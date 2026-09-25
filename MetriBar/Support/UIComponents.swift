@@ -8,18 +8,121 @@
 import AppKit
 import SwiftUI
 
-/// 打开 SwiftUI Settings 窗口（macOS 13/14 选择子不同，逐个尝试）。
+/// 设置窗口唯一入口：自持一个 NSWindow + NSHostingController(SettingsView)。
+///
+/// 为什么不继续用 `Settings` 场景 + `sendAction(showSettingsWindow:)`：
+/// MetriBar 是 LSUIElement Agent 应用，实测（macOS 27 beta / Xcode 27）该选择子
+/// **返回 true 但窗口根本没被创建** —— 自检日志里可见窗口只有 NSStatusBarWindow，
+/// 这正是「点齿轮没反应」的根因（`openSettings` / `showPreferencesWindow:` 同病）。
+/// AppKit 自建窗口行为确定、能自检、macOS 13 起可用，且不违背「不使用 NSStatusItem」。
 @MainActor
 enum SettingsWindow {
+
+    private static var controller: NSWindowController?
+
     static func open() {
-        NSApp.activate(ignoringOtherApps: true)
-        if #available(macOS 14.0, *) {
-            if !NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
-                NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-            }
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        // Agent 应用平时不是激活态，先提策略，否则窗口会被别的 App 压住。
+        let originalPolicy = NSApp.activationPolicy()
+        if originalPolicy != .regular {
+            NSApp.setActivationPolicy(.regular)
         }
+        closeMenuBarPanels()
+
+        let window = ensureWindow()
+        window.makeKeyAndOrderFront(nil)
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+
+        Diag.notice(Diag.lifecycle, "打开设置窗口：\(window.title)，策略=\(policyName(NSApp.activationPolicy()))")
+        restorePolicy(originalPolicy)
+        verifyOpened(after: 0.4)
+    }
+
+    // MARK: - 窗口构建
+
+    private static func ensureWindow() -> NSWindow {
+        if let window = controller?.window {
+            return window
+        }
+
+        let hosting = NSHostingController(rootView: SettingsView())
+        let window = NSWindow(contentViewController: hosting)
+        window.title = "MetriBar 设置"
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        // 关闭时不销毁：复用同一个窗口，反复开关不会重建。
+        window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 400, height: 430))
+        window.setFrameAutosaveName("MetriBarSettingsWindow")
+        if !window.setFrameUsingName("MetriBarSettingsWindow") {
+            window.center()
+        }
+
+        let controller = NSWindowController(window: window)
+        controller.shouldCascadeWindows = false
+        self.controller = controller
+
+        Diag.notice(Diag.lifecycle, "创建设置窗口（NSHostingController）")
+        return window
+    }
+
+    // MARK: - 自检与收尾
+
+    /// 确认窗口真的可见并写进日志：Agent 应用最容易在这一步静默失败。
+    private static func verifyOpened(after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            let names = NSApp.windows
+                .filter(\.isVisible)
+                .map { String(describing: type(of: $0)) + ":" + ($0.title.isEmpty ? "‹无标题›" : $0.title) }
+            let opened = controller?.window?.isVisible == true
+            Diag.notice(
+                Diag.lifecycle,
+                "设置窗口自检：\(opened ? "已打开" : "未出现")｜可见窗口 [\(names.joined(separator: ", "))]"
+            )
+        }
+    }
+
+    /// 收起 MenuBarExtra 面板（nonactivating panel），否则它会压住设置窗口。
+    private static func closeMenuBarPanels() {
+        for window in NSApp.windows where window.isVisible {
+            let className = String(describing: type(of: window))
+            guard window is NSPanel || className.lowercased().contains("menubar") else { continue }
+            window.orderOut(nil)
+        }
+    }
+
+    /// 恢复 Agent 形态（不占 Dock）。设置窗口开着时切回 accessory 是安全的。
+    private static func restorePolicy(_ original: NSApplication.ActivationPolicy) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            guard original != .regular else { return }
+            NSApp.setActivationPolicy(original)
+        }
+    }
+
+    private static func policyName(_ policy: NSApplication.ActivationPolicy) -> String {
+        switch policy {
+        case .regular: return "regular"
+        case .accessory: return "accessory"
+        case .prohibited: return "prohibited"
+        @unknown default: return "unknown"
+        }
+    }
+}
+
+/// 齿轮按钮：统一走 SettingsWindow.open()。
+@MainActor
+struct SettingsGearButton: View {
+    var body: some View {
+        Button {
+            SettingsWindow.open()
+        } label: {
+            Image(systemName: "gearshape")
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut(",", modifiers: .command)
+        .help("设置（⌘,）")
     }
 }
 

@@ -12,12 +12,13 @@
 
 | 项目 | 说明 |
 | --- | --- |
-| 菜单栏 | 实时下载速率、上传速率、CPU 温度（可选 CPU 占用率），数值等宽字体不抖动 |
-| 弹出面板 | 上下行速率 + 比例条、CPU 温度（含传感器 key）、CPU 占用、风扇转速/区间、内存（App / Wired / Compressed）、磁盘可用空间 |
+| 菜单栏 | 实时 **下载 ↓ / 上传 ↑ / CPU 温度**，可再叠加 CPU、GPU 占用率；等宽数字不抖动 |
+| 弹出面板 | 上下行速率 + 比例条、CPU 温度（含传感器 key）、**CPU 占用 + GPU 占用（渲染/光栅细分）**、风扇转速/区间、内存（App / Wired / Compressed）、磁盘可用空间 |
 | 后台采集 | `DispatchSourceTimer` + 独立串行队列，1–10 秒可调（默认 2 秒），**主线程零系统调用** |
 | 开机自启 | `SMAppService.mainApp`（macOS 13+），设置页一键开关并显示真实注册状态 |
 | 原生观感 | `ultraThinMaterial` 背景、圆角卡片、深浅色自适应、系统控件尺寸与字号 |
 | 硬件读取 | [SMCKit](https://github.com/srimanachanta/SMCKit)（MIT）访问 AppleSMC：CPU 温度、风扇转速 |
+| GPU 占用 | IOKit `IORegistry` → GPU accelerator（Apple Silicon 为 `AGXAccelerator…`）的 `PerformanceStatistics`，指数平滑防跳变 |
 | 体积 | 单个 `.app`，无嵌入框架副本以外的额外依赖，静态链接 SMCKit |
 
 ---
@@ -126,6 +127,7 @@ MetriBar/
 │   ├── CPULoadCollector.swift   # host_statistics(HOST_CPU_LOAD_INFO) ticks 差值
 │   ├── DiskCollector.swift      # FileManager.mountedVolumeURLs + URLResourceValues
 │   ├── SMCSensorReader.swift    # actor：SMCKit 封装，温度 key 解析 + 风扇枚举
+│   ├── GPUCollector.swift       # IORegistry PerformanceStatistics：GPU / 渲染 / 光栅占用（EMA）
 │   └── MetricsEngine.swift      # DispatchSourceTimer 调度 + @MainActor MetricsStore
 ├── Views/
 │   ├── MenuBarLabelView.swift   # 菜单栏文本（仅数值）
@@ -206,7 +208,13 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging             # 关闭
 [lifecycle] 采集启动：每 2.0 秒
 [smc]       传感器解析完成：温度键 [Tp0C Tp0R Tp04 Tp08 Tp1E …] 风扇 2 个
 [metrics]   en0 in 150681600->153684992 Δ3003392 | out 2418020352->2418158592 Δ138240 | elapsed=1.999
-[metrics]   ↓1.5M ↑69K CPU 13% 温度 60°[Tp0C] 风扇 风扇 1 7247 RPM, 风扇 2 7804 RPM 内存 72% 磁盘剩余 676.96 GB 基线就绪=true
+[metrics]   ↓1.5M ↑69K CPU 13% GPU 47% 温度 60°[Tp0C] 风扇 风扇 1 7247 RPM, 风扇 2 7804 RPM 内存 72% 磁盘剩余 676.96 GB 基线就绪=true
+```
+
+GPU 读数走 IOKit，与「活动监视器 › GPU」不同源（后者是聚合私有接口），但趋势一致：
+
+```bash
+ioreg -c AGXAccelerator -l | grep -i PerformanceStatistics   # 看设备原始百分比
 ```
 
 内存口径与「活动监视器」一致（128 GB 机型实测已用 71%–72%）。
@@ -254,6 +262,9 @@ xcrun stapler staple MetriBar-1.0.dmg
 
 | 现象 | 处理 |
 | --- | --- |
+| **点齿轮打不开设置** | 已修复：`LSUIElement` Agent 应用里 `showSettingsWindow:` / `openSettings` 只"响应"不建窗。现在设置由 `SettingsWindow.open()` 托管的 `NSWindow + NSHostingController` 承载，齿轮与 ⌘, 同走此路径；日志会打 `设置窗口自检：已打开｜可见窗口 […]` |
+| **菜单栏只显示下载速度** | 已修复：`MenuBarExtra` 的 label 用 `HStack` 时状态项宽度可能按首帧固定，变长部分被裁掉。现改为拼接的**单个 `Text`**；启动日志 `菜单栏字段 [↓下载 ↑上传 温度]` 可确认开关状态 |
+| GPU 显示 `--` | 虚拟机 / 无 Metal 设备时 `IORegistry` 里没有 accelerator 节点，属正常降级 |
 | 温度显示 `--` | 该机型 SMC 无对应 key，或仍处沙箱。核对 `ENABLE_APP_SANDBOX = NO` 并重新构建；可用 `ioreg -l | grep -i SMC` 自查 |
 | 风扇区显示「未检测到风扇」 | MacBook Air / Mac mini 等被动散热机型正常 |
 | 网速一直为 `0` | 首次采样只建基线，2 秒后才有值；若仍为 0，检查是否只有 VPN 口在传输（`utun*` 被有意排除） |

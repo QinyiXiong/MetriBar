@@ -108,6 +108,23 @@ struct CPUSnapshot: Sendable {
     let system: Double
 }
 
+// MARK: - GPU 负载（IORegistry PerformanceStatistics）
+
+struct GPUSnapshot: Sendable {
+    static let empty = GPUSnapshot(available: false, utilization: nil, renderer: nil, tiler: nil, deviceName: nil)
+
+    /// 是否读到 GPU 加速器节点（虚拟机 / 无 Metal 设备时为 false）。
+    let available: Bool
+    /// 设备总占用，0...1（已平滑）。
+    let utilization: Double?
+    /// 渲染核心占用 0...1，部分机型不提供。
+    let renderer: Double?
+    /// 光栅化（Tiler）占用 0...1。
+    let tiler: Double?
+    /// IORegistry 节点名，例如 AGXAcceleratorG17X，便于排障。
+    let deviceName: String?
+}
+
 // MARK: - 聚合快照
 
 /// 一次完整采集的结果。整棵树只读，可安全跨越线程传递。
@@ -118,6 +135,7 @@ struct MetricsSnapshot: Sendable {
         memory: .empty,
         disk: .empty,
         cpu: .empty,
+        gpu: .empty,
         timestamp: .distantPast
     )
 
@@ -126,6 +144,7 @@ struct MetricsSnapshot: Sendable {
     let memory: MemorySnapshot
     let disk: DiskSnapshot
     let cpu: CPUSnapshot
+    let gpu: GPUSnapshot
     let timestamp: Date
 
     var isValid: Bool { timestamp != .distantPast }

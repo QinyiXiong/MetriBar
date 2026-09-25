@@ -9,12 +9,16 @@ import SwiftUI
 
 @MainActor
 struct SettingsView: View {
-    @EnvironmentObject private var settings: AppSettings
+    /// 设置窗口**自带**一份 AppSettings：它和主面板共用同一批 UserDefaults key，
+    /// 所以状态天然一致；这样就不再依赖 `Scene.environmentObject`
+    /// （macOS 13 的 Settings 场景不会继承 App 级注入，取不到就直接崩溃）。
+    @StateObject private var settings = AppSettings()
 
     /// 与 AppSettings 共用同一批 UserDefaults key，直接绑定即可自动持久化。
     @AppStorage(AppSettings.Keys.showUploadInMenuBar) private var showUpload = true
     @AppStorage(AppSettings.Keys.showTemperatureInMenuBar) private var showTemperature = true
     @AppStorage(AppSettings.Keys.showCPUUsageInMenuBar) private var showCPUUsage = false
+    @AppStorage(AppSettings.Keys.showGPUUsageInMenuBar) private var showGPUUsage = false
     @AppStorage(AppSettings.Keys.speedUnit) private var speedUnitRaw = SpeedUnit.auto.rawValue
     @AppStorage(AppSettings.Keys.temperatureUnit) private var temperatureUnitRaw = TemperatureUnit.celsius.rawValue
 
@@ -33,10 +37,20 @@ struct SettingsView: View {
             }
 
             Section("菜单栏显示") {
-                Toggle("上传速率", isOn: $showUpload)
-                Toggle("CPU 温度", isOn: $showTemperature)
+                Toggle("下载速率 ↓", isOn: .constant(true))
+                Toggle("上传速率 ↑", isOn: $showUpload)
                 Toggle("CPU 占用率", isOn: $showCPUUsage)
-                Text("菜单栏只显示数值与单位，不显示应用名称。")
+                Toggle("GPU 占用率", isOn: $showGPUUsage)
+                Toggle("CPU 温度", isOn: $showTemperature)
+
+                Text(previewText)
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                Text("↑ 菜单栏排版预览（数值为示意）。只显示数值与单位，不显示应用名称。")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -77,6 +91,16 @@ struct SettingsView: View {
         .frame(width: 400)
         .frame(minHeight: 380)
         .onAppear { settings.refreshLoginItemStatus() }
+    }
+
+    /// 按当前开关拼出菜单栏文案（示意值），和 MenuBarLabelView 的字段顺序保持一致。
+    private var previewText: String {
+        var parts = ["↓1.2M"]
+        if showUpload { parts.append("↑68K") }
+        if showCPUUsage { parts.append("12%") }
+        if showGPUUsage { parts.append("G8%") }
+        if showTemperature { parts.append("59°") }
+        return parts.joined(separator: "  ")
     }
 
     /// 间隔修改要广播通知，让采集 Timer 立即重建。
