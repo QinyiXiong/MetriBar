@@ -272,40 +272,54 @@ ioreg -c AGXAccelerator -l | grep -i PerformanceStatistics   # 看设备原始�
 
 ---
 
-## 📦 打包 dmg
+## 📦 分发与安装
+
+一条命令产出安装包（**通用二进制 Intel + Apple Silicon、自包含无第三方 dylib**，约 672 KB）：
 
 ```bash
-./Scripts/build_dmg.sh              # 输出 dist/MetriBar-1.0.dmg
-./Scripts/build_dmg.sh --identity "Developer ID Application: 你的名字 (TEAMID)"
+./Scripts/build_dmg.sh                    # ad-hoc 签名 → dist/MetriBar-1.0.dmg
+./Scripts/build_dmg.sh --identity "Developer ID Application: 你的名字 (TEAMID)" \
+                       --notarize you@example.com TEAMID   # 正式分发（需付费开发者账号）
 ```
 
-手动流程：
+dmg 里已含 `MetriBar.app` + `/Applications` 快捷方式 + `README`。
+
+### 情况 A：发给别人（没有开发者账号，免费）
+
+ad-hoc / 未公证的 App 被下载后会被 Gatekeeper 拦下，提示
+「已损坏」或「无法打开，因为它来自身份不明的开发者」——**这不是 App 坏了**，
+只是没被 Apple 公证。让对方在终端执行一次放行即可（永久生效）：
 
 ```bash
-# 1. archive
-xcodebuild -project MetriBar.xcodeproj -scheme MetriBar \
-  -configuration Release -archivePath build/MetriBar.xcarchive archive
-
-# 2. 导出 / 复制 app
-cp -R build/MetriBar.xcarchive/Products/Applications/MetriBar.app dist/
-
-# 3. 签名（必须带 hardened runtime；关闭沙箱已在 entitlements 中声明）
-codesign --force --deep --options runtime \
-  --entitlements MetriBar.entitlements \
-  --sign "Developer ID Application: 你的名字 (TEAMID)" dist/MetriBar.app
-
-# 4. 打 dmg
-hdiutil create -volname MetriBar -srcfolder dist -ov -format UDZO MetriBar-1.0.dmg
-
-# 5. 签名 + 公证 dmg
-codesign --sign "Developer ID Application: 你的名字 (TEAMID)" MetriBar-1.0.dmg
-xcrun notarytool submit MetriBar-1.0.dmg --apple-id you@example.com \
-  --team-id TEAMID --password <app-password> --wait
-xcrun stapler staple MetriBar-1.0.dmg
+# 打开 dmg，把 MetriBar.app 拖进「应用程序」文件夹后，执行：
+xattr -dr com.apple.quarantine /Applications/MetriBar.app
+open /Applications/MetriBar.app
 ```
 
-**没有开发者账号？** 本机自用直接 `xcodebuild` + ad-hoc 签名即可运行；
-分发给他人时对方需 `xattr -dr com.apple.quarantine /Applications/MetriBar.app` 放行。
+之后就像普通 App 一样正常打开、开机自启。缺点：对方要动一次终端。
+
+### 情况 B：正式分发（有 Apple Developer ID，$99/年）
+
+签名 + 公证后对方双击即可打开，无需终端：
+
+```bash
+./Scripts/build_dmg.sh --identity "Developer ID Application: 你的名字 (TEAMID)" \
+                       --notarize you@example.com TEAMID
+```
+
+脚本会用 `notarytool` 提交公证并 `stapler staple` 回粘。首次需存一次凭据：
+`xcrun notarytool store-credentials MetriBar-Notary --apple-id you@example.com --team-id TEAMID`。
+（因为要读 SMC，本项目 `com.apple.security.app-sandbox = false`，**只能外部分发，不能上架 Mac App Store**。）
+
+### 情况 C：装到自己的电脑
+
+- **已有本仓库**：`xcodebuild` 直接构建出的 App 就在本机，通常不会被拦（本机构建 = 本地可信）。拖进 `/Applications` 即可。
+- **从 dmg**：双击挂载 → 把 `MetriBar.app` 拖到 `Applications` 快捷方式上 → 打开。
+- **开机自启**：打开 App → 点右下角齿轮 ⚙️ 进设置 → 打开「登录时自动启动」（走 `SMAppService`，无需 plist）。
+
+> 图标在菜单栏**只出现一次**是正常的（`LSUIElement`，不占 Dock）。若之前是从 DerivedData 跑的旧实例，
+> 拖到 /Applications 后记得先退出旧的：`pkill -f MetriBar`，再从 /Applications 打开。
+
 
 ---
 
