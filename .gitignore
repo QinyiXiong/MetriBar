@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+DerivedData/
+.DerivedData/
+build/
+dist/
+*.xcarchive
+*.dmg
+
+# 本地调试脚手架（不属于交付物）
+.probe/
+.tmp/
+.modulecache/
+
+# 例外：SwiftPM 解析结果需要入库，保证协作者拉到同一版本
+!MetriBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved

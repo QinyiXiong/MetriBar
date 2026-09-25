@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 必须关闭 App Sandbox：CPU 温度与风扇转速来自 AppleSMC 用户客户端，
+	     沙箱内无法打开 io_service。因此本应用只能以 dmg 形式外部签名分发，
+	     不能上架 Mac App Store。 -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+</dict>
+</plist>

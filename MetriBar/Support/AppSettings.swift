@@ -1,0 +1,173 @@
+//
+//  AppSettings.swift
+//  MetriBar
+//
+//  设置存储（UserDefaults / @AppStorage）+ 登录项管理（SMAppService）。
+//
+
+import AppKit
+import Combine
+import Foundation
+import ServiceManagement
+import SwiftUI
+
+/// 应用设置。仅主线程访问（SwiftUI 环境对象）。
+@MainActor
+final class AppSettings: ObservableObject {
+
+    enum Keys {
+        static let refreshInterval = "refreshInterval"
+        static let launchAtLogin = "launchAtLoginEnabled"
+        static let speedUnit = "speedUnit"
+        static let temperatureUnit = "temperatureUnit"
+        static let showUploadInMenuBar = "showUploadInMenuBar"
+        static let showTemperatureInMenuBar = "showTemperatureInMenuBar"
+        static let showCPUUsageInMenuBar = "showCPUUsageInMenuBar"
+    }
+
+    /// 允许的刷新间隔（秒）。需求：1~2 秒为主，另放宽到 3/5/10 省电。
+    static let allowedIntervals: [Double] = [1, 2, 3, 5, 10]
+
+    // MARK: - 存储项
+
+    /// 采集/刷新间隔（秒）。修改后会广播通知，由 MetricsEngine 重建 Timer。
+    @AppStorage(Keys.refreshInterval) var refreshInterval: Double = 2
+
+    /// 菜单栏是否显示上传速率。
+    @AppStorage(Keys.showUploadInMenuBar) var showUploadInMenuBar: Bool = true
+
+    /// 菜单栏是否显示 CPU 温度。
+    @AppStorage(Keys.showTemperatureInMenuBar) var showTemperatureInMenuBar: Bool = true
+
+    /// 菜单栏是否显示 CPU 占用率。
+    @AppStorage(Keys.showCPUUsageInMenuBar) var showCPUUsageInMenuBar: Bool = false
+
+    /// 网速单位。
+    @AppStorage(Keys.speedUnit) private var speedUnitRaw: String = SpeedUnit.auto.rawValue
+
+    /// 温度单位。
+    @AppStorage(Keys.temperatureUnit) private var temperatureUnitRaw: String = TemperatureUnit.celsius.rawValue
+
+    /// 登录项开关的存储值（真实状态以 SMAppService 为准）。
+    @AppStorage(Keys.launchAtLogin) private var launchAtLoginStored: Bool = false
+
+    // MARK: - 状态
+
+    /// SMAppService 真实注册状态，展示在设置页。
+    @Published private(set) var loginItemStatus: LoginItemStatus = .unsupported
+
+    enum LoginItemStatus: Equatable {
+        case unsupported
+        case enabled
+        case requiresApproval
+        case notRegistered
+        case failed(String)
+
+        var hintText: String {
+            switch self {
+            case .unsupported: return "当前系统不支持 SMAppService（需 macOS 13+）"
+            case .enabled: return "已注册，登录时自动启动"
+            case .requiresApproval: return "已提交，需在「系统设置 › 通用 › 登录项」中允许"
+            case .notRegistered: return "未注册"
+            case .failed(let message): return "注册失败：\(message)"
+            }
+        }
+    }
+
+    init() {
+        refreshLoginItemStatus()
+    }
+
+    // MARK: - 派生值
+
+    var speedUnit: SpeedUnit {
+        get { SpeedUnit(rawValue: speedUnitRaw) ?? .auto }
+        set { speedUnitRaw = newValue.rawValue }
+    }
+
+    var temperatureUnit: TemperatureUnit {
+        get { TemperatureUnit(rawValue: temperatureUnitRaw) ?? .celsius }
+        set { temperatureUnitRaw = newValue.rawValue }
+    }
+
+    var intervalText: String {
+        refreshInterval < 1.5 ? "1 秒" : String(format: "%.0f 秒", refreshInterval)
+    }
+
+    // MARK: - 写操作
+
+    func setRefreshInterval(_ seconds: Double) {
+        let value = min(max(seconds, 1), 10)
+        guard value != refreshInterval else { return }
+        refreshInterval = value
+        NotificationCenter.default.post(
+            name: .metriBarRefreshIntervalChanged,
+            object: value
+        )
+    }
+
+    // MARK: - 登录项（SMAppService, macOS 13+）
+
+    var launchAtLoginEnabled: Bool {
+        if #available(macOS 13.0, *) {
+            return SMAppService.mainApp.status == .enabled || launchAtLoginStored
+        }
+        return false
+    }
+
+    /// 注册 / 注销登录项。打包到 /Applications 后行为最稳定；
+    /// 从 DerivedData 直接运行时也能注册，但换路径后需重新开关一次。
+    func setLaunchAtLogin(_ enabled: Bool) {
+        guard #available(macOS 13.0, *) else {
+            loginItemStatus = .unsupported
+            return
+        }
+
+        do {
+            if enabled {
+                if #available(macOS 14.0, *) {
+                    // macOS 14：重复 register 可能抛错，先按当前状态判断。
+                    if SMAppService.mainApp.status != .enabled {
+                        try SMAppService.mainApp.register()
+                    }
+                } else {
+                    try SMAppService.mainApp.register()
+                }
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            launchAtLoginStored = enabled
+        } catch {
+            // 取消勾选一个本来就未注册的服务，不算错误。
+            if enabled == false, (error as NSError).domain == NSPOSIXErrorDomain,
+               (error as NSError).code == ENOENT {
+                launchAtLoginStored = false
+            } else {
+                loginItemStatus = .failed(error.localizedDescription)
+                return
+            }
+        }
+
+        refreshLoginItemStatus()
+    }
+
+    func refreshLoginItemStatus() {
+        guard #available(macOS 13.0, *) else {
+            loginItemStatus = .unsupported
+            return
+        }
+        switch SMAppService.mainApp.status {
+        case .enabled: loginItemStatus = .enabled
+        case .requiresApproval: loginItemStatus = .requiresApproval
+        default: loginItemStatus = launchAtLoginStored ? .enabled : .notRegistered
+        }
+    }
+
+    /// 打开「系统设置 › 登录项」，方便用户批准（macOS 13 无稳定 API，走 URL scheme）。
+    func openLoginItemsSettings() {
+        let urlString = "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+        if let url = URL(string: urlString) {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
