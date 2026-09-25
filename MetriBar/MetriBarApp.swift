@@ -30,6 +30,9 @@ struct MetriBarApp: App {
         // 启动即把菜单栏字段写进日志：若菜单栏"少了东西"，先看这行确认是开关问题还是排版问题。
         Diag.notice(Diag.lifecycle, "启动：间隔 \(String(format: "%.1f", storedInterval))s，菜单栏字段 [\(appSettings.menuBarFields.joined(separator: " "))]")
 
+        // 登录项自愈：若已开启自启且正从 /Applications 运行但未生效，重注册指向正确路径。
+        appSettings.ensureLaunchAtLoginSelfHeal()
+
         // 自检开关：`defaults write com.qyx.MetriBar MetriBarDebugOpenSettings -bool YES`
         // 启动后自动弹出设置窗口，用于验证 Agent 应用的开窗链路（正常使用时保持关闭）。
         if UserDefaults.standard.bool(forKey: "MetriBarDebugOpenSettings") {
