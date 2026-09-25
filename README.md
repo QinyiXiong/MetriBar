@@ -65,22 +65,47 @@ App 图标（`AppIcon.icns`，1024→16px 全尺寸自绘 · 卡通小机器人 
 
 MetriBar 用 macOS 自带的 **CoreBluetooth**，把运动手表实时广播的心率读进来，直接显示在菜单栏 `♥72` 与面板卡片上——**不需要任何厂商 SDK、不联网、不上云**。
 
-**原理**：手表开启「心率广播」后，会作为 BLE **外设（Peripheral）** 广播标准 **Heart Rate Service `0x180D`**；MetriBar 作为 **中心（Central）** 扫描 → 连接 → 订阅特征 **`0x2A37`（Heart Rate Measurement）**，手表每约 1 秒推一次。解析 `flags` 兼容 8/16-bit 心率值与传感器接触位，并校验 20…260 过滤噪声。断线自动重连（记住上次设备 UUID，优先回连）。
+**原理**：手表开启「心率广播」后，会作为 BLE **外设（Peripheral）** 广播标准 **Heart Rate Service `0x180D`**；MetriBar 作为 **中心（Central）** 扫描 → 连接 → 订阅特征 **`0x2A37`（Heart Rate Measurement）**，手表每约 1 秒推一次。解析 `flags` 兼容 8/16-bit 心率值与传感器接触位，并校验 20…260 过滤噪声。
+
+**省电 &「别一直搜」**：MetriBar **不会无限后台扫描**。每轮搜索只开 **30 秒**，超时仍没连上就**自动停止扫描**（状态变「已停止 · 点开面板重扫」），把蓝牙彻底停下来省电。**你再次点状态栏打开面板时，会自动重新起一轮搜索**——所以在手表那边开好广播、回到电脑点一下即可，无需进设置。连上后才会保持连接；断线不会偷偷反复重扫，同样等你下次点开面板。
 
 **手表端（fenix 8）**：下拉快捷面板 / 活动中找到「**心率广播**」并打开（不同固件路径略有差异，一般为：长按 ⌂ → 手机连接 / 传感器 → 心率广播）。广播模式下手表专为「外部接收器」服务。
 
 **Mac 端**：
 1. 首次启动会弹出「**允许 MetriBar 使用蓝牙**」→ 点允许（`NSBluetoothAlwaysUsageDescription`）。
 2. 设置 → 「心率 · 蓝牙」里可看到实时连接状态、当前 BPM，并可改**设备名过滤**（默认匹配 `fenix`，留空则接受任何广播心率服务的设备）。
-3. 换一块手表 → 点「重新搜索手表」即可，无需重启。
+3. 没连上时：**点状态栏打开面板即自动重扫一轮**（或进设置点「重新搜索手表」）。换一块手表也走这里，无需重启。
+
+> 🔑 **关于蓝牙授权弹窗**：同一份构建授权后会**长期记住**，普通启动不再弹。只有当 App 被**重新构建／更新**（ad-hoc 签名的指纹随之改变）时才会再问一次；要连更新都不弹，需用 **Developer ID 证书**签名（见「分发」）。需要重置授权：`tccutil reset Bluetooth com.qyx.MetriBar` 后重启 App。
 
 > ⚠️ **注意事项 / 排查**
 > - macOS **没有 ANT+ 无线**，只能走 BLE。若你的设备只发 ANT+，本 App 看不到（需 USB ANT+ 棒 + 额外驱动，超出范围）。
 > - 手表必须处于「**心率广播**」状态；仅日常佩戴不主动广播时是搜不到的。
-> - 部分手表在被**手机 App 连接**时会暂停对外广播（广播本就是给第三方接收器用的）；如连不上，可断开手机或重新开广播。
+> - 部分手表在被**手机 App 连接**时会暂停对外广播（广播本就是给第三方接收器用的）；如连不上，可关闭手机蓝牙或重新开广播，然后回到电脑**点状态栏重扫**。
 > - 没授权蓝牙 / 蓝牙未开 → 状态会显示「未授权 / 蓝牙未开启」，去 系统设置 › 隐私与安全 › 蓝牙 允许即可。
 > - 需要重置授权：`tccutil reset Bluetooth com.qyx.MetriBar` 后重启 App。
 > - 不用心率时，在设置里关掉「菜单栏显示心率」即**完全停止蓝牙扫描**，省电。
+
+---
+
+## 🔒 隐私与安全
+
+一句话：**完全离线，只读不传**。MetriBar 不做任何网络请求，没有埋点 / 统计 / 崩溃上报 / 云同步，也不申请通讯录、位置、麦克风、相机等权限。
+
+| 维度 | 实际做法 |
+| --- | --- |
+| 网络 | **无任何** `URLSession` / HTTP / socket / 上传代码；不联网、不上云、无遥测（"↑"只是**显示**你本机的上传速率，不是把数据发出去） |
+| 蓝牙 | 仅 **BLE Central**：连接你开启广播的手表、读取标准心率 `0x2A37`；不扫描其它设备内容，**已移除多余的「外设」权限声明**（`NSBluetoothPeripheralUsageDescription`），遵循最小权限 |
+| 硬件 | `sysctl` / `host_statistics` / `getifaddrs` / IORegistry / AppleSMC——**只读**运行指标；网卡只取**字节计数**，**不碰任何网络包内容** |
+| 磁盘 | 仅 `URLResourceValues` 读取卷宗的**容量/可用空间**，不读用户文件内容 |
+| 设置持久化 | 仅 `UserDefaults`（你自己的偏好），无外部写入 |
+| 日志 | `os_log`，subsystem `com.qyx.MetriBar`，默认只记启停；**默认关闭**详细模式，日志留在本机「控制台」，不外发 |
+| 离屏自检图 | 只有你手动开启 `MetriBarDebugSnap` 时才把**自己渲染的菜单栏位图**写到系统临时目录；非截屏，不抓别人画面 |
+
+- **App Sandbox 关闭**（`com.apple.security.app-sandbox = false`）：读 AppleSMC 温度/风扇所必需，代价是不能上架 Mac App Store、只能 dmg 外部分发。代码并未利用这一点去访问无关文件。
+- **不收集设备标识 / 不上传**：心率、网卡名、设备名等都只在本地内存与本机面板中使用，日志里出现的设备名也仅在本机控制台可见。
+
+> 想核对：仓库里搜 `URLSession`、`http`、`analytics`、`token` 均无实现；可 `codesign -d --entitlements :- MetriBar.app` 查看实际权限只有 `app-sandbox=false`。
 
 ---
 
@@ -311,7 +336,7 @@ ioreg -c AGXAccelerator -l | grep -i PerformanceStatistics   # 看设备原始�
 一条命令产出安装包（**通用二进制 Intel + Apple Silicon、自包含无第三方 dylib**，约 680 KB）：
 
 ```bash
-./Scripts/build_dmg.sh                    # ad-hoc 签名 → dist/MetriBar-1.0.dmg
+./Scripts/build_dmg.sh                    # ad-hoc 签名 → dist/MetriBar-<版本>.dmg
 ./Scripts/build_dmg.sh --identity "Developer ID Application: 你的名字 (TEAMID)" \
                        --notarize you@example.com TEAMID   # 正式分发（需付费开发者账号）
 ```
@@ -360,7 +385,8 @@ open /Applications/MetriBar.app
 
 | 现象 | 处理 |
 | --- | --- |
-| **点齿轮打不开设置** | 已修复：`LSUIElement` Agent 应用里 `showSettingsWindow:` / `openSettings` 只"响应"不建窗。现在设置由 `SettingsWindow.open()` 托管的 `NSWindow + NSHostingController` 承载，齿轮与 ⌘, 同走此路径 |
+| **点齿轮打不开设置 / 窗口一闪而过** | 已修复：`LSUIElement` Agent 应用里 `showSettingsWindow:` / `openSettings` 只"响应"不建窗；之前又用**固定延时**切回 accessory，会在切回瞬间把刚弹出的窗口带走。现在设置由 `SettingsWindow.open()` 托管的 `NSWindow + NSHostingController` 承载，并保持 `regular` **直到窗口真正关闭**才还原，齿轮与 ⌘, 同走此路径 |
+| **心率一直搜不到 / 想省电不常驻** | v1.4 起为「有限扫描」：每轮只搜 30s 后自动停止省电；在手表开好广播后**点一下状态栏**即重新起一轮搜索并秒连。若被手机抢占，关掉手机蓝牙再点状态栏 |
 | **菜单栏只显示下载速度** | 已修复：`MenuBarExtra` 的 label 用 `HStack` 时状态项宽度可能按首帧固定，变长部分被裁掉。现改为单个拼接 label；启动日志可确认开关状态 |
 | GPU 显示 `--` | 虚拟机 / 无 Metal 设备时 `IORegistry` 里没有 accelerator 节点，属正常降级 |
 | 温度显示 `--` | 该机型 SMC 无对应 key，或仍处沙箱。核对 `ENABLE_APP_SANDBOX = NO` 并重新构建；可用 `ioreg -l \| grep -i SMC` 自查 |
@@ -369,6 +395,19 @@ open /Applications/MetriBar.app
 | 开机自启无效 | 换过 `.app` 路径后需重新开关一次（现已自愈处理）；查看「系统设置 › 通用 › 登录项」是否被拒绝 |
 | 菜单栏文字过长挤掉其他图标 | 设置里关掉「上传速率」或「CPU 占用率」 |
 | 控制台刷屏 `com.apple.linkd.autoShortcut` / `4097` | App Intents 为未公证 App 注册时的系统噪音，会自行退避（`Will NOT re-try`），对监控无影响。只有 Developer ID + 公证才能彻底消除 |
+
+---
+
+## 📝 更新记录
+
+| 版本 | 主要内容 |
+| --- | --- |
+| **v1.5** | 心率改为**有限扫描**（每轮 30s，超时自动停止省电，不再后台常驻搜索；点开面板重扫）；修复**设置窗口一闪而过**（激活策略保持到窗口关闭再还原）；补「隐私与安全」章节；移除多余的蓝牙**外设**权限声明；仓库不再跟踪 `xcuserdata` |
+| **v1.4** | 点击状态栏打开面板即**强制重扫**心率（已连接不打扰） |
+| **v1.3** | 修好 **BLE 连不上**（`peripheral` 弱引用导致反复 `connect()`）+ 全量扫描 + 保活；真机 fenix 8 稳定收到实时心率 |
+| **v1.2** | App 图标换成**卡通小机器人** mascot |
+| **v1.1** | 新增**手表心率（BLE）**：订阅 `0x180D` / `0x2A37`，实时进菜单栏 + 面板 |
+| **v1.0** | 首个版本：网速 / CPU 温度 / GPU / 风扇 / 内存 / 磁盘 菜单栏监视 + 自绘非模板徽章 |
 
 ---
 

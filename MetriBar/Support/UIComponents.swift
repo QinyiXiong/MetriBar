@@ -21,29 +21,26 @@ enum SettingsWindow {
     private static var controller: NSWindowController?
 
     static func open() {
-        // Agent 应用平时不是激活态，先提策略，否则窗口会被别的 App 压住。
+        // Agent 应用平时不是激活态，先提策略到 regular，否则设置窗口会被别的 App 压住。
+        // 关键：保持 regular **直到设置窗口真正关闭**再还原——之前用固定延时切回 accessory
+        // 会在切回的瞬间把刚弹出的窗口带走，表现为"菜单栏一闪而过、设置没停留"。
         let originalPolicy = NSApp.activationPolicy()
         if originalPolicy != .regular {
             NSApp.setActivationPolicy(.regular)
         }
         closeMenuBarPanels()
 
-        let window = ensureWindow()
+        let window = ensureWindow(revertTo: originalPolicy)
         window.makeKeyAndOrderFront(nil)
-        if #available(macOS 14.0, *) {
-            NSApp.activate()
-        } else {
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        NSApp.activate(ignoringOtherApps: true)
 
         Diag.notice(Diag.lifecycle, "打开设置窗口：\(window.title)，策略=\(policyName(NSApp.activationPolicy()))")
-        restorePolicy(originalPolicy)
         verifyOpened(after: 0.4)
     }
 
     // MARK: - 窗口构建
 
-    private static func ensureWindow() -> NSWindow {
+    private static func ensureWindow(revertTo originalPolicy: NSApplication.ActivationPolicy) -> NSWindow {
         if let window = controller?.window {
             return window
         }
@@ -58,6 +55,18 @@ enum SettingsWindow {
         window.setFrameAutosaveName("MetriBarSettingsWindow")
         if !window.setFrameUsingName("MetriBarSettingsWindow") {
             window.center()
+        }
+
+        // 设置窗口关闭时再切回 accessory（不占 Dock / 无系统菜单栏），
+        // 期间保持 regular 让窗口稳定停留，避免"一闪而过"。
+        if originalPolicy != .regular {
+            NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: window, queue: .main
+            ) { _ in
+                if NSApp.activationPolicy() == .regular {
+                    NSApp.setActivationPolicy(.accessory)
+                }
+            }
         }
 
         let controller = NSWindowController(window: window)
@@ -90,14 +99,6 @@ enum SettingsWindow {
             let className = String(describing: type(of: window))
             guard window is NSPanel || className.lowercased().contains("menubar") else { continue }
             window.orderOut(nil)
-        }
-    }
-
-    /// 恢复 Agent 形态（不占 Dock）。设置窗口开着时切回 accessory 是安全的。
-    private static func restorePolicy(_ original: NSApplication.ActivationPolicy) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            guard original != .regular else { return }
-            NSApp.setActivationPolicy(original)
         }
     }
 
