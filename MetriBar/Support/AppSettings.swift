@@ -201,6 +201,33 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    /// 登录项自愈：仅当"从 /Applications 运行 + 此前已开启自启"时，按 bundle 路径强制盖章。
+    /// 记录上次注册路径；只要当前路径变化（如从 DerivedData 迁到 /Applications），
+    /// 就 unregister→register，把登录项重新指向正确副本。路径未变则完全 no-op。幂等、安静。
+    func ensureLaunchAtLoginSelfHeal() {
+        guard #available(macOS 13.0, *) else { return }
+        guard launchAtLoginStored else { return }
+        let currentPath = Bundle.main.bundlePath
+        guard currentPath.hasPrefix("/Applications/") else { return }
+
+        let regKey = "loginItemRegisteredPath"
+        let lastPath = UserDefaults.standard.string(forKey: regKey)
+        guard SMAppService.mainApp.status != .enabled || lastPath != currentPath else {
+            Diag.notice(Diag.lifecycle, "开机自启已启用：\(currentPath)")
+            return
+        }
+
+        do {
+            try? SMAppService.mainApp.unregister()   // 清掉可能指向旧路径的登记
+            try SMAppService.mainApp.register()        // 重新登记 = 当前 /Applications 副本
+            UserDefaults.standard.set(currentPath, forKey: regKey)
+            Diag.notice(Diag.lifecycle, "登录项自愈：已把开机自启重新指向 \(currentPath)")
+        } catch {
+            Diag.notice(Diag.lifecycle, "登录项自愈失败：\(error.localizedDescription)")
+        }
+        refreshLoginItemStatus()
+    }
+
     /// 打开「系统设置 › 登录项」，方便用户批准（macOS 13 无稳定 API，走 URL scheme）。
     func openLoginItemsSettings() {
         let urlString = "x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
