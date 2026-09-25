@@ -34,6 +34,8 @@ struct PopoverView: View {
         .padding(12)
         .frame(width: 286)
         .background(.ultraThinMaterial)
+        // 点击状态栏打开面板时：若心率还没连上，强制重扫一次（已连接不打扰）。
+        .onAppear { HeartRateCollector.shared.rescanIfNeeded() }
     }
 
     private var snapshot: MetricsSnapshot { store.snapshot }
