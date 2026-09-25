@@ -8,11 +8,22 @@
 
 ---
 
+## 🖼 界面预览
+
+离屏渲染自检图（`MetriBarDebugSnap`，真实数据）：
+
+![菜单栏 · 深色](docs/预览/menubar-dark.png)
+![菜单栏 · 浅色](docs/预览/menubar-light.png)
+
+![弹出面板 · 深色](docs/预览/panel-dark.png)
+
+---
+
 ## ✨ 特性
 
 | 项目 | 说明 |
 | --- | --- |
-| 菜单栏 | 实时 **下载 ↓ / 上传 ↑ / CPU 温度**，可再叠加 CPU、GPU 占用率；等宽数字不抖动 |
+| 菜单栏 | 实时 **下载 ↓ / 上传 ↑ / CPU 温度**，可叠加 CPU、GPU 占用率；**两种排版：丰富（SF Symbols + 按负载/温度着色 + 分级字号）/ 紧凑（纯文本）**；等宽数字不抖动 |
 | 弹出面板 | 上下行速率 + 比例条、CPU 温度（含传感器 key）、**CPU 占用 + GPU 占用（渲染/光栅细分）**、风扇转速/区间、内存（App / Wired / Compressed）、磁盘可用空间 |
 | 后台采集 | `DispatchSourceTimer` + 独立串行队列，1–10 秒可调（默认 2 秒），**主线程零系统调用** |
 | 开机自启 | `SMAppService.mainApp`（macOS 13+），设置页一键开关并显示真实注册状态 |
@@ -200,6 +211,27 @@ defaults write com.qyx.MetriBar MetriBarVerboseLogging -bool YES   # 开启
 log stream --predicate 'subsystem == "com.qyx.MetriBar"' --level info
 defaults delete com.qyx.MetriBar MetriBarVerboseLogging             # 关闭
 ```
+
+### 🎨 排版自检图（没有屏幕录制权限也能看到界面）
+
+终端没有「屏幕录制」权限时 `screencapture` 拍不到菜单栏。项目内置离屏渲染自检：
+启动后用 `NSHostingView` 把菜单栏文案（深 / 浅两版）与面板渲染成 PNG 写到临时目录，
+日志打印路径，直接打开就能看到真实排版与配色。
+
+```bash
+defaults write com.qyx.MetriBar MetriBarDebugSnap -bool YES
+open MetriBar.app
+log show --last 30s --predicate 'subsystem == "com.qyx.MetriBar" AND eventMessage CONTAINS "自检图"'
+defaults delete com.qyx.MetriBar MetriBarDebugSnap        # 用完关掉
+```
+
+菜单栏排版在 **设置 › 菜单栏显示 › 排版样式** 里切换，下方有实时预览
+（预览用的就是 `MenuBarLabelView.compose(...)`，与顶部状态栏同一套拼装逻辑，所见即所得）：
+
+| 样式 | 效果 |
+| --- | --- |
+| 丰富（默认） | `⬇ 1.6M │ ⬆ 28K │ 🌡 66°`，图标随负载/温度变色，温度计图标按热度换低/中/高 |
+| 紧凑 | `↓1.6M ↑28K 66°`，无图标，宽度最省 |
 
 以下是 **Apple Silicon（M5 Max / macOS 27 beta / Xcode 27）实测输出**，
 下载 npm 包时的采样：

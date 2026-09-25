@@ -89,6 +89,32 @@ enum Fmt {
         return String(format: "%.0f%@", value, showSymbol ? unit.shortSymbol : "")
     }
 
+    /// 拆成「数值 + 单位」两段，供菜单栏做层级排版：`("12.4", "K")`。
+    static func speedParts(_ bytesPerSecond: Double) -> (value: String, unit: String) {
+        let compact = compactSpeed(bytesPerSecond)
+        guard let last = compact.last, last.isLetter else { return (compact, "") }
+        return (String(compact.dropLast()), String(last))
+    }
+
+    /// 温度拆段：`("64", "°")`。
+    static func temperatureParts(_ celsius: Double?, unit: TemperatureUnit = .celsius) -> (value: String, unit: String) {
+        let text = temperature(celsius, unit: unit)
+        guard text != "--" else { return ("--", "") }
+        return (String(text.dropLast()), unit.shortSymbol)
+    }
+
+    /// 紧凑容量（二进制）：`648.9 GB`、`1.8 TB`。面板右侧用，避免折行。
+    static func compactVolume(_ bytes: UInt64) -> String {
+        let b = Double(bytes)
+        switch b {
+        case ..<1_024: return String(format: "%.0f B", b)
+        case ..<1_048_576: return String(format: "%.0f KB", b / 1_024)
+        case ..<1_073_741_824: return String(format: "%.0f MB", b / 1_048_576)
+        case ..<1_099_511_627_776: return String(format: "%.1f GB", b / 1_073_741_824)
+        default: return String(format: "%.2f TB", b / 1_099_511_627_776)
+        }
+    }
+
     static func percent(_ fraction: Double, digits: Int = 0) -> String {
         String(format: "%.\(digits)f%%", min(max(fraction, 0), 1) * 100)
     }

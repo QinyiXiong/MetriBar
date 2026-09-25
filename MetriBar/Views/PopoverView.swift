@@ -14,7 +14,7 @@ struct PopoverView: View {
     @EnvironmentObject private var settings: AppSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 9) {
             header
             networkSection
 
@@ -113,14 +113,15 @@ struct PopoverView: View {
 
             // GPU 占用：IORegistry 的 GPU accelerator 节点（Apple Silicon 为 AGXAccelerator…）
             MetricRow(
-                systemImage: "cpu.fill",
+                systemImage: "cube",
                 title: "GPU 占用",
                 value: snapshot.gpu.utilization.map { Fmt.percent($0) } ?? "--",
                 detail: gpuDetail
             )
+            // GPU 用青色，和 CPU 的绿/黄/红区分开，两行不会看混。
             SlimGauge(
                 fraction: snapshot.gpu.utilization ?? 0,
-                color: GaugeColor.forFraction(snapshot.gpu.utilization ?? 0)
+                color: Color(nsColor: .systemTeal)
             )
 
             if snapshot.hardware.hasFan {
@@ -148,7 +149,6 @@ struct PopoverView: View {
         var parts: [String] = []
         if let renderer = gpu.renderer { parts.append("渲染 \(Fmt.percent(renderer))") }
         if let tiler = gpu.tiler { parts.append("光栅 \(Fmt.percent(tiler))") }
-        if let name = gpu.deviceName { parts.append(name) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -164,15 +164,15 @@ struct PopoverView: View {
             MetricRow(
                 systemImage: "memorychip",
                 title: "已用",
-                value: "\(Fmt.volume(snapshot.memory.usedBytes)) / \(Fmt.volume(snapshot.memory.totalBytes))",
+                value: "\(Fmt.compactVolume(snapshot.memory.usedBytes)) / \(Fmt.compactVolume(snapshot.memory.totalBytes))",
                 detail: Fmt.percent(snapshot.memory.usedFraction)
             )
             SlimGauge(fraction: snapshot.memory.usedFraction, color: GaugeColor.forFraction(snapshot.memory.usedFraction))
 
             HStack(spacing: 8) {
-                legendItem("App", Fmt.volume(snapshot.memory.appBytes))
-                legendItem("联动", Fmt.volume(snapshot.memory.wiredBytes))
-                legendItem("已压缩", Fmt.volume(snapshot.memory.compressedBytes))
+                legendItem("App", Fmt.compactVolume(snapshot.memory.appBytes))
+                legendItem("联动", Fmt.compactVolume(snapshot.memory.wiredBytes))
+                legendItem("已压缩", Fmt.compactVolume(snapshot.memory.compressedBytes))
                 Spacer()
             }
         }
@@ -195,7 +195,7 @@ struct PopoverView: View {
                 systemImage: "internaldrive",
                 title: snapshot.disk.volumeName,
                 value: Fmt.percent(snapshot.disk.usedFraction),
-                detail: "可用 \(Fmt.volume(snapshot.disk.freeBytes)) / \(Fmt.volume(snapshot.disk.totalBytes))"
+                detail: "可用 \(Fmt.compactVolume(snapshot.disk.freeBytes)) / \(Fmt.compactVolume(snapshot.disk.totalBytes))"
             )
             SlimGauge(fraction: snapshot.disk.usedFraction, color: GaugeColor.forFraction(snapshot.disk.usedFraction))
         }

@@ -24,6 +24,21 @@ final class AppSettings: ObservableObject {
         static let showTemperatureInMenuBar = "showTemperatureInMenuBar"
         static let showCPUUsageInMenuBar = "showCPUUsageInMenuBar"
         static let showGPUUsageInMenuBar = "showGPUUsageInMenuBar"
+        static let menuBarStyle = "menuBarStyle"
+    }
+
+    /// 菜单栏排版风格。
+    enum MenuBarStyle: String, CaseIterable, Identifiable, Sendable {
+        case rich
+        case compact
+
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .rich: return "丰富（图标 + 配色）"
+            case .compact: return "紧凑（纯文本）"
+            }
+        }
     }
 
     /// 允许的刷新间隔（秒）。需求：1~2 秒为主，另放宽到 3/5/10 省电。
@@ -45,6 +60,9 @@ final class AppSettings: ObservableObject {
 
     /// 菜单栏是否显示 GPU 占用率。
     @AppStorage(Keys.showGPUUsageInMenuBar) var showGPUUsageInMenuBar: Bool = false
+
+    /// 菜单栏排版：rich = 图标 + 配色 + 分级字号；compact = 纯文本最省宽度。
+    @AppStorage(Keys.menuBarStyle) private var menuBarStyleRaw: String = MenuBarStyle.rich.rawValue
 
     /// 网速单位。
     @AppStorage(Keys.speedUnit) private var speedUnitRaw: String = SpeedUnit.auto.rawValue
@@ -94,6 +112,11 @@ final class AppSettings: ObservableObject {
         set { temperatureUnitRaw = newValue.rawValue }
     }
 
+    var menuBarStyle: MenuBarStyle {
+        get { MenuBarStyle(rawValue: menuBarStyleRaw) ?? .rich }
+        set { menuBarStyleRaw = newValue.rawValue }
+    }
+
     /// 菜单栏当前会显示哪些字段（顺序即显示顺序），写进日志便于排查"少了什么"。
     var menuBarFields: [String] {
         var fields: [String] = ["↓下载"]
@@ -101,6 +124,7 @@ final class AppSettings: ObservableObject {
         if showCPUUsageInMenuBar { fields.append("CPU") }
         if showGPUUsageInMenuBar { fields.append("GPU") }
         if showTemperatureInMenuBar { fields.append("温度") }
+        fields.append(menuBarStyle == .rich ? "样式=丰富" : "样式=紧凑")
         return fields
     }
 
