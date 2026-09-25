@@ -19,6 +19,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.showTemperatureInMenuBar) private var showTemperature = true
     @AppStorage(AppSettings.Keys.showCPUUsageInMenuBar) private var showCPUUsage = false
     @AppStorage(AppSettings.Keys.showGPUUsageInMenuBar) private var showGPUUsage = false
+    @AppStorage(AppSettings.Keys.menuBarStyle) private var menuBarStyleRaw = AppSettings.MenuBarStyle.rich.rawValue
     @AppStorage(AppSettings.Keys.speedUnit) private var speedUnitRaw = SpeedUnit.auto.rawValue
     @AppStorage(AppSettings.Keys.temperatureUnit) private var temperatureUnitRaw = TemperatureUnit.celsius.rawValue
 
@@ -37,20 +38,33 @@ struct SettingsView: View {
             }
 
             Section("菜单栏显示") {
+                Picker("排版样式", selection: $menuBarStyleRaw) {
+                    ForEach(AppSettings.MenuBarStyle.allCases) { style in
+                        Text(style.label).tag(style.rawValue)
+                    }
+                }
+
                 Toggle("下载速率 ↓", isOn: .constant(true))
                 Toggle("上传速率 ↑", isOn: $showUpload)
                 Toggle("CPU 占用率", isOn: $showCPUUsage)
                 Toggle("GPU 占用率", isOn: $showGPUUsage)
                 Toggle("CPU 温度", isOn: $showTemperature)
 
-                Text(previewText)
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                Text("↑ 菜单栏排版预览（数值为示意）。只显示数值与单位，不显示应用名称。")
+                // 用真实菜单栏组件渲染示例数值，切样式当场见效。
+                MenuBarLabelView.compose(
+                    settings: settings,
+                    down: 1_250_000,
+                    up: 68_000,
+                    cpu: 0.12,
+                    gpu: 0.34,
+                    temperature: 64
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color(nsColor: .quaternaryLabelColor).opacity(0.35))
+                .clipShape(Capsule())
+
+                Text("↑ 菜单栏实时预览（数值为示意，样式与顶部状态栏完全一致）。")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -91,16 +105,6 @@ struct SettingsView: View {
         .frame(width: 400)
         .frame(minHeight: 380)
         .onAppear { settings.refreshLoginItemStatus() }
-    }
-
-    /// 按当前开关拼出菜单栏文案（示意值），和 MenuBarLabelView 的字段顺序保持一致。
-    private var previewText: String {
-        var parts = ["↓1.2M"]
-        if showUpload { parts.append("↑68K") }
-        if showCPUUsage { parts.append("12%") }
-        if showGPUUsage { parts.append("G8%") }
-        if showTemperature { parts.append("59°") }
-        return parts.joined(separator: "  ")
     }
 
     /// 间隔修改要广播通知，让采集 Timer 立即重建。

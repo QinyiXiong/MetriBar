@@ -111,6 +111,45 @@ enum SettingsWindow {
     }
 }
 
+/// 离屏渲染自检：把 SwiftUI 视图导出 PNG。
+///
+/// 这台机器的终端没有「屏幕录制」权限，`screencapture` 拿不到菜单栏画面；
+/// 离屏渲染自己的视图不受该权限限制，所以用它来核对排版与配色。
+@MainActor
+enum UISnapshot {
+
+    @discardableResult
+    static func export(_ view: AnyView, name: String, dark: Bool = true) -> URL? {
+        let hosting = NSHostingView(rootView: view)
+        hosting.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        var size = hosting.fittingSize
+        if size.width < 10 || size.height < 10 { size = NSSize(width: 320, height: 40) }
+        hosting.frame = NSRect(origin: .zero, size: size)
+        hosting.layoutSubtreeIfNeeded()
+
+        guard let bitmap = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) else {
+            Diag.warning(Diag.lifecycle, "离屏渲染失败：无法分配 bitmap（\(name)）")
+            return nil
+        }
+        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("metribar-\(name)-\(Int(Date().timeIntervalSince1970)).png")
+        guard let data = bitmap.representation(using: .png, properties: [:]) else {
+            Diag.warning(Diag.lifecycle, "离屏渲染失败：PNG 编码为空（\(name)）")
+            return nil
+        }
+        do {
+            try data.write(to: url)
+            Diag.notice(Diag.lifecycle, "已导出排版自检图 \(name) \(Int(size.width))x\(Int(size.height)) → \(url.path)")
+            return url
+        } catch {
+            Diag.warning(Diag.lifecycle, "导出写盘失败 \(name)：\(error.localizedDescription)")
+            return nil
+        }
+    }
+}
+
 /// 齿轮按钮：统一走 SettingsWindow.open()。
 @MainActor
 struct SettingsGearButton: View {
@@ -139,10 +178,10 @@ struct PanelSection<Content: View>: View {
                 .foregroundColor(.secondary)
                 .textCase(nil)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 5) {
                 content
             }
-            .padding(10)
+            .padding(9)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)

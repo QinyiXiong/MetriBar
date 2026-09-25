@@ -24,7 +24,8 @@ struct MetriBarApp: App {
         let appSettings = AppSettings()
 
         _settings = StateObject(wrappedValue: appSettings)
-        _store = StateObject(wrappedValue: MetricsStore(interval: storedInterval))
+        let metricsStore = MetricsStore(interval: storedInterval)
+        _store = StateObject(wrappedValue: metricsStore)
 
         // 启动即把菜单栏字段写进日志：若菜单栏"少了东西"，先看这行确认是开关问题还是排版问题。
         Diag.notice(Diag.lifecycle, "启动：间隔 \(String(format: "%.1f", storedInterval))s，菜单栏字段 [\(appSettings.menuBarFields.joined(separator: " "))]")
@@ -34,6 +35,36 @@ struct MetriBarApp: App {
         if UserDefaults.standard.bool(forKey: "MetriBarDebugOpenSettings") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 SettingsWindow.open()
+            }
+        }
+
+        // 排版自检：`defaults write com.qyx.MetriBar MetriBarDebugSnap -bool YES`
+        // 启动 3 秒后把菜单栏文案（深色 / 浅色）与面板离屏渲染成 PNG。
+        // 终端没有「屏幕录制」权限时，这是唯一能看到实际排版的方式。
+        if UserDefaults.standard.bool(forKey: "MetriBarDebugSnap") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                let snap = metricsStore.snapshot
+                for dark in [true, false] {
+                    UISnapshot.export(
+                        AnyView(
+                            MenuBarLabelView(snapshot: snap, settings: appSettings)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Color(nsColor: .windowBackgroundColor))
+                        ),
+                        name: dark ? "menubar-dark" : "menubar-light",
+                        dark: dark
+                    )
+                }
+                UISnapshot.export(
+                    AnyView(
+                        PopoverView()
+                            .environmentObject(metricsStore)
+                            .environmentObject(appSettings)
+                            .background(Color(nsColor: .windowBackgroundColor))
+                    ),
+                    name: "panel-dark"
+                )
             }
         }
     }

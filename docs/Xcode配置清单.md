@@ -96,6 +96,8 @@ Support/     AppSettings · Formatters · UIComponents · Diagnostics
 | 2 | 菜单栏只显示数值，无 App 名 | `↓1.5M ↑69K 59°`（设置里可再叠加 CPU / GPU）；日志 `菜单栏字段 [↓下载 ↑上传 温度]` |
 | 2b | **点齿轮能打开设置** | 日志出现 `设置窗口自检：已打开｜可见窗口 […, NSWindow:MetriBar 设置]` |
 | 2c | GPU 占用有数（Apple Silicon） | 面板 `GPU 占用` 行非 `--`，日志 `… CPU 13% GPU 47% …` |
+| 2d | 菜单栏丰富排版 | `⬇ 1.6M │ ⬆ 28K │ 🌡 66°`：图标着色、单位小号；设置里可切「紧凑」纯文本 |
+| 2e | CPU 与 GPU 视觉可区分 | CPU `cpu` + 绿/黄/红条，GPU `cube` + 青色条 |
 | 3 | 点开面板：网络 / 温度 / 风扇 / 内存 / 磁盘齐全 | `ultraThinMaterial`，深浅色自适应 |
 | 4 | 温度旁显示实际传感器 key | `Tp0C`（Apple Silicon）/ `TC0P`（Intel） |
 | 5 | 改刷新间隔立即生效 | 设置页 → 采集，日志出现「采集重建：每 N 秒」 |
@@ -131,6 +133,7 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging
 | --- | --- |
 | `MetriBarVerboseLogging` | 逐 tick、逐网卡的明细（含基线与间隔） |
 | `MetriBarDebugOpenSettings` | 启动 1 秒后自动弹出设置窗口，用于验证 Agent 应用开窗链路 |
+| `MetriBarDebugSnap` | 启动 3 秒后导出菜单栏（深/浅）与面板离屏 PNG，无屏幕录制权限时唯一能看到画面的手段 |
 
 ## 9. 踩过的坑（务必别改回去）
 
@@ -157,5 +160,8 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging
    （症状是「只能看到下载速度」）。用 `Text` 的 `+` 把各段拼成一个 `Text`，分段着色照常可用。
 10. GPU 百分比来自 `IORegistry` 的 `PerformanceStatistics`，是**瞬时值**、跳变极大，
     必须平滑（本项目 EMA α=0.35），否则菜单栏会频闪。
-11. Timer 用 `DispatchSourceTimer` + `leeway:120ms`，并且**只保留一个 source**，
+11. **自定义容量格式化，五档阈值要一次写全**：曾把 GB 档之后直接 `default: TB`，
+    结果 128 GB 内存显示成 `128.0 TB`、646 GB 磁盘显示成 `647.3 TB`。
+    B/KB/MB/GB/TB 阈值列全，再用离屏自检图核对单位。
+12. Timer 用 `DispatchSourceTimer` + `leeway:120ms`，并且**只保留一个 source**，
    改间隔时先 `cancel()` 再重建；`isSampling` 闸门防止 SMC 偶发阻塞导致任务堆积。
