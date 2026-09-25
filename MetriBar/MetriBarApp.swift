@@ -57,6 +57,21 @@ struct MetriBarApp: App {
                     )
                 }
                 UISnapshot.export(
+                    MenuBarBadge.image(
+                        MenuBarLabelView.compose(
+                            settings: appSettings,
+                            down: snap.network.downBps,
+                            up: snap.network.upBps,
+                            cpu: snap.cpu.total,
+                            gpu: snap.gpu.utilization,
+                            temperature: snap.hardware.cpuTemperature
+                        ),
+                        signature: "debug",
+                        dark: true
+                    ),
+                    name: "badge"
+                )
+                UISnapshot.export(
                     AnyView(
                         PopoverView()
                             .environmentObject(metricsStore)

@@ -118,6 +118,19 @@ enum SettingsWindow {
 @MainActor
 enum UISnapshot {
 
+    /// 直接导出已渲染好的 NSImage（用于核对菜单栏位图 label 的尺寸与配色）。
+    @discardableResult
+    static func export(_ image: NSImage, name: String) -> URL? {
+        guard let tiff = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("metribar-\(name)-\(Int(Date().timeIntervalSince1970)).png")
+        guard let data = bitmap.representation(using: .png, properties: [:]) else { return nil }
+        try? data.write(to: url)
+        Diag.notice(Diag.lifecycle, "已导出 \(name) \(Int(image.size.width))x\(Int(image.size.height))pt 像素 \(bitmap.pixelsWide)x\(bitmap.pixelsHigh) → \(url.path)")
+        return url
+    }
+
     @discardableResult
     static func export(_ view: AnyView, name: String, dark: Bool = true) -> URL? {
         let hosting = NSHostingView(rootView: view)

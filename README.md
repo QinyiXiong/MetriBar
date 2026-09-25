@@ -12,6 +12,12 @@
 
 离屏渲染自检图（`MetriBarDebugSnap`，真实数据）：
 
+菜单栏实际提交给状态栏的位图（`isTemplate = false`，非模板渲染才能保住颜色）：
+
+![菜单栏位图](docs/预览/menubar-badge.png)
+
+离屏渲染的完整视图：
+
 ![菜单栏 · 深色](docs/预览/menubar-dark.png)
 ![菜单栏 · 浅色](docs/预览/menubar-light.png)
 
@@ -19,11 +25,28 @@
 
 ---
 
+## 🎯 菜单栏为什么是「自绘位图」
+
+`MenuBarExtra` 的 label 会被 macOS 状态栏按 **template（模板图）** 重绘，实测结果：
+
+| 写法 | 结果 |
+| --- | --- |
+| `Text` + `foregroundColor` | 颜色全被抹平成单色（选中时反色成白/黑） |
+| `Text("\(Image(systemName: …))")` | **SF Symbol 直接不显示**，只剩字面字符：`2.3K│3.5K│54°` |
+| `Image(nsImage:)` + `isTemplate = false` + `.renderingMode(.original)` | ✅ 图标与配色原样保留 |
+
+所以「丰富」排版的做法是：用 `NSHostingView` 把 SwiftUI 排版离屏渲染成
+一张 ~80×20pt 的位图（`MenuBarBadge.swift`），标记 `isTemplate = false` 后交给
+`MenuBarExtra`；带内容签名缓存，数值没变就不重画。「紧凑」排版仍然走纯 `Text`，
+作为极端环境下的兜底。
+
+---
+
 ## ✨ 特性
 
 | 项目 | 说明 |
 | --- | --- |
-| 菜单栏 | 实时 **下载 ↓ / 上传 ↑ / CPU 温度**，可叠加 CPU、GPU 占用率；**两种排版：丰富（SF Symbols + 按负载/温度着色 + 分级字号）/ 紧凑（纯文本）**；等宽数字不抖动 |
+| 菜单栏 | 实时 **下载 ↓ / 上传 ↑ / CPU 温度**，可叠加 CPU、GPU 占用率；**两种排版：丰富（自绘非模板位图，图标 + 配色 + 分级字号）/ 紧凑（纯文本）**；等宽数字不抖动 |
 | 弹出面板 | 上下行速率 + 比例条、CPU 温度（含传感器 key）、**CPU 占用 + GPU 占用（渲染/光栅细分）**、风扇转速/区间、内存（App / Wired / Compressed）、磁盘可用空间 |
 | 后台采集 | `DispatchSourceTimer` + 独立串行队列，1–10 秒可调（默认 2 秒），**主线程零系统调用** |
 | 开机自启 | `SMAppService.mainApp`（macOS 13+），设置页一键开关并显示真实注册状态 |
