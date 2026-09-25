@@ -15,6 +15,7 @@
 //  变长的字段会被裁掉，表现为「只能看到下载速度」。
 //
 
+import AppKit
 import SwiftUI
 
 @MainActor
@@ -36,7 +37,31 @@ struct MenuBarLabelView: View {
     }
 
     var body: some View {
-        Self.compose(
+        // 紧凑模式：纯文本最稳（状态栏 template 渲染下也不会出问题）。
+        if settings.menuBarStyle == .compact {
+            Self.compact(
+                settings: settings,
+                down: snapshot.network.downBps,
+                up: snapshot.network.upBps,
+                cpu: snapshot.cpu.total,
+                gpu: snapshot.gpu.utilization,
+                temperature: snapshot.hardware.cpuTemperature
+            )
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 2)
+            .help(hint)
+        } else {
+            // 丰富模式：状态栏会把 label 当 template 重绘（颜色抹平、SF Symbol 消失），
+            // 所以这里传**非模板位图**，图标与配色才能保住。
+            Image(nsImage: badge)
+                .renderingMode(.original)
+                .padding(.horizontal, 2)
+                .help(hint)
+        }
+    }
+
+    private var badge: NSImage {
+        let composed = Self.compose(
             settings: settings,
             down: snapshot.network.downBps,
             up: snapshot.network.upBps,
@@ -44,9 +69,21 @@ struct MenuBarLabelView: View {
             gpu: snapshot.gpu.utilization,
             temperature: snapshot.hardware.cpuTemperature
         )
-        .fixedSize(horizontal: true, vertical: false)
-        .padding(.horizontal, 2)
-        .help(hint)
+        return MenuBarBadge.image(
+            composed,
+            signature: Self.signature(settings: settings, snapshot: snapshot),
+            dark: MenuBarBadge.isDark
+        )
+    }
+
+    /// 缓存签名：数值取整到与显示一致的精度，内容不变就不必重画位图。
+    static func signature(settings: AppSettings, snapshot: MetricsSnapshot) -> String {
+        var parts = [Fmt.compactSpeed(snapshot.network.downBps)]
+        if settings.showUploadInMenuBar { parts.append(Fmt.compactSpeed(snapshot.network.upBps)) }
+        if settings.showCPUUsageInMenuBar { parts.append(Fmt.percent(snapshot.cpu.total)) }
+        if settings.showGPUUsageInMenuBar, let gpu = snapshot.gpu.utilization { parts.append(Fmt.percent(gpu)) }
+        if settings.showTemperatureInMenuBar { parts.append(Fmt.temperature(snapshot.hardware.cpuTemperature, unit: settings.temperatureUnit)) }
+        return parts.joined(separator: ",")
     }
 
     // MARK: - 共用拼装（真实菜单栏 & 设置页预览都走这里，保证所见即所得）
@@ -101,9 +138,12 @@ struct MenuBarLabelView: View {
         let idle = bytes < 1_000
 
         if idle {
-            return Text(verbatim: "·")
-                .font(Metrics.value)
-                .foregroundColor(.secondary.opacity(0.75))
+            // 空闲也要保留图标与位置节奏，只把整段转成暗色，
+            // 否则会出现孤零零一个点、字段宽度跳来跳去。
+            let dim = Color.secondary.opacity(0.7)
+            return glyph(symbol, dim, Metrics.arrow)
+                + Metrics.gap
+                + Text(verbatim: "0").font(Metrics.value).foregroundColor(dim)
         }
 
         return glyph(symbol, color, Metrics.arrow)
