@@ -63,6 +63,29 @@ enum MenuBarBadge {
         return image
     }
 
+    /// 自检：直接读取真实状态栏按钮上的图像属性。
+    /// `isTemplate` 若被打回 true，说明系统又把 label 抹成单色（图标/颜色都会丢）。
+    static func logStatusItem() {
+        var found = 0
+        for window in NSApp.windows {
+            guard let content = window.contentView else { continue }
+            var stack: [NSView] = [content]
+            while !stack.isEmpty {
+                let view = stack.removeLast()
+                stack.append(contentsOf: view.subviews)
+                guard let button = view as? NSStatusBarButton, let image = button.image else { continue }
+                found += 1
+                Diag.notice(
+                    Diag.lifecycle,
+                    "状态栏按钮：image \(Int(image.size.width))x\(Int(image.size.height))pt isTemplate=\(image.isTemplate) 像素 \(image.representations.first?.pixelsWide ?? 0)x\(image.representations.first?.pixelsHigh ?? 0) title=\u{201C}\(button.title)\u{201D}"
+                )
+            }
+        }
+        if found == 0 {
+            Diag.warning(Diag.lifecycle, "状态栏按钮自检：没找到 NSStatusBarButton（label 可能未挂载）")
+        }
+    }
+
     /// 当前系统是否处于深色外观。
     static var isDark: Bool {
         NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua

@@ -56,6 +56,7 @@ struct MetriBarApp: App {
                         dark: dark
                     )
                 }
+                MenuBarBadge.logStatusItem()
                 UISnapshot.export(
                     MenuBarBadge.image(
                         MenuBarLabelView.compose(
