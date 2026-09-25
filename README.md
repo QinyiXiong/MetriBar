@@ -25,7 +25,7 @@
 
 ![弹出面板 · 深色](docs/预览/panel-dark.png)
 
-App 图标（`AppIcon.icns`，1024→16px 全尺寸自绘）：
+App 图标（`AppIcon.icns`，1024→16px 全尺寸自绘 · 卡通小机器人 mascot：白机身 + 天青面罩 + kawaii 脸，呼应菜单栏 ♥）：
 
 ![App 图标](docs/预览/app-icon.png)
 

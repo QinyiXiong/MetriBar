@@ -25,7 +25,7 @@ The exact bitmap handed to the status bar — locked at **177×18 pt @2x**, rend
 
 ![Popover · dark](docs/预览/panel-dark.png)
 
-App icon (`AppIcon.icns`, drawn for 1024→16 px):
+App icon (`AppIcon.icns`, drawn for 1024→16 px · cartoon robot mascot: white chassis + cyan visor + kawaii face, echoing the ♥ in the menu bar):
 
 ![App icon](docs/预览/app-icon.png)
 

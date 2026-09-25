@@ -1,13 +1,17 @@
 import AppKit
 import CoreGraphics
 
-// ── 调色板（明亮卡通）───────────────────────────────────────────
-let bgTop    = NSColor(srgbRed: 0.46, green: 0.78, blue: 1.00, alpha: 1)   // 天空蓝
-let bgBottom = NSColor(srgbRed: 0.18, green: 0.54, blue: 0.96, alpha: 1)
-let heartTop = NSColor(srgbRed: 1.00, green: 0.50, blue: 0.62, alpha: 1)   // 珊瑚粉
-let heartBot = NSColor(srgbRed: 0.91, green: 0.22, blue: 0.40, alpha: 1)   // 玫红
-let ink      = NSColor(srgbRed: 0.16, green: 0.20, blue: 0.34, alpha: 1)   // 卡通描边/眼睛
-let blush    = NSColor(srgbRed: 1.00, green: 0.62, blue: 0.72, alpha: 0.55)
+// ── 调色板（明亮卡通 · 小机器人 mascot）────────────────────────────
+let bgTop     = NSColor(srgbRed: 0.46, green: 0.78, blue: 1.00, alpha: 1)   // 天空蓝
+let bgBottom  = NSColor(srgbRed: 0.18, green: 0.54, blue: 0.96, alpha: 1)
+let chromeTop = NSColor(srgbRed: 0.99, green: 1.00, blue: 1.00, alpha: 1)   // 机身（近白）
+let chromeBot = NSColor(srgbRed: 0.80, green: 0.87, blue: 0.97, alpha: 1)   // 机身下（淡蓝）
+let glassTop  = NSColor(srgbRed: 0.36, green: 0.76, blue: 1.00, alpha: 1)   // 面罩玻璃（天青）
+let glassBot  = NSColor(srgbRed: 0.14, green: 0.47, blue: 0.90, alpha: 1)
+let accentTop = NSColor(srgbRed: 1.00, green: 0.58, blue: 0.68, alpha: 1)   // 珊瑚粉（呼应 ♥）
+let accentBot = NSColor(srgbRed: 0.91, green: 0.24, blue: 0.42, alpha: 1)
+let ink       = NSColor(srgbRed: 0.16, green: 0.20, blue: 0.34, alpha: 1)   // 卡通描边/眼睛
+let blush     = NSColor(srgbRed: 1.00, green: 0.62, blue: 0.72, alpha: 0.55)
 
 func grad(_ a: NSColor, _ b: NSColor) -> NSGradient { NSGradient(starting: a, ending: b)! }
 
@@ -15,43 +19,24 @@ func squircle(_ rect: CGRect, _ r: CGFloat) -> CGPath {
     CGPath(roundedRect: rect, cornerWidth: r, cornerHeight: r, transform: nil)
 }
 
-// 心脏轮廓（参数方程采样，16·sin³t / 13cos t −5cos2t −4cos3t −cos4t）
-func heartPath(center cx: CGFloat, cy: CGFloat, w HW: CGFloat, h HH: CGFloat) -> CGPath {
-    let N = 240
-    var raw: [(CGFloat, CGFloat)] = []
-    var minX = CGFloat.infinity, maxX = -CGFloat.infinity, minY = CGFloat.infinity, maxY = -CGFloat.infinity
-    for i in 0..<N {
-        let t = CGFloat(i) / CGFloat(N) * 2 * .pi
-        let x = 16 * pow(sin(t), 3)
-        let y = 13*cos(t) - 5*cos(2*t) - 4*cos(3*t) - cos(4*t)
-        raw.append((x, y))
-        minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
-    }
-    let p = CGMutablePath()
-    for (i, pt) in raw.enumerated() {
-        let px = cx + (pt.0 - 0) / ((maxX - minX)/2) * (HW/2)
-        let py = (cy - HH/2) + (pt.1 - minY) / (maxY - minY) * HH
-        if i == 0 { p.move(to: CGPoint(x: px, y: py)) } else { p.addLine(to: CGPoint(x: px, y: py)) }
-    }
-    p.closeSubpath()
-    return p
-}
-
 // 四角闪光星
 func star(_ c: CGPoint, _ r: CGFloat) -> CGPath {
     let p = CGMutablePath(); let inn = r * 0.34
     let angs: [CGFloat] = [.pi/2, .pi, 1.5 * .pi, 0]
     for k in 0..<4 {
-        let a1 = angs[k]; let a2 = angs[k] - .pi/4; let a3 = angs[k] + .pi/4
+        let a1 = angs[k]; let a2 = angs[k] - .pi/4
         p.addLine(to: CGPoint(x: c.x + cos(a1)*r, y: c.y + sin(a1)*r))
         p.addLine(to: CGPoint(x: c.x + cos(a2)*inn, y: c.y + sin(a2)*inn))
-        _ = a3
     }
     p.closeSubpath(); return p
 }
 
 func fill(_ ctx: CGContext, _ path: CGPath, rect: CGRect, _ g: NSGradient) {
     ctx.saveGState(); ctx.addPath(path); ctx.clip(); g.draw(in: rect, angle: -90); ctx.restoreGState()
+}
+func inkStroke(_ ctx: CGContext, _ path: CGPath, width w: CGFloat) {
+    ctx.saveGState(); ctx.addPath(path); ctx.setStrokeColor(ink.cgColor)
+    ctx.setLineWidth(w); ctx.setLineJoin(.round); ctx.strokePath(); ctx.restoreGState()
 }
 
 func renderPNG(_ px: Int) -> Data {
@@ -65,7 +50,7 @@ func renderPNG(_ px: Int) -> Data {
     let ctx = nsgc.cgContext
     ctx.clear(CGRect(x: 0, y: 0, width: S, height: S))
 
-    // 背景 squircle + 顶部高光 + 内描边
+    // ── 背景 squircle + 顶部高光 + 远景气泡 + 内描边 ──
     let m = S * 0.02, corner = S * 0.2237
     let bgRect = CGRect(x: m, y: m, width: S - 2*m, height: S - 2*m)
     let bgPath = squircle(bgRect, corner)
@@ -74,63 +59,123 @@ func renderPNG(_ px: Int) -> Data {
     let gloss = NSGradient(colors: [NSColor(white: 1, alpha: 0.22), NSColor(white: 1, alpha: 0)],
                            atLocations: [0.0, 0.5], colorSpace: .sRGB)!
     gloss.draw(in: bgRect, angle: -90)
-    // 远景柔光点（卡通气泡）
     ctx.setFillColor(NSColor(white: 1, alpha: 0.10).cgColor)
     ctx.fillEllipse(in: CGRect(x: S*0.68, y: S*0.14, width: S*0.30, height: S*0.30))
     ctx.restoreGState()
     ctx.saveGState(); ctx.addPath(squircle(bgRect.insetBy(dx: S*0.006, dy: S*0.006), corner*0.98))
     ctx.setStrokeColor(NSColor(white: 1, alpha: 0.35).cgColor); ctx.setLineWidth(max(1, S*0.01)); ctx.strokePath(); ctx.restoreGState()
 
-    // 心脏几何
-    let cx = S * 0.5, HW = S * 0.64, HH = S * 0.56, cy = S * 0.5
-    let heart = heartPath(center: cx, cy: cy, w: HW, h: HH)
+    // ── 小机器人几何 ──
+    let cx = S * 0.5
+    let headW = S * 0.60, headH = S * 0.42, headCy = S * 0.56
+    let headR = S * 0.14
+    let headRect = CGRect(x: cx - headW/2, y: headCy - headH/2, width: headW, height: headH)
+    let headPath = squircle(headRect, headR)
 
-    // ① 贴纸白描边 + 投影（让心脏像贴纸浮起）
+    // 身体（机身后下方露头，梯形圆角近似：用小圆角矩形）
+    let bodyW = S * 0.34, bodyH = S * 0.18, bodyCy = headCy - headH/2 - bodyH*0.52
+    let bodyRect = CGRect(x: cx - bodyW/2, y: bodyCy - bodyH/2, width: bodyW, height: bodyH)
+    let bodyPath = squircle(bodyRect, S*0.08)
+
+    // 天线 + 耳罩
+    let antX = cx, antTopY = headCy + headH/2
+    let antLen = S * 0.13, ballR = S * 0.045
+    let ballC = CGPoint(x: antX, y: antTopY + antLen)
+    func ear(_ sign: CGFloat) -> CGRect {
+        let ex = cx + sign * (headW/2 + S*0.01), ey = headCy
+        return CGRect(x: ex - S*0.058, y: ey - S*0.058, width: S*0.116, height: S*0.116)
+    }
+
+    // ① 贴纸白描边 + 投影（身体→耳→天线→头，整体浮起）
     ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -S*0.02), blur: S*0.06, color: NSColor(white: 0, alpha: 0.32).cgColor)
-    ctx.addPath(heart); ctx.setStrokeColor(NSColor.white.cgColor); ctx.setLineWidth(S*0.075)
-    ctx.setLineJoin(.round); ctx.strokePath()
+    ctx.setShadow(offset: CGSize(width: 0, height: -S*0.018), blur: S*0.05, color: NSColor(white: 0, alpha: 0.30).cgColor)
+    ctx.setStrokeColor(NSColor.white.cgColor); ctx.setLineJoin(.round); ctx.setLineCap(.round)
+    let halo = S * 0.075
+    ctx.setLineWidth(halo)
+    ctx.addPath(bodyPath); ctx.strokePath()
+    ctx.addPath(squircle(headRect, headR)); ctx.strokePath()
+    ctx.setLineWidth(halo * 0.7)
+    ctx.addEllipse(in: ear(-1)); ctx.strokePath()
+    ctx.addEllipse(in: ear(1));  ctx.strokePath()
+    ctx.beginPath(); ctx.move(to: CGPoint(x: antX, y: headCy + headH/2 - S*0.01)); ctx.addLine(to: ballC); ctx.strokePath()
+    ctx.setLineWidth(halo)
+    ctx.beginPath(); ctx.addEllipse(in: CGRect(x: ballC.x-ballR, y: ballC.y-ballR, width: 2*ballR, height: 2*ballR)); ctx.strokePath()
     ctx.restoreGState()
 
-    // ② 心脏本体红色渐变
-    fill(ctx, heart, rect: CGRect(x: cx-HW/2, y: cy-HH/2, width: HW, height: HH), grad(heartTop, heartBot))
+    // ② 机身 / 头 / 耳 chrome 渐变填充
+    fill(ctx, bodyPath, rect: bodyRect, grad(chromeTop, chromeBot))
+    fill(ctx, headPath, rect: headRect, grad(chromeTop, chromeBot))
+    for s in [-1.0, 1.0] as [CGFloat] {
+        let e = ear(s); fill(ctx, CGPath(ellipseIn: e, transform: nil), rect: e, grad(chromeTop, chromeBot))
+        inkStroke(ctx, CGPath(ellipseIn: e.insetBy(dx: S*0.03, dy: S*0.03), transform: nil), width: max(1, S*0.012))
+    }
 
-    // ③ 卡通深色轮廓线
-    ctx.saveGState(); ctx.addPath(heart); ctx.setStrokeColor(ink.cgColor)
-    ctx.setLineWidth(S*0.022); ctx.setLineJoin(.round); ctx.strokePath(); ctx.restoreGState()
+    // ③ 机身/头 深色轮廓线
+    inkStroke(ctx, bodyPath, width: S*0.02)
+    inkStroke(ctx, headPath, width: S*0.022)
 
-    // ④ 大高光（左上瓣，贴纸光泽）
+    // ④ 头部顶缘大高光（贴纸光泽）
     ctx.saveGState()
-    ctx.translateBy(x: cx - HW*0.22, y: cy + HH*0.34); ctx.rotate(by: -0.5)
-    ctx.setFillColor(NSColor(white: 1, alpha: 0.55).cgColor)
-    ctx.fillEllipse(in: CGRect(x: -HW*0.13, y: -HH*0.065, width: HW*0.26, height: HH*0.13))
+    ctx.translateBy(x: cx - headW*0.20, y: headCy + headH*0.30); ctx.rotate(by: -0.5)
+    ctx.setFillColor(NSColor(white: 1, alpha: 0.5).cgColor)
+    ctx.fillEllipse(in: CGRect(x: -headW*0.13, y: -headH*0.055, width: headW*0.26, height: headH*0.11))
     ctx.restoreGState()
 
-    // ⑤ kawaii 表情：眼睛 + 高光点 + 微笑 + 腮红
+    // ⑤ 面罩玻璃（kawaii 脸所在屏幕）
+    let screenW = headW - S*0.14, screenH = headH * 0.5
+    let screenRect = CGRect(x: cx - screenW/2, y: headCy - headH*0.10, width: screenW, height: screenH)
+    let screenPath = squircle(screenRect, S*0.09)
+    fill(ctx, screenPath, rect: screenRect, grad(glassTop, glassBot))
+    inkStroke(ctx, screenPath, width: S*0.018)
+    // 面罩斜向高光
+    ctx.saveGState(); ctx.addPath(screenPath); ctx.clip()
+    ctx.setFillColor(NSColor(white: 1, alpha: 0.28).cgColor)
+    ctx.move(to: CGPoint(x: screenRect.minX, y: screenRect.maxY))
+    ctx.addLine(to: CGPoint(x: screenRect.minX + screenW*0.5, y: screenRect.maxY))
+    ctx.addLine(to: CGPoint(x: screenRect.minX + screenW*0.2, y: screenRect.minY))
+    ctx.addLine(to: CGPoint(x: screenRect.minX, y: screenRect.minY)); ctx.fillPath()
+    ctx.restoreGState()
+
+    // ⑥ 眼睛（大）+ 高光点
     func ellipse(_ c: CGPoint, _ rx: CGFloat, _ ry: CGFloat, _ color: CGColor) {
         ctx.setFillColor(color); ctx.fillEllipse(in: CGRect(x: c.x-rx, y: c.y-ry, width: 2*rx, height: 2*ry))
     }
-    let eyeY = cy + HH*0.14, eyeDX = HW*0.17
-    ellipse(CGPoint(x: cx - eyeDX, y: eyeY), S*0.050, S*0.068, ink.cgColor)
-    ellipse(CGPoint(x: cx + eyeDX, y: eyeY), S*0.050, S*0.068, ink.cgColor)
-    ellipse(CGPoint(x: cx - eyeDX - S*0.014, y: eyeY + S*0.024), S*0.016, S*0.020, NSColor.white.cgColor)
-    ellipse(CGPoint(x: cx + eyeDX - S*0.014, y: eyeY + S*0.024), S*0.016, S*0.020, NSColor.white.cgColor)
-    // 腮红
-    ctx.setFillColor(blush.cgColor)
-    ctx.fillEllipse(in: CGRect(x: cx - HW*0.30 - S*0.045, y: cy - HH*0.06 - S*0.028, width: S*0.09, height: S*0.056))
-    ctx.fillEllipse(in: CGRect(x: cx + HW*0.30 - S*0.045, y: cy - HH*0.06 - S*0.028, width: S*0.09, height: S*0.056))
-    // 微笑（U 形二次曲线）
+    let eyeY = screenRect.midY + screenH*0.02, eyeDX = screenW*0.24
+    ellipse(CGPoint(x: cx - eyeDX, y: eyeY), S*0.048, S*0.062, NSColor.white.cgColor)
+    ellipse(CGPoint(x: cx + eyeDX, y: eyeY), S*0.048, S*0.062, NSColor.white.cgColor)
+    ellipse(CGPoint(x: cx - eyeDX + S*0.012, y: eyeY - S*0.014), S*0.018, S*0.022, ink.cgColor)
+    ellipse(CGPoint(x: cx + eyeDX + S*0.012, y: eyeY - S*0.014), S*0.018, S*0.022, ink.cgColor)
+
+    // ⑦ 微笑（在面罩下沿，二次曲线）
     ctx.saveGState()
-    ctx.setStrokeColor(ink.cgColor); ctx.setLineWidth(S*0.024); ctx.setLineCap(.round)
-    ctx.move(to: CGPoint(x: cx - HW*0.14, y: cy - HH*0.02))
-    ctx.addQuadCurve(to: CGPoint(x: cx + HW*0.14, y: cy - HH*0.02), control: CGPoint(x: cx, y: cy - HH*0.18))
+    ctx.setStrokeColor(NSColor.white.cgColor); ctx.setLineWidth(S*0.022); ctx.setLineCap(.round)
+    ctx.move(to: CGPoint(x: cx - screenW*0.14, y: screenRect.minY + screenH*0.22))
+    ctx.addQuadCurve(to: CGPoint(x: cx + screenW*0.14, y: screenRect.minY + screenH*0.22),
+                     control: CGPoint(x: cx, y: screenRect.minY + screenH*0.05))
     ctx.strokePath(); ctx.restoreGState()
 
-    // ⑥ 闪光星星（白）
+    // ⑧ 腮红（贴在头两侧，面罩外）
+    ctx.setFillColor(blush.cgColor)
+    ctx.fillEllipse(in: CGRect(x: cx - headW*0.34 - S*0.05, y: screenRect.minY - S*0.01, width: S*0.10, height: S*0.056))
+    ctx.fillEllipse(in: CGRect(x: cx + headW*0.34 - S*0.05, y: screenRect.minY - S*0.01, width: S*0.10, height: S*0.056))
+
+    // ⑨ 天线球（珊瑚粉）+ 胸口心形灯（呼应 ♥）
+    let ballRect = CGRect(x: ballC.x-ballR, y: ballC.y-ballR, width: 2*ballR, height: 2*ballR)
+    fill(ctx, CGPath(ellipseIn: ballRect, transform: nil), rect: ballRect, grad(accentTop, accentBot))
+    inkStroke(ctx, CGPath(ellipseIn: ballRect, transform: nil), width: max(1, S*0.014))
     ctx.setFillColor(NSColor.white.cgColor)
-    ctx.addPath(star(CGPoint(x: S*0.17, y: S*0.80), S*0.055)); ctx.fillPath()
-    ctx.addPath(star(CGPoint(x: S*0.85, y: S*0.74), S*0.045)); ctx.fillPath()
-    ctx.addPath(star(CGPoint(x: S*0.83, y: S*0.28), S*0.035)); ctx.fillPath()
+    ellipse(CGPoint(x: ballC.x - ballR*0.3, y: ballC.y + ballR*0.3), ballR*0.28, ballR*0.28, NSColor.white.cgColor)
+    // 天线杆深色描边
+    ctx.saveGState(); ctx.setStrokeColor(ink.cgColor); ctx.setLineWidth(max(1, S*0.016)); ctx.setLineCap(.round)
+    ctx.move(to: CGPoint(x: antX, y: headCy + headH/2)); ctx.addLine(to: CGPoint(x: ballC.x, y: ballC.y - ballR*0.6)); ctx.strokePath(); ctx.restoreGState()
+    // 胸口小灯（珊瑚）
+    ellipse(CGPoint(x: cx, y: bodyCy + bodyH*0.1), S*0.022, S*0.022, accentBot.cgColor)
+
+    // ⑩ 闪光星星（白）
+    ctx.setFillColor(NSColor.white.cgColor)
+    ctx.addPath(star(CGPoint(x: S*0.16, y: S*0.80), S*0.055)); ctx.fillPath()
+    ctx.addPath(star(CGPoint(x: S*0.86, y: S*0.72), S*0.045)); ctx.fillPath()
+    ctx.addPath(star(CGPoint(x: S*0.83, y: S*0.24), S*0.032)); ctx.fillPath()
 
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
@@ -160,6 +205,5 @@ try! JSONSerialization.data(withJSONObject: ["images": images, "info": ["author"
 
 let snap = "/Users/qinyixiong/Programer/CodeManager/MetriBar/.tmp/snap"
 try? fm.createDirectory(atPath: snap, withIntermediateDirectories: true)
-let png512 = cache[512]!
-try! png512.write(to: URL(fileURLWithPath: snap + "/metribar-icon-preview.png"))
-print("卡通图标已生成 \(images.count) 尺寸")
+try! cache[512]!.write(to: URL(fileURLWithPath: snap + "/metribar-icon-preview.png"))
+print("机器人图标已生成 \(images.count) 尺寸")
