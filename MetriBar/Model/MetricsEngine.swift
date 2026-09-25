@@ -32,6 +32,8 @@ final class MetricsEngine {
     private var cpu = CPULoadCollector()
     private var gpu = GPUCollector()
     private let sensors = SMCSensorReader()
+    /// 手表心率采集器（BLE）。独立队列，tick 只做一次无锁读。
+    private let heart = HeartRateCollector.shared
 
     private weak var store: MetricsStore?
     private var isSampling = false
@@ -60,11 +62,25 @@ final class MetricsEngine {
     func start(interval seconds: TimeInterval) {
         interval = clamped(seconds)
         Diag.notice(Diag.lifecycle, "采集启动：每 \(interval) 秒")
+        if heartEnabled() { heart.start() }   // 心率默认开启：需要时把蓝牙栈拉起来
         queue.async { [weak self] in
             guard let self else { return }
             self.scheduleTimer()
         }
     }
+
+    /// 心率显示开关（未显式设置时默认开）。
+    private func heartEnabled() -> Bool {
+        (UserDefaults.standard.object(forKey: AppSettings.Keys.showHeartRateInMenuBar) as? Bool) ?? true
+    }
+
+    /// 心率显示开关联动蓝牙采集的起停。
+    func setHeartEnabled(_ enabled: Bool) {
+        Diag.notice(Diag.lifecycle, "心率采集：\(enabled ? "开启" : "关闭")")
+        enabled ? heart.start() : heart.stop()
+    }
+
+    func rescanHeart() { heart.rescan() }
 
     func restart(interval seconds: TimeInterval) {
         interval = clamped(seconds)
@@ -80,6 +96,7 @@ final class MetricsEngine {
 
     func stop() {
         Diag.notice(Diag.lifecycle, "采集停止")
+        heart.stop()
         queue.async { [weak self] in
             self?.timer?.cancel()
             self?.timer = nil
@@ -144,6 +161,7 @@ final class MetricsEngine {
         let diskSnapshot = disk.sample()
         let cpuSnapshot = cpu.sample()
         let gpuSnapshot = gpu.sample(now: now)
+        let heartReading = heart.current()   // 无锁读缓存，绝不阻塞
 
         let store = self.store
         let sensors = self.sensors
@@ -157,6 +175,7 @@ final class MetricsEngine {
                 disk: diskSnapshot,
                 cpu: cpuSnapshot,
                 gpu: gpuSnapshot,
+                heart: heartReading,
                 timestamp: Date()
             )
             await store?.publish(snapshot)
@@ -181,6 +200,7 @@ final class MetricsEngine {
              + " 风扇 \(fans)"
              + " 内存 \(Fmt.percent(snapshot.memory.usedFraction))"
              + " 磁盘剩余 \(Fmt.volume(snapshot.disk.freeBytes))"
+             + " ♥\(snapshot.heart.bpm.map(String.init) ?? "--")(\(snapshot.heart.status.text))"
              + " 基线就绪=\(snapshot.network.ready)"
     }
 
@@ -250,21 +270,36 @@ final class MetricsStore: ObservableObject {
     /// 设置项由 @AppStorage 直接写入，不触发 didSet；
     /// 因此由 AppSettings 主动广播通知，这里订阅后重建 Timer。
     private func observeSettings() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleIntervalChange(_:)),
-            name: .metriBarRefreshIntervalChanged,
-            object: nil
-        )
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(handleIntervalChange(_:)),
+                           name: .metriBarRefreshIntervalChanged, object: nil)
+        center.addObserver(self, selector: #selector(handleHeartEnabled(_:)),
+                           name: .metriBarHeartEnabledChanged, object: nil)
+        center.addObserver(self, selector: #selector(handleHeartRescan),
+                           name: .metriBarHeartRescan, object: nil)
     }
 
     @objc private func handleIntervalChange(_ note: Notification) {
         let seconds = (note.object as? TimeInterval) ?? UserDefaults.standard.double(forKey: AppSettings.Keys.refreshInterval)
         engine.restart(interval: seconds)
     }
+
+    @objc private func handleHeartEnabled(_ note: Notification) {
+        engine.setHeartEnabled((note.object as? Bool) ?? true)
+    }
+
+    @objc private func handleHeartRescan() {
+        engine.rescanHeart()
+    }
 }
 
 extension Notification.Name {
     /// 刷新间隔发生变化（object 为新的 TimeInterval）。
     static let metriBarRefreshIntervalChanged = Notification.Name("com.qyx.MetriBar.refreshIntervalChanged")
+    /// 心率显示开关变化（object 为 Bool）：联动蓝牙采集起停。
+    static let metriBarHeartEnabledChanged = Notification.Name("com.qyx.MetriBar.heartEnabledChanged")
+    /// 需要重新扫描心率设备（换了手表 / 改了名称过滤）。
+    static let metriBarHeartRescan = Notification.Name("com.qyx.MetriBar.heartRescan")
+    /// 心率状态/数值发生变化（采集器发出，UI 可 @observe）。
+    static let metriBarHeartState = Notification.Name("com.qyx.MetriBar.heartState")
 }

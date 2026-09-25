@@ -68,6 +68,7 @@ struct MetriBarApp: App {
                         cpu: snap.cpu.total,
                         gpu: snap.gpu.utilization,
                         temperature: snap.hardware.cpuTemperature,
+                        heart: snap.heart.bpm ?? 72,
                         dark: MenuBarBadge.isDark
                     ),
                     name: "badge-live"
@@ -80,7 +81,8 @@ struct MetriBarApp: App {
                             up: 68_000,
                             cpu: 0.12,
                             gpu: 0.34,
-                            temperature: 64
+                            temperature: 64,
+                            heart: 72
                         ),
                         background: .pill,
                         dark: false

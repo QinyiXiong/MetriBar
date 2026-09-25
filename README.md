@@ -6,11 +6,11 @@
 
 </div>
 
-一个 **macOS 菜单栏实时监视工具**：在菜单栏直接看到 **下载 / 上传速率 + CPU 温度**，点开面板查看网络、CPU、GPU、风扇、内存与磁盘。
+一个 **macOS 菜单栏实时监视工具**：在菜单栏直接看到 **下载 / 上传速率 + CPU 温度 + 手表心率 ♥**，点开面板查看网络、CPU、GPU、风扇、内存与磁盘。
 
 纯 **SwiftUI `MenuBarExtra(.window)`** 实现 —— 不写一行 AppKit `NSStatusItem`，没有 WidgetKit / 桌面小组件，没有 CoreData / CloudKit。
 
-> 菜单栏效果：`↓12.4M ↑980K 72°`（仅数值与单位，不显示应用名称）
+> 菜单栏效果：`↓12.4M ↑980K 72° ♥72`（仅数值与单位，不显示应用名称）
 
 ---
 
@@ -56,7 +56,31 @@ App 图标（`AppIcon.icns`，1024→16px 全尺寸自绘）：
 | 原生观感 | `ultraThinMaterial` 背景、圆角卡片、深浅色自适应、系统控件尺寸与字号 |
 | 硬件读取 | [SMCKit](https://github.com/srimanachanta/SMCKit)（MIT）访问 AppleSMC：CPU 温度、风扇转速 |
 | GPU 占用 | IOKit `IORegistry` → GPU accelerator（Apple Silicon 为 `AGXAccelerator…`）的 `PerformanceStatistics`，指数平滑防跳变 |
+| 心率 ♥ | CoreBluetooth **BLE** 连接支持「广播心率」的手表（Garmin fenix 8 等），订阅标准心率服务 `0x180D` / 特征 `0x2A37`，**实时推送到菜单栏 + 面板**；无 SDK、不联网、不上云；macOS **无 ANT+**，走 BLE |
 | 体积 | 单个自包含 `.app`；SMCKit 静态链接，无第三方 dylib |
+
+---
+
+## 🫀 手表心率（蓝牙 BLE）
+
+MetriBar 用 macOS 自带的 **CoreBluetooth**，把运动手表实时广播的心率读进来，直接显示在菜单栏 `♥72` 与面板卡片上——**不需要任何厂商 SDK、不联网、不上云**。
+
+**原理**：手表开启「心率广播」后，会作为 BLE **外设（Peripheral）** 广播标准 **Heart Rate Service `0x180D`**；MetriBar 作为 **中心（Central）** 扫描 → 连接 → 订阅特征 **`0x2A37`（Heart Rate Measurement）**，手表每约 1 秒推一次。解析 `flags` 兼容 8/16-bit 心率值与传感器接触位，并校验 20…260 过滤噪声。断线自动重连（记住上次设备 UUID，优先回连）。
+
+**手表端（fenix 8）**：下拉快捷面板 / 活动中找到「**心率广播**」并打开（不同固件路径略有差异，一般为：长按 ⌂ → 手机连接 / 传感器 → 心率广播）。广播模式下手表专为「外部接收器」服务。
+
+**Mac 端**：
+1. 首次启动会弹出「**允许 MetriBar 使用蓝牙**」→ 点允许（`NSBluetoothAlwaysUsageDescription`）。
+2. 设置 → 「心率 · 蓝牙」里可看到实时连接状态、当前 BPM，并可改**设备名过滤**（默认匹配 `fenix`，留空则接受任何广播心率服务的设备）。
+3. 换一块手表 → 点「重新搜索手表」即可，无需重启。
+
+> ⚠️ **注意事项 / 排查**
+> - macOS **没有 ANT+ 无线**，只能走 BLE。若你的设备只发 ANT+，本 App 看不到（需 USB ANT+ 棒 + 额外驱动，超出范围）。
+> - 手表必须处于「**心率广播**」状态；仅日常佩戴不主动广播时是搜不到的。
+> - 部分手表在被**手机 App 连接**时会暂停对外广播（广播本就是给第三方接收器用的）；如连不上，可断开手机或重新开广播。
+> - 没授权蓝牙 / 蓝牙未开 → 状态会显示「未授权 / 蓝牙未开启」，去 系统设置 › 隐私与安全 › 蓝牙 允许即可。
+> - 需要重置授权：`tccutil reset Bluetooth com.qyx.MetriBar` 后重启 App。
+> - 不用心率时，在设置里关掉「菜单栏显示心率」即**完全停止蓝牙扫描**，省电。
 
 ---
 

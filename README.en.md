@@ -6,11 +6,11 @@
 
 </div>
 
-**A macOS menu-bar system monitor.** See **download / upload speed + CPU temperature** right in the menu bar; click for a panel with network, CPU, GPU, fans, memory and disk.
+**A macOS menu-bar system monitor.** See **download / upload speed + CPU temperature + heart rate ♥** right in the menu bar; click for a panel with network, CPU, GPU, fans, memory and disk.
 
 Built purely with **SwiftUI `MenuBarExtra(.window)`** — not a single line of AppKit `NSStatusItem`, no WidgetKit / desktop widgets, no CoreData / CloudKit.
 
-> Menu-bar readout: `↓12.4M ↑980K 72°` (values + units only, no app name)
+> Menu-bar readout: `↓12.4M ↑980K 72° ♥72` (values + units only, no app name)
 
 ---
 
@@ -56,7 +56,31 @@ So the "rich" style draws everything with **Core Text / `NSAttributedString`** i
 | Native feel | `ultraThinMaterial` background, rounded cards, light/dark adaptive, system control metrics & font sizes |
 | Hardware reads | [SMCKit](https://github.com/srimanachanta/SMCKit) (MIT) for AppleSMC: CPU temperature, fan RPM |
 | GPU usage | IOKit `IORegistry` → GPU accelerator (`AGXAccelerator…` on Apple Silicon) `PerformanceStatistics`, EMA-smoothed to stop flicker |
+| Heart rate ♥ | CoreBluetooth **BLE** links to a watch that broadcasts heart rate (Garmin fenix 8, etc.), subscribing the standard Heart Rate service `0x180D` / characteristic `0x2A37`, **pushed live to the menu bar + panel**; no SDK, no network, no cloud; macOS has **no ANT+**, uses BLE |
 | Footprint | Single self-contained `.app`; SMCKit statically linked, no third-party dylibs |
+
+---
+
+## Heart rate (Bluetooth LE)
+
+MetriBar uses macOS's built-in **CoreBluetooth** to read the heart rate your sports watch broadcasts and show it in the menu bar (`♥72`) and in a panel card — **no vendor SDK, no network, no cloud**.
+
+**How it works**: when the watch turns on "Broadcast Heart Rate" it advertises the standard **Heart Rate Service `0x180D`** as a BLE **peripheral**; MetriBar acts as the **central** — scan → connect → subscribe to characteristic **`0x2A37` (Heart Rate Measurement)**, and the watch pushes a reading roughly every second. It parses `flags` for 8/16-bit heart-rate format and the sensor-contact bit, filtering readings to a sane 20…260 range. It auto-reconnects (remembering the last device UUID).
+
+**On the watch (fenix 8)**: open "Heart Rate Broadcast" from the controls / controls wheel or within an activity (path varies by firmware — typically long-press ⌂ → Sensors / Phone Connect → Broadcast Heart Rate). Broadcast mode is designed to serve external receivers.
+
+**On the Mac**:
+1. On first launch macOS prompts "**Allow MetriBar to use Bluetooth**" → Allow (`NSBluetoothAlwaysUsageDescription`).
+2. Settings → "Heart rate · Bluetooth" shows live connection state and current BPM, plus a **name filter** (defaults to matching `fenix`; leave blank to accept any device broadcasting the heart-rate service).
+3. Swapping watches → tap "Rescan", no restart needed.
+
+> ⚠️ **Notes / troubleshooting**
+> - macOS has **no ANT+ radio**, so this is BLE-only. A device that broadcasts ANT+ only is not visible here (that would need a USB ANT+ dongle + drivers, out of scope).
+> - The watch must actually be in "**Broadcast Heart Rate**" mode — normal wear doesn't broadcast.
+> - Some watches pause external broadcasting while connected to their phone app (broadcast is meant for third-party receivers); disconnect the phone or restart broadcasting if it won't connect.
+> - Bluetooth off / not authorized → the state shows "Off / Not authorized"; enable it in System Settings › Privacy & Security › Bluetooth.
+> - Reset the grant: `tccutil reset Bluetooth com.qyx.MetriBar` then relaunch.
+> - Not using heart rate? Turn off "Show heart rate" in Settings to **stop BLE scanning entirely** and save battery.
 
 ---
 

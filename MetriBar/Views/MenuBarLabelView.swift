@@ -45,7 +45,8 @@ struct MenuBarLabelView: View {
                 up: snapshot.network.upBps,
                 cpu: snapshot.cpu.total,
                 gpu: snapshot.gpu.utilization,
-                temperature: snapshot.hardware.cpuTemperature
+                temperature: snapshot.hardware.cpuTemperature,
+                heart: snapshot.heart.bpm
             )
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 2)
@@ -68,6 +69,7 @@ struct MenuBarLabelView: View {
             cpu: snapshot.cpu.total,
             gpu: snapshot.gpu.utilization,
             temperature: snapshot.hardware.cpuTemperature,
+            heart: snapshot.heart.bpm,
             dark: MenuBarBadge.isDark
         )
     }
@@ -80,10 +82,11 @@ struct MenuBarLabelView: View {
         cpu: Double?,
         gpu: Double?,
         temperature: Double?,
+        heart: Int? = nil,
         dark: Bool
     ) -> NSImage {
         MenuBarBadge.image(
-            segments: badgeSegments(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature),
+            segments: badgeSegments(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature, heart: heart),
             background: .pill,
             dark: dark
         )
@@ -95,7 +98,8 @@ struct MenuBarLabelView: View {
         up: Double,
         cpu: Double?,
         gpu: Double?,
-        temperature: Double?
+        temperature: Double?,
+        heart: Int? = nil
     ) -> [MenuBarSegment] {
         var segments: [MenuBarSegment] = []
         let idleLabel: NSColor = .secondaryLabelColor
@@ -157,6 +161,17 @@ struct MenuBarLabelView: View {
             ))
         }
 
+        // 心率段：❤ + bpm。没信号时保留槽位显示 "--"（转灰），避免图标跳来跳去。
+        if settings.showHeartRateInMenuBar {
+            let hasBeat = heart != nil
+            segments.append(MenuBarSegment(
+                symbol: "heart.fill",
+                value: heart.map { String($0) } ?? "--",
+                unit: "",
+                color: hasBeat ? .systemPink : idleLabel
+            ))
+        }
+
         return segments
     }
 
@@ -167,6 +182,7 @@ struct MenuBarLabelView: View {
         if settings.showCPUUsageInMenuBar { parts.append(Fmt.percent(snapshot.cpu.total)) }
         if settings.showGPUUsageInMenuBar, let gpu = snapshot.gpu.utilization { parts.append(Fmt.percent(gpu)) }
         if settings.showTemperatureInMenuBar { parts.append(Fmt.temperature(snapshot.hardware.cpuTemperature, unit: settings.temperatureUnit)) }
+        if settings.showHeartRateInMenuBar { parts.append("♥" + (snapshot.heart.bpm.map(String.init) ?? "--")) }
         return parts.joined(separator: ",")
     }
 
@@ -178,10 +194,11 @@ struct MenuBarLabelView: View {
         up: Double,
         cpu: Double?,
         gpu: Double?,
-        temperature: Double?
+        temperature: Double?,
+        heart: Int? = nil
     ) -> Text {
         if settings.menuBarStyle == .compact {
-            return compact(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature)
+            return compact(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature, heart: heart)
         }
 
         var parts: [Text] = [speedSegment(symbol: "arrow.down", color: Color(nsColor: .systemBlue), bytes: down)]
@@ -197,6 +214,9 @@ struct MenuBarLabelView: View {
         }
         if settings.showTemperatureInMenuBar {
             parts.append(divider + temperatureSegment(temperature))
+        }
+        if settings.showHeartRateInMenuBar {
+            parts.append(divider + heartSegment(heart))
         }
 
         return join(parts)
@@ -264,6 +284,14 @@ struct MenuBarLabelView: View {
             + Text(verbatim: parts.unit).font(Metrics.unit).foregroundColor(.secondary)
     }
 
+    /// 心率段：❤ + bpm；无信号转灰显示 "--"。
+    private static func heartSegment(_ bpm: Int?) -> Text {
+        let color: Color = bpm == nil ? Color.secondary.opacity(0.7) : Color(nsColor: .systemPink)
+        return glyph("heart.fill", color, Metrics.chip)
+            + Metrics.gap
+            + Text(verbatim: bpm.map(String.init) ?? "--").font(Metrics.value).foregroundColor(bpm == nil ? .secondary : color)
+    }
+
     /// 紧凑样式：无图标，最短。
     private static func compact(
         settings: AppSettings,
@@ -271,13 +299,15 @@ struct MenuBarLabelView: View {
         up: Double,
         cpu: Double?,
         gpu: Double?,
-        temperature: Double?
+        temperature: Double?,
+        heart: Int? = nil
     ) -> Text {
         var text = Text("↓" + Fmt.compactSpeed(down))
         if settings.showUploadInMenuBar { text = text + Text("  ") + Text("↑" + Fmt.compactSpeed(up)) }
         if settings.showCPUUsageInMenuBar, let cpu { text = text + Text("  ") + Text(Fmt.percent(cpu)) }
         if settings.showGPUUsageInMenuBar, let gpu { text = text + Text("  ") + Text("G" + Fmt.percent(gpu)) }
         if settings.showTemperatureInMenuBar { text = text + Text("  ") + Text(Fmt.temperature(temperature)) }
+        if settings.showHeartRateInMenuBar { text = text + Text("  ") + Text("\u{2665}" + (heart.map(String.init) ?? "--")) }
         return text.font(.system(size: 11, weight: .medium)).foregroundColor(.primary)
     }
 

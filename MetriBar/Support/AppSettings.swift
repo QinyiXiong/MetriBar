@@ -24,6 +24,8 @@ final class AppSettings: ObservableObject {
         static let showTemperatureInMenuBar = "showTemperatureInMenuBar"
         static let showCPUUsageInMenuBar = "showCPUUsageInMenuBar"
         static let showGPUUsageInMenuBar = "showGPUUsageInMenuBar"
+        static let showHeartRateInMenuBar = "showHeartRateInMenuBar"
+        static let heartDeviceNameFilter = "heartDeviceNameFilter"
         static let menuBarStyle = "menuBarStyle"
     }
 
@@ -60,6 +62,12 @@ final class AppSettings: ObservableObject {
 
     /// 菜单栏是否显示 GPU 占用率。
     @AppStorage(Keys.showGPUUsageInMenuBar) var showGPUUsageInMenuBar: Bool = false
+
+    /// 菜单栏是否显示手表心率（BLE）。默认开：授权蓝牙 + 手表开广播后即生效。
+    @AppStorage(Keys.showHeartRateInMenuBar) var showHeartRateInMenuBar: Bool = true
+
+    /// 心率设备名过滤（大小写不敏感的子串）。留空=接受任何广播标准心率服务的设备。默认匹配 fenix。
+    @AppStorage(Keys.heartDeviceNameFilter) var heartDeviceNameFilter: String = "fenix"
 
     /// 菜单栏排版：rich = 图标 + 配色 + 分级字号；compact = 纯文本最省宽度。
     @AppStorage(Keys.menuBarStyle) private var menuBarStyleRaw: String = MenuBarStyle.rich.rawValue
@@ -124,6 +132,7 @@ final class AppSettings: ObservableObject {
         if showCPUUsageInMenuBar { fields.append("CPU") }
         if showGPUUsageInMenuBar { fields.append("GPU") }
         if showTemperatureInMenuBar { fields.append("温度") }
+        if showHeartRateInMenuBar { fields.append("♥心率") }
         fields.append(menuBarStyle == .rich ? "样式=丰富" : "样式=紧凑")
         return fields
     }
@@ -142,6 +151,19 @@ final class AppSettings: ObservableObject {
             name: .metriBarRefreshIntervalChanged,
             object: value
         )
+    }
+
+    /// 切换「菜单栏显示心率」：同时开/关蓝牙采集（关掉就省电，不再扫描）。
+    func setShowHeartRate(_ enabled: Bool) {
+        guard enabled != showHeartRateInMenuBar else { return }
+        showHeartRateInMenuBar = enabled
+        NotificationCenter.default.post(name: .metriBarHeartEnabledChanged, object: enabled)
+    }
+
+    /// 改设备名过滤后让采集器重新扫描（换一块手表时不用重启）。
+    func setHeartDeviceNameFilter(_ text: String) {
+        heartDeviceNameFilter = text
+        NotificationCenter.default.post(name: .metriBarHeartRescan, object: nil)
     }
 
     // MARK: - 登录项（SMAppService, macOS 13+）

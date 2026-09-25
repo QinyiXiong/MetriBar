@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 @MainActor
 struct SettingsView: View {
@@ -19,6 +20,12 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.showTemperatureInMenuBar) private var showTemperature = true
     @AppStorage(AppSettings.Keys.showCPUUsageInMenuBar) private var showCPUUsage = false
     @AppStorage(AppSettings.Keys.showGPUUsageInMenuBar) private var showGPUUsage = false
+    @AppStorage(AppSettings.Keys.showHeartRateInMenuBar) private var showHeartRate = true
+    @AppStorage(AppSettings.Keys.heartDeviceNameFilter) private var heartNameFilter = "fenix"
+
+    /// 蓝牙/心率实时状态（每分钟不必，1s 轮询采集器缓存即可）。
+    @State private var heartStatus: HeartRateCollector.Reading = HeartRateCollector.shared.current()
+    @State private var heartTimer: Timer?
     @AppStorage(AppSettings.Keys.menuBarStyle) private var menuBarStyleRaw = AppSettings.MenuBarStyle.rich.rawValue
     @AppStorage(AppSettings.Keys.speedUnit) private var speedUnitRaw = SpeedUnit.auto.rawValue
     @AppStorage(AppSettings.Keys.temperatureUnit) private var temperatureUnitRaw = TemperatureUnit.celsius.rawValue
@@ -49,6 +56,7 @@ struct SettingsView: View {
                 Toggle("CPU 占用率", isOn: $showCPUUsage)
                 Toggle("GPU 占用率", isOn: $showGPUUsage)
                 Toggle("CPU 温度", isOn: $showTemperature)
+                Toggle("心率 ♥（蓝牙手表）", isOn: heartToggleBinding)
 
                 // 预览直接显示真实提交给状态栏的位图，切样式当场见效。
                 menuBarPreview
@@ -60,6 +68,42 @@ struct SettingsView: View {
                     )
 
                 Text("↑ 菜单栏实时预览（数值为示意，样式与顶部状态栏完全一致）。")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            Section("心率 · 蓝牙") {
+                Toggle("在菜单栏显示心率", isOn: heartToggleBinding)
+
+                LabeledContent("连接状态") {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(heartStatus.isConnected ? Color(nsColor: .systemGreen)
+                                                         : Color(nsColor: .systemOrange).opacity(0.8))
+                            .frame(width: 6, height: 6)
+                        Text(heartStatus.status.text)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                if let name = heartStatus.deviceName, heartStatus.isConnected {
+                    LabeledContent("设备", value: name)
+                }
+                if let bpm = heartStatus.bpm {
+                    LabeledContent("当前心率", value: "\(bpm) BPM")
+                }
+
+                TextField("设备名过滤（留空=任意心率设备）", text: heartFilterBinding)
+
+                HStack {
+                    Button("重新搜索手表") { settings.setHeartDeviceNameFilter(heartNameFilter) }
+                    Button("打开「蓝牙」设置") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.Bluetooth") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+
+                Text("在手表上打开「广播心率」（活动 · 设置里，或下拉快捷面板的心率广播）。首次会弹出「允许 MetriBar 使用蓝牙」。macOS 无 ANT+，走 BLE 标准心率服务。")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -99,7 +143,31 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 400)
         .frame(minHeight: 380)
-        .onAppear { settings.refreshLoginItemStatus() }
+        .onAppear {
+            settings.refreshLoginItemStatus()
+            heartStatus = HeartRateCollector.shared.current()
+            heartTimer?.invalidate()
+            heartTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                heartStatus = HeartRateCollector.shared.current()
+            }
+        }
+        .onDisappear { heartTimer?.invalidate(); heartTimer = nil }
+    }
+
+    /// 心率开关：写 @AppStorage（菜单栏会立即反映），并广播让采集器起停蓝牙。
+    private var heartToggleBinding: Binding<Bool> {
+        Binding(
+            get: { showHeartRate },
+            set: { settings.setShowHeartRate($0) }
+        )
+    }
+
+    /// 设备名过滤：改完立即重扫（换手表不用重启 App）。
+    private var heartFilterBinding: Binding<String> {
+        Binding(
+            get: { heartNameFilter },
+            set: { settings.setHeartDeviceNameFilter($0) }
+        )
     }
 
     /// 设置页里的菜单栏预览：Rich 直接渲染最终位图，Compact 沿用纯文本。
@@ -113,7 +181,8 @@ struct SettingsView: View {
                     up: 68_000,
                     cpu: 0.12,
                     gpu: 0.34,
-                    temperature: 64
+                    temperature: 64,
+                    heart: 72
                 ),
                 background: .pill,
                 dark: MenuBarBadge.isDark
@@ -127,7 +196,8 @@ struct SettingsView: View {
                 up: 68_000,
                 cpu: 0.12,
                 gpu: 0.34,
-                temperature: 64
+                temperature: 64,
+                heart: 72
             )
             .fixedSize()
         }

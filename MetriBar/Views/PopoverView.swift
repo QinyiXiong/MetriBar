@@ -18,6 +18,10 @@ struct PopoverView: View {
             header
             networkSection
 
+            if settings.showHeartRateInMenuBar {
+                heartSection
+            }
+
             // SMC 与 GPU 任一可用就显示硬件区（虚拟机里可能只有 GPU）。
             if store.snapshot.hardware.available || store.snapshot.gpu.available {
                 hardwareSection
@@ -91,6 +95,34 @@ struct PopoverView: View {
             .filter { $0.id != primary && !$0.isIdle }
             .count
         return rest > 0 ? "活动网卡：\(primary)（另有 \(rest) 块在传输）" : "活动网卡：\(primary)"
+    }
+
+    // MARK: - 心率（BLE 手表）
+
+    private var heartSection: some View {
+        PanelSection(title: "心率 · 手表") {
+            let hr = snapshot.heart
+            MetricRow(
+                systemImage: hr.isConnected ? "heart.fill" : "heart",
+                title: hr.deviceName ?? "心率",
+                value: hr.bpm.map { "\($0) BPM" } ?? "--",
+                detail: hr.status.text
+            )
+            // 简易区间条：静息~最大（50–190）映射；无信号归零。
+            let frac = hr.bpm.map { min(max((Double($0) - 50) / 140, 0), 1) } ?? 0
+            SlimGauge(fraction: frac, color: Color(nsColor: .systemPink))
+
+            if !hr.isConnected {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
+                        .font(.system(size: 10))
+                    Text(hr.status.text == "心率显示已关闭" ? "" : "请在手表开启「广播心率」并允许蓝牙")
+                        .font(.system(size: 10))
+                }
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+            }
+        }
     }
 
     // MARK: - 硬件（SMC）

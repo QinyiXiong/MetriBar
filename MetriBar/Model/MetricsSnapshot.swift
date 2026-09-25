@@ -136,6 +136,7 @@ struct MetricsSnapshot: Sendable {
         disk: .empty,
         cpu: .empty,
         gpu: .empty,
+        heart: HeartRateCollector.Reading(),
         timestamp: .distantPast
     )
 
@@ -145,6 +146,8 @@ struct MetricsSnapshot: Sendable {
     let disk: DiskSnapshot
     let cpu: CPUSnapshot
     let gpu: GPUSnapshot
+    /// 手表心率（BLE 采集）。未连接/未启用 = 默认值。
+    let heart: HeartRateCollector.Reading
     let timestamp: Date
 
     var isValid: Bool { timestamp != .distantPast }
