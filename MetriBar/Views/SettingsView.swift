@@ -182,7 +182,8 @@ struct SettingsView: View {
                     cpu: 0.12,
                     gpu: 0.34,
                     temperature: 64,
-                    heart: 72
+                    heart: 72,
+                    showHeart: settings.showHeartRateInMenuBar
                 ),
                 background: .pill,
                 dark: MenuBarBadge.isDark
@@ -197,7 +198,8 @@ struct SettingsView: View {
                 cpu: 0.12,
                 gpu: 0.34,
                 temperature: 64,
-                heart: 72
+                heart: 72,
+                showHeart: settings.showHeartRateInMenuBar
             )
             .fixedSize()
         }

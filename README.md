@@ -56,7 +56,7 @@ App 图标（`AppIcon.icns`，1024→16px 全尺寸自绘 · 卡通小机器人 
 | 原生观感 | `ultraThinMaterial` 背景、圆角卡片、深浅色自适应、系统控件尺寸与字号 |
 | 硬件读取 | [SMCKit](https://github.com/srimanachanta/SMCKit)（MIT）访问 AppleSMC：CPU 温度、风扇转速 |
 | GPU 占用 | IOKit `IORegistry` → GPU accelerator（Apple Silicon 为 `AGXAccelerator…`）的 `PerformanceStatistics`，指数平滑防跳变 |
-| 心率 ♥ | CoreBluetooth **BLE** 连接支持「广播心率」的手表（Garmin fenix 8 等），订阅标准心率服务 `0x180D` / 特征 `0x2A37`，**实时推送到菜单栏 + 面板**；无 SDK、不联网、不上云；macOS **无 ANT+**，走 BLE |
+| 心率 ♥ | CoreBluetooth **BLE** 连接支持「广播心率」的手表（Garmin fenix 8 等），订阅标准心率服务 `0x180D` / 特征 `0x2A37`，**实时推送到菜单栏 + 面板**；**♥ 仅在手表已连接时出现在菜单栏，断开即自动隐藏**（面板仍保留状态区）；无 SDK、不联网、不上云；macOS **无 ANT+**，走 BLE |
 | 体积 | 单个自包含 `.app`；SMCKit 静态链接，无第三方 dylib |
 
 ---
@@ -402,6 +402,7 @@ open /Applications/MetriBar.app
 
 | 版本 | 主要内容 |
 | --- | --- |
+| **v1.6** | **菜单栏 ♥ 仅在手表已连接时显示**，断开 / 搜索中自动隐藏整段（省电位图，面板仍保留心率状态区） |
 | **v1.5** | 心率改为**有限扫描**（每轮 30s，超时自动停止省电，不再后台常驻搜索；点开面板重扫）；修复**设置窗口一闪而过**（激活策略保持到窗口关闭再还原）；补「隐私与安全」章节；移除多余的蓝牙**外设**权限声明；仓库不再跟踪 `xcuserdata` |
 | **v1.4** | 点击状态栏打开面板即**强制重扫**心率（已连接不打扰） |
 | **v1.3** | 修好 **BLE 连不上**（`peripheral` 弱引用导致反复 `connect()`）+ 全量扫描 + 保活；真机 fenix 8 稳定收到实时心率 |
