@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2025 QinyiXiong · MIT</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>MetriBar 需要通过蓝牙连接支持「广播心率」的手表（如 Garmin fenix），把实时心率显示到菜单栏。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>MetriBar 使用蓝牙连接手表读取心率。</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
