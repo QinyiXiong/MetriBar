@@ -141,6 +141,18 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
         }
     }
 
+    /// 面板点开时调用：没连上就强制重扫（清掉假连接/陈旧状态），已连接则不打扰。
+    func rescanIfNeeded() {
+        queue.async {
+            guard let c = self.central, c.state == .poweredOn else { return }
+            guard self.reading.status != .connected else { return }
+            Diag.notice(Diag.lifecycle, "心率：面板打开，强制重扫")
+            self.connectTimer?.cancel()
+            if let p = self.peripheral { c.cancelPeripheralConnection(p); self.peripheral = nil }
+            self.beginScan()
+        }
+    }
+
     /// 当前期望的设备名过滤（小写）。空串=接受任何广播心率服务的设备。
     private func nameFilter() -> String {
         (UserDefaults.standard.string(forKey: AppSettings.Keys.heartDeviceNameFilter) ?? "fenix")
