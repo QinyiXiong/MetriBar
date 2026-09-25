@@ -18,7 +18,8 @@ struct PopoverView: View {
             header
             networkSection
 
-            if store.snapshot.hardware.available {
+            // SMC 与 GPU 任一可用就显示硬件区（虚拟机里可能只有 GPU）。
+            if store.snapshot.hardware.available || store.snapshot.gpu.available {
                 hardwareSection
             }
 
@@ -108,6 +109,19 @@ struct PopoverView: View {
                 value: Fmt.percent(snapshot.cpu.total),
                 detail: "用户 \(Fmt.percent(snapshot.cpu.user)) · 系统 \(Fmt.percent(snapshot.cpu.system))"
             )
+            SlimGauge(fraction: snapshot.cpu.total, color: GaugeColor.forFraction(snapshot.cpu.total))
+
+            // GPU 占用：IORegistry 的 GPU accelerator 节点（Apple Silicon 为 AGXAccelerator…）
+            MetricRow(
+                systemImage: "cpu.fill",
+                title: "GPU 占用",
+                value: snapshot.gpu.utilization.map { Fmt.percent($0) } ?? "--",
+                detail: gpuDetail
+            )
+            SlimGauge(
+                fraction: snapshot.gpu.utilization ?? 0,
+                color: GaugeColor.forFraction(snapshot.gpu.utilization ?? 0)
+            )
 
             if snapshot.hardware.hasFan {
                 ForEach(snapshot.hardware.fans) { fan in
@@ -125,6 +139,17 @@ struct PopoverView: View {
                     .foregroundColor(.secondary)
             }
         }
+    }
+
+    /// GPU 明细：渲染 / 光栅占用 + IORegistry 节点名。
+    private var gpuDetail: String? {
+        let gpu = snapshot.gpu
+        guard gpu.available else { return "未检测到 GPU 加速器" }
+        var parts: [String] = []
+        if let renderer = gpu.renderer { parts.append("渲染 \(Fmt.percent(renderer))") }
+        if let tiler = gpu.tiler { parts.append("光栅 \(Fmt.percent(tiler))") }
+        if let name = gpu.deviceName { parts.append(name) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private func fanRange(_ fan: FanReading) -> String? {
@@ -187,13 +212,7 @@ struct PopoverView: View {
 
             Spacer()
 
-            Button {
-                SettingsWindow.open()
-            } label: {
-                Image(systemName: "gearshape")
-            }
-            .buttonStyle(.plain)
-            .help("设置（⌘,）")
+            SettingsGearButton()
 
             Button {
                 NSApp.terminate(nil)

@@ -50,7 +50,7 @@ MTL_FAST_MATH / ENABLE_PREVIEWS  = 默认
 ```
 
 - UI 层（`MetriBarApp`、`MetricsStore`、`AppSettings`、所有 View）显式标注 `@MainActor`；
-- 采集层（`NetworkCollector` / `MemoryCollector` / `DiskCollector` / `CPULoadCollector` /
+- 采集层（`NetworkCollector` / `MemoryCollector` / `DiskCollector` / `CPULoadCollector` / `GPUCollector` /
   `MetricsEngine`）保持 nonisolated，`SMCSensorReader` 是 `actor`。
 - 若沿用模板默认的 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`，
   `MetricsEngine.queue.async { … }` 里的采集体会被判成 MainActor 隔离，直接编译不过。
@@ -81,9 +81,9 @@ xcodebuild -resolvePackageDependencies -project MetriBar.xcodeproj -scheme Metri
 **新建的 `.swift` 文件放进目录就自动参与编译**，不需要手工 Add Files。
 
 ```
-MetriBarApp.swift              # @main：MenuBarExtra(.window) + Settings
+MetriBarApp.swift              # @main：MenuBarExtra(.window) + ⌘, 命令
 Model/       MetricsSnapshot · NetworkCollector · MemoryCollector · DiskCollector
-             CPULoadCollector · SMCSensorReader · MetricsEngine
+             CPULoadCollector · SMCSensorReader · GPUCollector · MetricsEngine
 Views/       MenuBarLabelView · PopoverView · SettingsView
 Support/     AppSettings · Formatters · UIComponents · Diagnostics
 ```
@@ -93,7 +93,9 @@ Support/     AppSettings · Formatters · UIComponents · Diagnostics
 | # | 检查 | 期望 |
 | --- | --- | --- |
 | 1 | 启动后不出现 Dock 图标 | ✅ LSUIElement |
-| 2 | 菜单栏只显示数值，无 App 名 | `↓1.5M ↑69K 59°`（可在设置里增减字段） |
+| 2 | 菜单栏只显示数值，无 App 名 | `↓1.5M ↑69K 59°`（设置里可再叠加 CPU / GPU）；日志 `菜单栏字段 [↓下载 ↑上传 温度]` |
+| 2b | **点齿轮能打开设置** | 日志出现 `设置窗口自检：已打开｜可见窗口 […, NSWindow:MetriBar 设置]` |
+| 2c | GPU 占用有数（Apple Silicon） | 面板 `GPU 占用` 行非 `--`，日志 `… CPU 13% GPU 47% …` |
 | 3 | 点开面板：网络 / 温度 / 风扇 / 内存 / 磁盘齐全 | `ultraThinMaterial`，深浅色自适应 |
 | 4 | 温度旁显示实际传感器 key | `Tp0C`（Apple Silicon）/ `TC0P`（Intel） |
 | 5 | 改刷新间隔立即生效 | 设置页 → 采集，日志出现「采集重建：每 N 秒」 |
@@ -118,8 +120,17 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging
 [lifecycle] 采集启动：每 2.0 秒
 [smc] 传感器解析完成：温度键 [Tp0C Tp0R Tp04 Tp08 Tp1E …] 风扇 2 个
 [metrics] en0 in 150681600->153684992 Δ3003392 | out 2418020352->2418158592 Δ138240 | elapsed=1.999
-[metrics] ↓1.5M ↑69K CPU 13% 温度 60°[Tp0C] 风扇 风扇 1 7247 RPM, 风扇 2 7804 RPM 内存 72% 磁盘剩余 676.96 GB 基线就绪=true
+[metrics] ↓1.5M ↑69K CPU 13% GPU 47% 温度 60°[Tp0C] 风扇 风扇 1 7247 RPM, 风扇 2 7804 RPM 内存 72% 磁盘剩余 676.96 GB 基线就绪=true
+[lifecycle] 打开设置窗口：MetriBar 设置，策略=regular
+[lifecycle] 设置窗口自检：已打开｜可见窗口 [NSStatusBarWindow:Item-0, NSWindow:MetriBar 设置]
 ```
+
+两个排查开关（都用 `defaults write com.qyx.MetriBar <key> -bool YES` 后重启 App）：
+
+| Key | 作用 |
+| --- | --- |
+| `MetriBarVerboseLogging` | 逐 tick、逐网卡的明细（含基线与间隔） |
+| `MetriBarDebugOpenSettings` | 启动 1 秒后自动弹出设置窗口，用于验证 Agent 应用开窗链路 |
 
 ## 9. 踩过的坑（务必别改回去）
 
@@ -138,5 +149,13 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging
 6. **`ProcessInfo.thermalPressure` 在新 SDK 已不存在**，不要用它做降级判断。
 7. `MetricsEngine` 的 `store` 用 **二阶段 `bind(store:)`** 绑定，
    避免在 `MetricsStore.init` 的表达式里把 `self` 逃逸出去。
-8. Timer 用 `DispatchSourceTimer` + `leeway:120ms`，并且**只保留一个 source**，
+8. **`Settings` 场景在 LSUIElement Agent 应用里不可靠**：`sendAction(showSettingsWindow:)`
+   返回 `true` 却不会创建窗口（自检日志里只有 `NSStatusBarWindow`），`openSettings()` 同样静默失败。
+   现由 `SettingsWindow.open()` 自持 `NSWindow + NSHostingController(SettingsView)`：
+   临时提 `.regular` → 收起 MenuBarExtra 面板 → `makeKeyAndOrderFront` → 0.6s 后恢复 `.accessory`。
+9. **`MenuBarExtra` 的 label 不要放 `HStack`**：状态项宽度可能按首帧固定，字段变长会被裁掉
+   （症状是「只能看到下载速度」）。用 `Text` 的 `+` 把各段拼成一个 `Text`，分段着色照常可用。
+10. GPU 百分比来自 `IORegistry` 的 `PerformanceStatistics`，是**瞬时值**、跳变极大，
+    必须平滑（本项目 EMA α=0.35），否则菜单栏会频闪。
+11. Timer 用 `DispatchSourceTimer` + `leeway:120ms`，并且**只保留一个 source**，
    改间隔时先 `cancel()` 再重建；`isSampling` 闸门防止 SMC 偶发阻塞导致任务堆积。

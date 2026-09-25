@@ -30,6 +30,7 @@ final class MetricsEngine {
     private var memory = MemoryCollector()
     private var disk = DiskCollector()
     private var cpu = CPULoadCollector()
+    private var gpu = GPUCollector()
     private let sensors = SMCSensorReader()
 
     private weak var store: MetricsStore?
@@ -72,6 +73,7 @@ final class MetricsEngine {
             guard let self else { return }
             self.network.resetBaseline()
             self.cpu.reset()
+            self.gpu.reset()
             self.scheduleTimer()
         }
     }
@@ -121,6 +123,7 @@ final class MetricsEngine {
             self.queue.async {
                 self.network.resetBaseline()
                 self.cpu.reset()
+            self.gpu.reset()
             }
         }
     }
@@ -140,6 +143,7 @@ final class MetricsEngine {
         let memorySnapshot = memory.sample()
         let diskSnapshot = disk.sample()
         let cpuSnapshot = cpu.sample()
+        let gpuSnapshot = gpu.sample(now: now)
 
         let store = self.store
         let sensors = self.sensors
@@ -152,6 +156,7 @@ final class MetricsEngine {
                 memory: memorySnapshot,
                 disk: diskSnapshot,
                 cpu: cpuSnapshot,
+                gpu: gpuSnapshot,
                 timestamp: Date()
             )
             await store?.publish(snapshot)
@@ -171,6 +176,7 @@ final class MetricsEngine {
         return "↓\(Fmt.compactSpeed(snapshot.network.downBps))"
              + " ↑\(Fmt.compactSpeed(snapshot.network.upBps))"
              + " CPU \(Fmt.percent(snapshot.cpu.total))"
+             + " GPU \(snapshot.gpu.utilization.map { Fmt.percent($0) } ?? "--")"
              + " 温度 \(Fmt.temperature(snapshot.hardware.cpuTemperature))[\(snapshot.hardware.sensorKey ?? "-")]"
              + " 风扇 \(fans)"
              + " 内存 \(Fmt.percent(snapshot.memory.usedFraction))"
