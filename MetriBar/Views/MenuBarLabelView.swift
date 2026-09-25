@@ -61,19 +61,103 @@ struct MenuBarLabelView: View {
     }
 
     private var badge: NSImage {
-        let composed = Self.compose(
+        Self.badge(
             settings: settings,
             down: snapshot.network.downBps,
             up: snapshot.network.upBps,
             cpu: snapshot.cpu.total,
             gpu: snapshot.gpu.utilization,
-            temperature: snapshot.hardware.cpuTemperature
-        )
-        return MenuBarBadge.image(
-            composed,
-            signature: Self.signature(settings: settings, snapshot: snapshot),
+            temperature: snapshot.hardware.cpuTemperature,
             dark: MenuBarBadge.isDark
         )
+    }
+
+    /// 真实菜单栏与设置页预览共用：同一套 segments + 同一个 Core Text 绘制器。
+    static func badge(
+        settings: AppSettings,
+        down: Double,
+        up: Double,
+        cpu: Double?,
+        gpu: Double?,
+        temperature: Double?,
+        dark: Bool
+    ) -> NSImage {
+        MenuBarBadge.image(
+            segments: badgeSegments(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature),
+            background: .pill,
+            dark: dark
+        )
+    }
+
+    static func badgeSegments(
+        settings: AppSettings,
+        down: Double,
+        up: Double,
+        cpu: Double?,
+        gpu: Double?,
+        temperature: Double?
+    ) -> [MenuBarSegment] {
+        var segments: [MenuBarSegment] = []
+        let idleLabel: NSColor = .secondaryLabelColor
+
+        if true { // 下载常驻显示
+            let parts = Fmt.speedParts(down)
+            let idle = down < 1_000
+            segments.append(MenuBarSegment(
+                symbol: "arrow.down",
+                value: idle ? "0" : parts.value,
+                unit: idle ? "" : parts.unit,
+                color: idle ? idleLabel : .systemBlue
+            ))
+        }
+
+        if settings.showUploadInMenuBar {
+            let parts = Fmt.speedParts(up)
+            let idle = up < 1_000
+            segments.append(MenuBarSegment(
+                symbol: "arrow.up",
+                value: idle ? "0" : parts.value,
+                unit: idle ? "" : parts.unit,
+                color: idle ? idleLabel : .systemOrange
+            ))
+        }
+
+        if settings.showCPUUsageInMenuBar, let cpu {
+            segments.append(MenuBarSegment(
+                symbol: "cpu",
+                value: String(format: "%.0f", min(max(cpu, 0), 1) * 100),
+                unit: "%",
+                color: NSColor(GaugeColor.forFraction(cpu))
+            ))
+        }
+
+        if settings.showGPUUsageInMenuBar, let gpu {
+            segments.append(MenuBarSegment(
+                symbol: "cube",
+                value: String(format: "%.0f", min(max(gpu, 0), 1) * 100),
+                unit: "%",
+                color: NSColor(GaugeColor.forFraction(gpu))
+            ))
+        }
+
+        if settings.showTemperatureInMenuBar {
+            let parts = Fmt.temperatureParts(temperature, unit: settings.temperatureUnit)
+            let color = NSColor(GaugeColor.forTemperature(temperature))
+            let symbol: String
+            switch temperature ?? 0 {
+            case ..<50: symbol = "thermometer.low"
+            case ..<80: symbol = "thermometer.medium"
+            default: symbol = "thermometer.high"
+            }
+            segments.append(MenuBarSegment(
+                symbol: symbol,
+                value: parts.value,
+                unit: settings.temperatureUnit == .celsius ? "\u{00B0}" : "\u{00B0}F",
+                color: color
+            ))
+        }
+
+        return segments
     }
 
     /// 缓存签名：数值取整到与显示一致的精度，内容不变就不必重画位图。

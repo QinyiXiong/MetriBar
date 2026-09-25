@@ -58,20 +58,33 @@ struct MetriBarApp: App {
                 }
                 MenuBarBadge.logStatusItem()
                 UISnapshot.export(
-                    MenuBarBadge.image(
-                        MenuBarLabelView.compose(
-                            settings: appSettings,
-                            down: snap.network.downBps,
-                            up: snap.network.upBps,
-                            cpu: snap.cpu.total,
-                            gpu: snap.gpu.utilization,
-                            temperature: snap.hardware.cpuTemperature
-                        ),
-                        signature: "debug",
-                        dark: true
+                    MenuBarLabelView.badge(
+                        settings: appSettings,
+                        down: snap.network.downBps,
+                        up: snap.network.upBps,
+                        cpu: snap.cpu.total,
+                        gpu: snap.gpu.utilization,
+                        temperature: snap.hardware.cpuTemperature,
+                        dark: MenuBarBadge.isDark
                     ),
-                    name: "badge"
+                    name: "badge-live"
                 )
+                UISnapshot.export(
+                    MenuBarBadge.preview(
+                        segments: MenuBarLabelView.badgeSegments(
+                            settings: appSettings,
+                            down: 1_250_000,
+                            up: 68_000,
+                            cpu: 0.12,
+                            gpu: 0.34,
+                            temperature: 64
+                        ),
+                        background: .pill,
+                        dark: false
+                    ),
+                    name: "badge-light"
+                )
+                MenuBarBadge.selfTest()
                 UISnapshot.export(
                     AnyView(
                         PopoverView()

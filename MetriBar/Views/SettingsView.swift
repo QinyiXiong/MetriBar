@@ -50,19 +50,14 @@ struct SettingsView: View {
                 Toggle("GPU 占用率", isOn: $showGPUUsage)
                 Toggle("CPU 温度", isOn: $showTemperature)
 
-                // 用真实菜单栏组件渲染示例数值，切样式当场见效。
-                MenuBarLabelView.compose(
-                    settings: settings,
-                    down: 1_250_000,
-                    up: 68_000,
-                    cpu: 0.12,
-                    gpu: 0.34,
-                    temperature: 64
-                )
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Color(nsColor: .quaternaryLabelColor).opacity(0.35))
-                .clipShape(Capsule())
+                // 预览直接显示真实提交给状态栏的位图，切样式当场见效。
+                menuBarPreview
+                    .padding(.vertical, 4)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(nsColor: .quaternaryLabelColor).opacity(0.35))
+                    )
 
                 Text("↑ 菜单栏实时预览（数值为示意，样式与顶部状态栏完全一致）。")
                     .font(.system(size: 11))
@@ -105,6 +100,37 @@ struct SettingsView: View {
         .frame(width: 400)
         .frame(minHeight: 380)
         .onAppear { settings.refreshLoginItemStatus() }
+    }
+
+    /// 设置页里的菜单栏预览：Rich 直接渲染最终位图，Compact 沿用纯文本。
+    @ViewBuilder private var menuBarPreview: some View {
+        let style = AppSettings.MenuBarStyle(rawValue: menuBarStyleRaw) ?? .rich
+        if style == .rich {
+            Image(nsImage: MenuBarBadge.image(
+                segments: MenuBarLabelView.badgeSegments(
+                    settings: settings,
+                    down: 1_250_000,
+                    up: 68_000,
+                    cpu: 0.12,
+                    gpu: 0.34,
+                    temperature: 64
+                ),
+                background: .pill,
+                dark: MenuBarBadge.isDark
+            ))
+            .renderingMode(.original)
+            .fixedSize()
+        } else {
+            MenuBarLabelView.compose(
+                settings: settings,
+                down: 1_250_000,
+                up: 68_000,
+                cpu: 0.12,
+                gpu: 0.34,
+                temperature: 64
+            )
+            .fixedSize()
+        }
     }
 
     /// 间隔修改要广播通知，让采集 Timer 立即重建。

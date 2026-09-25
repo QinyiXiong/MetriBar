@@ -96,7 +96,7 @@ Support/     AppSettings · Formatters · UIComponents · Diagnostics
 | 2 | 菜单栏只显示数值，无 App 名 | `↓1.5M ↑69K 59°`（设置里可再叠加 CPU / GPU）；日志 `菜单栏字段 [↓下载 ↑上传 温度]` |
 | 2b | **点齿轮能打开设置** | 日志出现 `设置窗口自检：已打开｜可见窗口 […, NSWindow:MetriBar 设置]` |
 | 2c | GPU 占用有数（Apple Silicon） | 面板 `GPU 占用` 行非 `--`，日志 `… CPU 13% GPU 47% …` |
-| 2d | 菜单栏丰富排版**有颜色有图标** | 位图 label（`isTemplate=false`）：蓝↓橙↑温度随热度变色；若又变回单色 → 检查 `MenuBarBadge` 的 `isTemplate` |
+| 2d | 菜单栏丰富排版**有颜色、图标且宽度稳定** | 位图 label `177×18pt @2x`，`isTemplate=false`；文字清晰、数字变化不抖动。若单色→检查 `isTemplate`；若宽度抖动→检查固定槽位 |
 | 2e | CPU 与 GPU 视觉可区分 | CPU `cpu` + 绿/黄/红条，GPU `cube` + 青色条 |
 | 3 | 点开面板：网络 / 温度 / 风扇 / 内存 / 磁盘齐全 | `ultraThinMaterial`，深浅色自适应 |
 | 4 | 温度旁显示实际传感器 key | `Tp0C`（Apple Silicon）/ `TC0P`（Intel） |
@@ -156,13 +156,18 @@ defaults delete com.qyx.MetriBar MetriBarVerboseLogging
    返回 `true` 却不会创建窗口（自检日志里只有 `NSStatusBarWindow`），`openSettings()` 同样静默失败。
    现由 `SettingsWindow.open()` 自持 `NSWindow + NSHostingController(SettingsView)`：
    临时提 `.regular` → 收起 MenuBarExtra 面板 → `makeKeyAndOrderFront` → 0.6s 后恢复 `.accessory`。
-9. **`MenuBarExtra` 的 label 有两道坎，一次踩完**：
+9. **`MenuBarExtra` 的 label 有三道坎，一次踩完**：
    - 放 `HStack`：状态项宽度可能按首帧固定，字段变长被裁掉 → 症状「只能看到下载速度」；
-     改成 `Text` 的 `+` 拼成单个 `Text`。
-   - 但**单 Text 也只解决宽度，不解决样式**：状态栏按 template 重绘，颜色被抹平，
+     改成单个 label，不要依赖 SwiftUI 自动伸缩。
+   - 但**单 Text 仍只解决宽度，不解决样式**：状态栏按 template 重绘，颜色被抹平，
      `Text("\(Image(systemName:))")` 里的 SF Symbol 干脆不显示（用户截图只剩 `2.3K│3.5K│54°`）。
-     「丰富」排版必须走**非模板位图**：`NSHostingView` 离屏渲染 → `NSImage.isTemplate = false`
-     → `Image(nsImage:).renderingMode(.original)`；「紧凑」排版保留纯 Text 兜底。
+     「丰富」排版必须走**非模板位图** → `Image(nsImage:).renderingMode(.original)`。
+   - 用 `NSHostingView` 离屏渲位图还会遇到两个问题：数字长度变化导致整块忽大忽小，
+     且只按窗口倍率绘制、字体平滑默认不开，看起来发虚。现改为 `MenuBarBadge` 直接用
+     Core Text / NSAttributedString：按主屏 `backingScaleFactor` 生成位图，显式打开
+     antialias + font smoothing；图标、数字单位分别使用统一固定槽位，实测稳定为 `177×18pt @2x`。
+     状态栏按钮自检必须看到 `isTemplate=false`，否则颜色仍会被系统抹平。
+     「紧凑」排版保留纯 Text 兜底。
 10. GPU 百分比来自 `IORegistry` 的 `PerformanceStatistics`，是**瞬时值**、跳变极大，
     必须平滑（本项目 EMA α=0.35），否则菜单栏会频闪。
 11. **自定义容量格式化，五档阈值要一次写全**：曾把 GB 档之后直接 `default: TB`，

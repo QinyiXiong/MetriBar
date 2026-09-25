@@ -12,14 +12,10 @@
 
 离屏渲染自检图（`MetriBarDebugSnap`，真实数据）：
 
-菜单栏实际提交给状态栏的位图（`isTemplate = false`，非模板渲染才能保住颜色）：
+菜单栏实际提交给状态栏的位图（固定 **177×18pt @2x**、非模板渲染）：
 
 ![菜单栏位图](docs/预览/menubar-badge.png)
-
-离屏渲染的完整视图：
-
-![菜单栏 · 深色](docs/预览/menubar-dark.png)
-![菜单栏 · 浅色](docs/预览/menubar-light.png)
+![浅色菜单栏](docs/预览/menubar-badge-light.png)
 
 ![弹出面板 · 深色](docs/预览/panel-dark.png)
 
