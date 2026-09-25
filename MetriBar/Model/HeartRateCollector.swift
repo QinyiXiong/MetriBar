@@ -36,7 +36,8 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
         case scanning         // 正在搜索手表
         case connecting       // 已找到，正在连接
         case connected        // 已订阅心率通知
-        case disconnected     // 曾连接后断开，等待重连
+        case disconnected     // 曾连接后断开
+        case idle             // 本轮搜索窗口结束仍未连上→已停止，等下次点开面板
 
         var text: String {
             switch self {
@@ -46,11 +47,18 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
             case .scanning:     return "正在搜索手表…"
             case .connecting:   return "连接中…"
             case .connected:    return "已连接"
-            case .disconnected: return "已断开，重连中…"
+            case .disconnected: return "已断开"
+            case .idle:         return "已停止 · 点开面板重扫"
             }
         }
 
-        var isActive: Bool { self == .poweredOff || self == .unauthorized ? false : true }
+        // 只有真正在搜索/连接时才值得"活"（闪烁）；停止待命态不该闪。
+        var isActive: Bool {
+            switch self {
+            case .poweredOff, .unauthorized, .idle: return false
+            default: return true
+            }
+        }
     }
 
     struct Reading: Sendable {
@@ -83,13 +91,17 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
 
     private let lock = NSLock()
     private var reading = Reading()
-    private var reconnectTimer: DispatchSourceTimer?
-    /// 连接看门狗：连不上就超时断开重扫，避免永远卡在「连接中…」。
+
+    /// 单轮"搜索窗口"时长：扫描超过这么久还没连上，就自动停止，不再后台常驻搜索，
+    /// 直到下次点开面板（rescanIfNeeded）才重新起一轮。省电、也符合"别一直搜"。
+    private let scanWindow: TimeInterval = 30
+
+    /// 搜索阶段时限计时器（一次性）；进入连接阶段即取消，交给 connectTimer。
+    private var scanDeadline: DispatchSourceTimer?
+    /// 连接阶段看门狗：连不上就取消并停止（不自动重扫，等下次点开面板）。
     private var connectTimer: DispatchSourceTimer?
     /// 发现日志节流，防止 allowDuplicates 刷屏。
     private var lastDiscoveryLog = Date.distantPast
-    /// 扫描保活：macOS 的 LE 扫描会自己变"钝"，未连接时每 ~12s 重扫一次唤醒发现。
-    private var scanTimer: DispatchSourceTimer?
 
     private override init() { super.init() }
 
@@ -121,8 +133,8 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
 
     func stop() {
         queue.async {
-            self.reconnectTimer?.cancel(); self.reconnectTimer = nil
-            self.connectTimer?.cancel(); self.cancelScanKeepalive()
+            self.scanDeadline?.cancel(); self.scanDeadline = nil
+            self.connectTimer?.cancel(); self.connectTimer = nil
             if let p = self.peripheral { self.central?.cancelPeripheralConnection(p) }
             self.central?.stopScan()
             self.peripheral = nil
@@ -164,49 +176,42 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
         if central.isScanning { central.stopScan() }
         // 不加服务过滤地全扫：很多 Garmin 把 0x180D 只放进 SCAN RESPONSE，
         // 用 `withServices:[0x180D]` 过滤会漏掉主广播包里没有 UUID 的广播。
-        // 真正的"是不是心率设备"在 didDiscover 回调里按 UUID/名字判断。
         central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
         mutate { $0.status = .scanning }
-        armScanKeepalive()
+        armScanDeadline()
     }
 
-    /// 未连接期间周期性重启扫描，唤醒 macOS 变钝的 LE 发现。
-    private func armScanKeepalive() {
-        scanTimer?.cancel()
+    /// 单轮搜索窗口：超过 scanWindow 还没进入连接/已连接，就停止本轮搜索转 idle。
+    private func armScanDeadline() {
+        scanDeadline?.cancel()
         let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + 12, repeating: 12)
+        t.schedule(deadline: .now() + scanWindow)
         t.setEventHandler { [weak self] in
-            guard let self, self.current().status != .connected else { return }
-            if let c = self.central, c.state == .poweredOn { self.beginScan() }
+            guard let self, self.reading.status == .scanning else { return }
+            Diag.notice(Diag.lifecycle, "心率：\(Int(self.scanWindow))s 没搜到，停止本轮搜索（点开面板可重扫）")
+            self.stopAndGoIdle()
         }
         t.resume()
-        scanTimer = t
+        scanDeadline = t
     }
 
-    private func cancelScanKeepalive() { scanTimer?.cancel(); scanTimer = nil }
+    private func cancelScanDeadline() { scanDeadline?.cancel(); scanDeadline = nil }
 
-    private func scheduleReconnect() {
-        reconnectTimer?.cancel()
-        let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + 1.5)
-        t.setEventHandler { [weak self] in
-            guard let self else { return }
-            // 优先重连记住的设备（仍在缓存列表里就直接 connect，省一次扫描）。
-            if let id = self.rememberedID,
-               let known = self.central?.retrievePeripherals(withIdentifiers: [id]).first {
-                self.peripheral = known
-                self.connect(known)
-            } else {
-                self.beginScan()
-            }
-        }
-        t.resume()
-        reconnectTimer = t
+    /// 彻底停下来：停扫 + 取消在途连接 → idle。不自动重连，等下次点开面板。
+    private func stopAndGoIdle() {
+        scanDeadline?.cancel(); scanDeadline = nil
+        connectTimer?.cancel(); connectTimer = nil
+        if let p = peripheral { central?.cancelPeripheralConnection(p) }
+        central?.stopScan()
+        peripheral = nil
+        // 保留 deviceName / bpm，面板仍能显示上次读到的值。
+        mutate { $0.status = .idle }
     }
 
     private func connect(_ p: CBPeripheral) {
         rememberedID = p.identifier
         self.peripheral = p
+        cancelScanDeadline()   // 搜索阶段结束，进入连接阶段
         mutate { $0.deviceName = p.name ?? $0.deviceName; $0.status = .connecting }
         Diag.notice(Diag.lifecycle, "心率：正在连接 \(p.name ?? "无名字") …")
         p.delegate = self
@@ -214,18 +219,15 @@ final class HeartRateCollector: NSObject, @unchecked Sendable {
         armConnectWatchdog()
     }
 
-    /// 连接看门狗：30s 内没连上才取消重扫——故意放宽，让 macOS 原生 ~20s 超时先触发并
-    /// 打出真实 didFailToConnect 错误码（10s 会抢在它前面静默 cancel，看不到失败原因）。
+    /// 连接看门狗：15s 连不上就取消并停止（转 idle），不自动重扫——等下次点开面板。
     private func armConnectWatchdog() {
         connectTimer?.cancel()
         let t = DispatchSource.makeTimerSource(queue: queue)
-        t.schedule(deadline: .now() + 30)
+        t.schedule(deadline: .now() + 15)
         t.setEventHandler { [weak self] in
             guard let self, self.reading.status == .connecting else { return }
-            Diag.notice(Diag.lifecycle, "心率：连接超时，断开重扫（若长时间如此，多半是手表仍连着手机 iPhone，请先在手机上断开）")
-            if let p = self.peripheral { self.central?.cancelPeripheralConnection(p) }
-            self.mutate { $0.status = .disconnected }
-            self.beginScan()
+            Diag.notice(Diag.lifecycle, "心率：连接超时，已停止（多半是手表仍连着手机 iPhone；点开面板可重连）")
+            self.stopAndGoIdle()
         }
         t.resume()
         connectTimer = t
@@ -305,24 +307,20 @@ extension HeartRateCollector: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        connectTimer?.cancel(); cancelScanKeepalive()
+        connectTimer?.cancel(); cancelScanDeadline()
         if central.isScanning { central.stopScan() }   // 连上了才停扫省电
         Diag.notice(Diag.lifecycle, "心率：已连接 \(peripheral.name ?? "未知设备")，发现服务中")
         peripheral.discoverServices([Self.hrService])
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        connectTimer?.cancel()
-        Diag.notice(Diag.lifecycle, "心率：连接失败 \(error?.localizedDescription ?? "")，稍后重连")
-        mutate { $0.status = .disconnected }
-        scheduleReconnect()
+        Diag.notice(Diag.lifecycle, "心率：连接失败（\(error?.localizedDescription ?? "未知")），已停止，点开面板可重连")
+        stopAndGoIdle()
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        connectTimer?.cancel()
-        Diag.notice(Diag.lifecycle, "心率：连接断开（\(peripheral.name ?? "")），1.5s 后重连")
-        mutate { $0.status = .disconnected }
-        scheduleReconnect()
+        Diag.notice(Diag.lifecycle, "心率：连接断开（\(peripheral.name ?? "")），已停止，点开面板可重连")
+        stopAndGoIdle()
     }
 }
 
