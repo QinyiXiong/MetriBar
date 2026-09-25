@@ -37,6 +37,10 @@ struct MenuBarLabelView: View {
     }
 
     var body: some View {
+        // 心率只在**真正连上手表时**才占菜单栏槽位；断开/搜索中整段隐藏（面板仍显示状态）。
+        let showHeart = settings.showHeartRateInMenuBar && snapshot.heart.isConnected
+        let heartBPM = showHeart ? snapshot.heart.bpm : nil
+
         // 紧凑模式：纯文本最稳（状态栏 template 渲染下也不会出问题）。
         if settings.menuBarStyle == .compact {
             Self.compact(
@@ -46,7 +50,8 @@ struct MenuBarLabelView: View {
                 cpu: snapshot.cpu.total,
                 gpu: snapshot.gpu.utilization,
                 temperature: snapshot.hardware.cpuTemperature,
-                heart: snapshot.heart.bpm
+                heart: heartBPM,
+                showHeart: showHeart
             )
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 2)
@@ -62,14 +67,16 @@ struct MenuBarLabelView: View {
     }
 
     private var badge: NSImage {
-        Self.badge(
+        let showHeart = settings.showHeartRateInMenuBar && snapshot.heart.isConnected
+        return Self.badge(
             settings: settings,
             down: snapshot.network.downBps,
             up: snapshot.network.upBps,
             cpu: snapshot.cpu.total,
             gpu: snapshot.gpu.utilization,
             temperature: snapshot.hardware.cpuTemperature,
-            heart: snapshot.heart.bpm,
+            heart: showHeart ? snapshot.heart.bpm : nil,
+            showHeart: showHeart,
             dark: MenuBarBadge.isDark
         )
     }
@@ -83,10 +90,11 @@ struct MenuBarLabelView: View {
         gpu: Double?,
         temperature: Double?,
         heart: Int? = nil,
+        showHeart: Bool = false,
         dark: Bool
     ) -> NSImage {
         MenuBarBadge.image(
-            segments: badgeSegments(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature, heart: heart),
+            segments: badgeSegments(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature, heart: heart, showHeart: showHeart),
             background: .pill,
             dark: dark
         )
@@ -99,7 +107,8 @@ struct MenuBarLabelView: View {
         cpu: Double?,
         gpu: Double?,
         temperature: Double?,
-        heart: Int? = nil
+        heart: Int? = nil,
+        showHeart: Bool = false
     ) -> [MenuBarSegment] {
         var segments: [MenuBarSegment] = []
         let idleLabel: NSColor = .secondaryLabelColor
@@ -161,8 +170,9 @@ struct MenuBarLabelView: View {
             ))
         }
 
-        // 心率段：❤ + bpm。没信号时保留槽位显示 "--"（转灰），避免图标跳来跳去。
-        if settings.showHeartRateInMenuBar {
+        // 心率段：❤ + bpm。仅在手表已连接时出现（showHeart 由调用方按 isConnected 决定）；
+        // 断开会整段隐藏，♥ 不再常驻。
+        if showHeart {
             let hasBeat = heart != nil
             segments.append(MenuBarSegment(
                 symbol: "heart.fill",
@@ -182,7 +192,7 @@ struct MenuBarLabelView: View {
         if settings.showCPUUsageInMenuBar { parts.append(Fmt.percent(snapshot.cpu.total)) }
         if settings.showGPUUsageInMenuBar, let gpu = snapshot.gpu.utilization { parts.append(Fmt.percent(gpu)) }
         if settings.showTemperatureInMenuBar { parts.append(Fmt.temperature(snapshot.hardware.cpuTemperature, unit: settings.temperatureUnit)) }
-        if settings.showHeartRateInMenuBar { parts.append("♥" + (snapshot.heart.bpm.map(String.init) ?? "--")) }
+        if settings.showHeartRateInMenuBar && snapshot.heart.isConnected { parts.append("♥" + (snapshot.heart.bpm.map(String.init) ?? "--")) }
         return parts.joined(separator: ",")
     }
 
@@ -195,7 +205,8 @@ struct MenuBarLabelView: View {
         cpu: Double?,
         gpu: Double?,
         temperature: Double?,
-        heart: Int? = nil
+        heart: Int? = nil,
+        showHeart: Bool = false
     ) -> Text {
         if settings.menuBarStyle == .compact {
             return compact(settings: settings, down: down, up: up, cpu: cpu, gpu: gpu, temperature: temperature, heart: heart)
@@ -215,7 +226,7 @@ struct MenuBarLabelView: View {
         if settings.showTemperatureInMenuBar {
             parts.append(divider + temperatureSegment(temperature))
         }
-        if settings.showHeartRateInMenuBar {
+        if showHeart {
             parts.append(divider + heartSegment(heart))
         }
 
@@ -300,14 +311,15 @@ struct MenuBarLabelView: View {
         cpu: Double?,
         gpu: Double?,
         temperature: Double?,
-        heart: Int? = nil
+        heart: Int? = nil,
+        showHeart: Bool = false
     ) -> Text {
         var text = Text("↓" + Fmt.compactSpeed(down))
         if settings.showUploadInMenuBar { text = text + Text("  ") + Text("↑" + Fmt.compactSpeed(up)) }
         if settings.showCPUUsageInMenuBar, let cpu { text = text + Text("  ") + Text(Fmt.percent(cpu)) }
         if settings.showGPUUsageInMenuBar, let gpu { text = text + Text("  ") + Text("G" + Fmt.percent(gpu)) }
         if settings.showTemperatureInMenuBar { text = text + Text("  ") + Text(Fmt.temperature(temperature)) }
-        if settings.showHeartRateInMenuBar { text = text + Text("  ") + Text("\u{2665}" + (heart.map(String.init) ?? "--")) }
+        if showHeart { text = text + Text("  ") + Text("\u{2665}" + (heart.map(String.init) ?? "--")) }
         return text.font(.system(size: 11, weight: .medium)).foregroundColor(.primary)
     }
 
