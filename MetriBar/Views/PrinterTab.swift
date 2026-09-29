@@ -261,7 +261,7 @@ enum PrinterPatterns {
         return out as Data
     }
 
-    /// 预览图（同一套绘制）。
+    /// 预览图：统一在 A4 虚拟坐标系绘制（与 PDF 完全同一比例），再等比缩放到卡片。
     static func preview(_ pattern: TestPattern, width: CGFloat = 236) -> NSImage? {
         let scale: CGFloat = 2
         let pxW = Int(width * scale), pxH = Int(width * scale * (PrintPage.h / PrintPage.w))
@@ -270,7 +270,9 @@ enum PrinterPatterns {
                                           colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return nil }
         guard let g = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
         NSGraphicsContext.saveGraphicsState(); NSGraphicsContext.current = g
-        pattern.draw(CGSize(width: CGFloat(pxW) / scale, height: CGFloat(pxH) / scale), g.cgContext)
+        let ctx = g.cgContext
+        ctx.scaleBy(x: CGFloat(pxW) / PrintPage.w, y: CGFloat(pxH) / PrintPage.h)
+        pattern.draw(CGSize(width: PrintPage.w, height: PrintPage.h), ctx)
         NSGraphicsContext.restoreGraphicsState()
         let img = NSImage(size: NSSize(width: width, height: width * (PrintPage.h / PrintPage.w)))
         img.addRepresentation(rep)
@@ -303,21 +305,38 @@ final class PrinterModel: ObservableObject {
     func refresh() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-            let (_, outP) = Shell.run("/usr/bin/lpstat", ["-p"])
+            // locale 不可信（中文系统输出「打印机X闲置」「用于X的设备」），
+            // 改为结构化解析：lpstat -v 行内定位 URI（含 ://），URI 前的文字去掉
+            // 「device for / 用于 …的设备」等本地化前后缀即为队列名。
+            let (_, outV) = Shell.run("/usr/bin/lpstat", ["-v"])
             var names: [String] = []
-            for line in outP.split(separator: "\n") {
-                if line.hasPrefix("printer ") { names.append(String(line.dropFirst(8).split(separator: " ").first ?? "")) }
+            for raw in outV.split(separator: "\n") {
+                let line = String(raw)
+                guard let uriRange = line.range(of: "://") else { continue }
+                // 反向扫描 URI scheme 头（ipp/ipps/dnssd/http…），scheme 之前即本地化包装文字
+                var schemeStart = uriRange.lowerBound
+                while schemeStart > line.startIndex {
+                    let prev = line.index(before: schemeStart)
+                    let c = line[prev]
+                    if c.isLetter || c.isNumber || c == "+" || c == "-" || c == "." { schemeStart = prev } else { break }
+                }
+                var prefix = String(line[line.startIndex..<schemeStart])
+                for junk in ["device for ", "用于", "的设备"] { prefix = prefix.replacingOccurrences(of: junk, with: "") }
+                prefix = prefix.trimmingCharacters(in: CharacterSet(charactersIn: " :："))
+                if !prefix.isEmpty { names.append(prefix) }
             }
-            let (_, outD) = Shell.run("/usr/bin/lpstat", ["-d"])
             var def: String?
-            if let r = outD.range(of: ":(.*)$", options: .regularExpression) {
-                def = String(outD[r]).replacingOccurrences(of: ":", with: "").trimmingCharacters(in: .whitespaces)
-                if def?.isEmpty ?? true { def = nil }
+            let (_, outD) = Shell.run("/usr/bin/lpstat", ["-d"])
+            if let r = outD.range(of: "[:：]\\s*(.+)$", options: .regularExpression) {
+                let v = outD[r].dropFirst().trimmingCharacters(in: .whitespacesAndNewlines)
+                if !v.isEmpty && !v.localizedCaseInsensitiveContains("unknown") { def = v }
             }
             let list = Array(Set(names)).sorted()
             DispatchQueue.main.async {
                 self.printers = list
-                if self.selectedPrinter == nil { self.selectedPrinter = def ?? list.first }
+                if self.selectedPrinter == nil || !list.contains(self.selectedPrinter ?? "") {
+                    self.selectedPrinter = def ?? list.first
+                }
                 self.statusText = list.isEmpty ? "未检测到打印机" : "检测到 \(list.count) 台打印机"
                 Diag.notice(Diag.lifecycle, "工具箱·打印机：\(list) 默认=\(def ?? "-")")
             }

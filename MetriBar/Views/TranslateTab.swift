@@ -239,11 +239,43 @@ final class TranslateModel: ObservableObject {
         }
     }
 
+    // MARK: Python 自动发现（免配置：找一个能 import funasr 的解释器）
+
+    func autoDetectPython(_ settings: TranslateSettings) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let fm = FileManager.default
+            var candidates = [settings.pythonPath, "/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]
+            for base in ["/opt/anaconda3/bin", "/opt/anaconda3/envs", "~/anaconda3/envs", "~/miniconda3/envs"] {
+                let expanded = (base as NSString).expandingTildeInPath
+                if base.hasSuffix("/envs"), let envs = try? fm.contentsOfDirectory(atPath: expanded) {
+                    candidates.append(contentsOf: envs.map { expanded + "/" + $0 + "/bin/python3" })
+                } else {
+                    candidates.append(base.hasSuffix("bin") ? base + "/python3" : expanded)
+                }
+            }
+            var seen = Set<String>()
+            for py in candidates where fm.isExecutableFile(atPath: py) && seen.insert(py).inserted {
+                let (rc, _) = Shell.run(py, ["-c", "import funasr"])
+                if rc == 0 {
+                    DispatchQueue.main.async {
+                        if settings.pythonPath != py {
+                            settings.pythonPath = py
+                            settings.set("pythonPath", py)
+                        }
+                        self?.selfCheckText = "✓ 已自动选择转写环境：\(py)"
+                        Diag.notice(Diag.lifecycle, "视频翻译·自动发现 Python：\(py)")
+                    }
+                    return
+                }
+            }
+        }
+    }
+
     func selfCheck(_ settings: TranslateSettings) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var msgs: [String] = []
             let (rcPy, _) = Shell.run(settings.pythonPath, ["--version"])
-            msgs.append(rcPy == 0 ? "✓ Python 可用" : "✗ Python 不可用（检查路径设置）")
+            msgs.append(rcPy == 0 ? "✓ Python 可用（含转写依赖则更优）" : "✗ Python 不可用（检查路径设置）")
             let fm = FileManager.default
             msgs.append(fm.fileExists(atPath: settings.pipelineDir + "/transcribe.py") ? "✓ 转写脚本就绪" : "✗ 未找到 transcribe.py（检查流水线目录）")
             let ready = Self.knownModels.filter { fm.fileExists(atPath: settings.effectiveModelDir + "/" + $0.dirName) }
@@ -275,7 +307,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 430, idealWidth: 520, minHeight: 480)
             sideColumn.frame(minWidth: 300, idealWidth: 340, minHeight: 480)
         }
-        .onAppear { model.scanModels(settings) }
+        .onAppear { model.scanModels(settings); model.autoDetectPython(settings) }
     }
 
     private var queueColumn: some View {
@@ -379,7 +411,7 @@ struct TranslateTab: View {
                     .padding(10).background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
             }
             Spacer()
-            Button { showingSettings = true } label: { Label("流水线 / 模型目录 / 翻译端点设置…", systemImage: "gearshape") }
+            Button { showingSettings = true } label: { Label("高级设置（转写工程 · 模型目录 · 翻译端点）", systemImage: "gearshape") }
             Text("模型仅在任务运行期间驻留内存，进程退出即完全回收。")
                 .font(.system(size: 10)).foregroundColor(.secondary)
         }
@@ -414,9 +446,11 @@ struct TranslateSettingsPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("视频翻译设置").font(.system(size: 15, weight: .bold))
-            group("Python 与流水线") {
+            group("转写环境") {
+                Text("转写 = 语音→字幕的 Python 工程（含 transcribe.py）。App 会自动寻找装好依赖的环境，一般无需改动。")
+                    .font(.system(size: 10)).foregroundColor(.secondary)
                 pathField("Python 可执行文件", get: { settings.pythonPath }, set: { settings.pythonPath = $0 }, isDir: false)
-                pathField("流水线目录（transcribe.py 所在）", get: { settings.pipelineDir }, set: { settings.pipelineDir = $0 }, isDir: true)
+                pathField("转写工程目录（含 transcribe.py）", get: { settings.pipelineDir }, set: { settings.pipelineDir = $0 }, isDir: true)
                 Toggle("完成后烧录字幕进视频（ffmpeg，较慢）", isOn: $settings.burnIn)
             }
             group("模型") {
