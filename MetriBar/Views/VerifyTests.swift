@@ -234,10 +234,15 @@ struct KeyboardTestView: NSViewRepresentable {
     func updateNSView(_ nsView: KeyboardLayoutView, context: Context) {}
 }
 
-/// 全尺寸键盘画布：主键区(15u) + 编辑区(3列) + 数字小键盘(4列) + 完整方向键。
-/// keyCode 用 Apple 官方 kVK_* 权威表；数字小键盘与主区数字靠 keyCode 区分。
+/// 全尺寸键盘画布。keyCode 全部取自 Apple 官方 <Carbon/Carbon.h> kVK_* 权威表：
+/// A0 S1 D2 F3 H4 G5 Z6 X7 C8 V9 B11 Q12 W13 E14 R15 Y16 T17 1_18 2_19 3_20 4_21 5_23 6_22
+/// 7_26 8_28 9_25 0_29 -=27 ==24 [=33 ]=30 \42 ;41 '39 ,43 .47 /44 `50 Return36 Tab48 Sp49
+/// Del51 Esc53 cmdR54 cmdL55 shL56 caps57 optL58 ctlL59 shR60 optR61 ctlR62 fn(Globe)63
+/// F1_122 F2_120 F3_99 F4_118 F5_96 F6_97 F7_98 F8_100 F9_101 F10_109 F11_103 F12_111
+/// Ins(help)114 Home115 PgUp116 FwdDel117 End119 PgDn121 ←123 →124 ↓125 ↑126
+/// PadClear71 /75 *67 -78 +69 =81 Enter76 .65 0_82…9_92（0=82,1=83,…7=89,8=91,9=92）
 final class KeyboardLayoutView: NSView {
-    private struct Cell { var label = ""; var codes = Set<UInt16>()
+    private struct Cell { var main = ""; var shift = ""; var codes = Set<UInt16>()
                           var x: CGFloat = 0; var y: CGFloat = 0; var w: CGFloat = 1; var h: CGFloat = 1 }
     private var cells: [Cell] = []
     private var tested = Set<Int>()
@@ -247,170 +252,217 @@ final class KeyboardLayoutView: NSView {
     override init(frame f: NSRect) { super.init(frame: f); wantsLayer = true; build() }
     required init?(coder: NSCoder) { fatalError() }
 
-    private func add(_ label: String, _ code: UInt16? = nil, x: CGFloat, y: CGFloat, w: CGFloat = 1, h: CGFloat = 1) {
-        var c = Cell(label: label, x: x, y: y, w: w, h: h)
-        if let code { c.codes.insert(code) }
-        cells.append(c)
+    private func add(_ x: CGFloat, _ y: CGFloat, main: String, shift: String = "", code: UInt16, w: CGFloat = 1, h: CGFloat = 1) {
+        cells.append(Cell(main: main, shift: shift, codes: [code], x: x, y: y, w: w, h: h))
     }
 
     private func build() {
-        // ── 功能行（h=0.7）──
-        add("esc", 53, x: 0, y: 0, h: 0.7)
-        let fR: [(String, UInt16)] = [("F1",122),("F2",120),("F3",99),("F4",118),
-                                        ("F5",96),("F6",97),("F7",98),("F8",100),
-                                        ("F9",101),("F10",109),("F11",103),("F12",111)]
+        // ── 功能行 y=0 h=0.7 ──
+        add(0, 0, main: "esc", code: 53, h: 0.7)
+        let fnRow: [(String, UInt16)] = [("F1",122),("F2",120),("F3",99),("F4",118),
+                                           ("F5",96),("F6",97),("F7",98),("F8",100),
+                                           ("F9",101),("F10",109),("F11",103),("F12",111)]
         var fx: CGFloat = 1.15
-        for (i, it) in fR.enumerated() {
+        for (i, it) in fnRow.enumerated() {
             if i == 4 || i == 8 { fx += 0.3 }
-            add(it.0, it.1, x: fx, y: 0, h: 0.7); fx += 1
+            add(fx, 0, main: it.0, code: it.1, h: 0.7); fx += 1
         }
-        add("prtsc", 105, x: 15.5, y: 0, h: 0.7)
-        add("scroll", 107, x: 16.55, y: 0, h: 0.7)
-        add("pause", 113, x: 17.6, y: 0, h: 0.7)
-        add("eject", 110, x: 18.65, y: 0, h: 0.7)
+        add(15.5, 0, main: "prtsc", code: 105, h: 0.7)
+        add(16.55, 0, main: "scroll", code: 107, h: 0.7)
+        add(17.6, 0, main: "pause", code: 113, h: 0.7)
+        add(18.65, 0, main: "eject", code: 110, h: 0.7)
 
-        // ── 数字行 ──
-        let nums: [(String, UInt16)] = [("~`",50),("1!",18),("2@",19),("3#",20),("4$",21),
-                                          ("5%",23),("6^",22),("7&",26),("8*",28),("9(",25),("0)",29),("-_",27),("=+",24)]
+        // ── 数字行 y=1 ──
+        let nums: [(String, String, UInt16)] = [
+            ("`","~",50),("1","!",18),("2","@",19),("3","#",20),("4","$",21),("5","%",23),
+            ("6","^",22),("7","&",26),("8","*",28),("9","(",25),("0",")",29),("-","_",27),("=","+",24)]
         var x: CGFloat = 0
-        for n in nums { add(n.0, n.1, x: x, y: 1); x += 1 }
-        add("delete", 51, x: 13, y: 1, w: 1.9)
+        for n in nums { add(x, 1, main: n.0, shift: n.1, code: n.2); x += 1 }
+        add(13, 1, main: "delete", code: 51, w: 1.9)
 
-        // ── QWERTY ──
-        add("tab", 48, x: 0, y: 2, w: 1.4)
+        // ── QWERTY y=2 ──
+        add(0, 2, main: "tab", code: 48, w: 1.4)
         let qw: [(String, UInt16)] = [("Q",12),("W",13),("E",14),("R",15),("T",17),
                                         ("Y",16),("U",32),("I",34),("O",31),("P",35)]
         x = 1.5
-        for n in qw { add(n.0, n.1, x: x, y: 2); x += 1 }
-        add("[{", 30, x: x, y: 2); x += 1
-        add("]}", 33, x: x, y: 2); x += 1
-        add("\\|", 42, x: x, y: 2, w: 1.5)
+        for n in qw { add(x, 2, main: n.0, code: n.1); x += 1 }
+        add(x, 2, main: "[", shift: "{", code: 33); x += 1
+        add(x, 2, main: "]", shift: "}", code: 30); x += 1
+        add(x, 2, main: "\\", shift: "|", code: 42, w: 1.5)
 
-        // ── ASDF ──
-        add("caps", 57, x: 0, y: 3, w: 1.8)
-        let asd: [(String, UInt16)] = [("A",0),("S",1),("D",2),("F",3),("G",5),
-                                         ("H",4),("J",6),("K",7),("L",8)]
+        // ── ASDF y=3 ──
+        add(0, 3, main: "caps", shift: "⇪", code: 57, w: 1.8)
+        let asdf: [(String, UInt16)] = [("A",0),("S",1),("D",2),("F",3),("G",5),
+                                          ("H",4),("J",38),("K",40),("L",37)]
         x = 1.9
-        for n in asd { add(n.0, n.1, x: x, y: 3); x += 1 }
-        add(";:", 41, x: x, y: 3); x += 1
-        add("'\"", 39, x: x, y: 3); x += 1
-        add("return", 36, x: x, y: 3, w: 2.0)
+        for n in asdf { add(x, 3, main: n.0, code: n.1); x += 1 }
+        add(x, 3, main: ";", shift: ":", code: 41); x += 1
+        add(x, 3, main: "'", shift: "\"", code: 39); x += 1
+        add(x, 3, main: "return", shift: "↩", code: 36, w: 2.0)
 
-        // ── ZXCV（含 , . /）──
-        add("⇧", 56, x: 0, y: 4, w: 2.3)
-        let zxCodes: [(String, UInt16)] = [("Z",46),("X",45),("C",47),("V",9),("B",11),("N",0x2D),("M",0x2E)]
+        // ── ZXCV y=4（官方：Z6 X7 C8 V9 B11 N45 M46 ,43 .47 /44）──
+        add(0, 4, main: "⇧", shift: "shift", code: 56, w: 2.3)
+        let zxcv: [(String, UInt16)] = [("Z",6),("X",7),("C",8),("V",9),("B",11),
+                                          ("N",45),("M",46)]
         x = 2.4
-        for n in zxCodes { add(n.0, n.1, x: x, y: 4); x += 1 }
-        add(",<", 43, x: x, y: 4); x += 1
-        add(".>", 47, x: x, y: 4); x += 1
-        add("/?", 44, x: x, y: 4); x += 1
-        add("⇧", 60, x: x, y: 4, w: 1.3)
+        for n in zxcv { add(x, 4, main: n.0, code: n.1); x += 1 }
+        add(x, 4, main: ",", shift: "<", code: 43); x += 1
+        add(x, 4, main: ".", shift: ">", code: 47); x += 1
+        add(x, 4, main: "/", shift: "?", code: 44); x += 1
+        add(x, 4, main: "⇧", shift: "shift", code: 60, w: 1.3)
 
-        // ── 底行 ──
-        add("control", 59, x: 0, y: 5, w: 1.2)
-        add("option", 58, x: 1.3, y: 5, w: 1.2)
-        add("command", 55, x: 2.6, y: 5, w: 1.2)
-        add("space", 49, x: 3.9, y: 5, w: 6.2)
-        add("command", 54, x: 10.2, y: 5, w: 1.2)
-        add("option", 61, x: 11.5, y: 5, w: 1.2)
-        add("fn", 63, x: 12.8, y: 5, w: 1.2)
+        // ── 底行 y=5 ──
+        add(0, 5, main: "control", shift: "⌃", code: 59, w: 1.2)
+        add(1.3, 5, main: "option", shift: "⌥", code: 58, w: 1.2)
+        add(2.6, 5, main: "command", shift: "⌘", code: 55, w: 1.2)
+        add(3.9, 5, main: "space", code: 49, w: 6.2)
+        add(10.2, 5, main: "command", shift: "⌘", code: 54, w: 1.2)
+        add(11.5, 5, main: "option", shift: "⌥", code: 61, w: 1.2)
+        add(12.8, 5, main: "fn", shift: "🌐", code: 63, w: 1.2)
 
-        // ── 编辑区第二排 + 方向键（↑ 单独在上）──
-        add("ins", 114, x: 15.5, y: 1)
-        add("home", 115, x: 16.55, y: 1)
-        add("pgup", 116, x: 17.6, y: 1)
-        add("del", 117, x: 18.65, y: 1)
-        add("end", 119, x: 16.55, y: 2)
-        add("pgdn", 121, x: 17.6, y: 2)
-        add("↑", 126, x: 16.55, y: 4)
-        add("←", 123, x: 15.5, y: 5)
-        add("↓", 125, x: 16.55, y: 5)
-        add("→", 124, x: 17.6, y: 5)
+        // ── 编辑区（主区右侧，间距分隔）──
+        add(15.5, 1, main: "ins", code: 114)
+        add(16.55, 1, main: "home", shift: "↖", code: 115)
+        add(17.6, 1, main: "pgup", code: 116)
+        add(15.5, 2, main: "del", code: 117)
+        add(16.55, 2, main: "end", shift: "↘", code: 119)
+        add(17.6, 2, main: "pgdn", shift: "↟", code: 121)
 
-        // ── 数字小键盘 ──
-        add("num", 71, x: 20.4, y: 1)
-        add("/", 75, x: 21.4, y: 1)
-        add("×", 67, x: 22.4, y: 1)
-        add("−", 78, x: 23.4, y: 1)
-        add("7", 89, x: 20.4, y: 2)
-        add("8", 91, x: 21.4, y: 2)
-        add("9", 92, x: 22.4, y: 2)
-        add("+", 69, x: 23.4, y: 2, h: 2)
-        add("4", 86, x: 20.4, y: 3)
-        add("5", 87, x: 21.4, y: 3)
-        add("6", 88, x: 22.4, y: 3)
-        add("1", 83, x: 20.4, y: 4)
-        add("2", 84, x: 21.4, y: 4)
-        add("3", 85, x: 22.4, y: 4)
-        add("enter", 76, x: 23.4, y: 4, h: 2)
-        add("0", 82, x: 20.4, y: 5, w: 2)
-        add(".", 65, x: 22.4, y: 5)
+        // ── 方向键（↑独立上排）──
+        add(16.55, 4, main: "↑", code: 126)
+        add(15.5, 5, main: "←", code: 123)
+        add(16.55, 5, main: "↓", code: 125)
+        add(17.6, 5, main: "→", code: 124)
+
+        // ── 数字小键盘 x≥20.3 ──
+        add(20.3, 1, main: "num", code: 71)
+        add(21.3, 1, main: "/", code: 75)
+        add(22.3, 1, main: "×", shift: "*", code: 67)
+        add(23.3, 1, main: "−", shift: "-", code: 78)
+        add(20.3, 2, main: "7", code: 89)
+        add(21.3, 2, main: "8", code: 91)
+        add(22.3, 2, main: "9", code: 92)
+        add(23.3, 2, main: "+", code: 69, h: 2)
+        add(20.3, 3, main: "4", code: 86)
+        add(21.3, 3, main: "5", code: 87)
+        add(22.3, 3, main: "6", code: 88)
+        add(20.3, 4, main: "1", code: 83)
+        add(21.3, 4, main: "2", code: 84)
+        add(22.3, 4, main: "3", code: 85)
+        add(23.3, 4, main: "enter", shift: "↵", code: 76, h: 2)
+        add(20.3, 5, main: "0", code: 82, w: 2)
+        add(22.3, 5, main: ".", code: 65)
+        add(20.3, 0, main: "=", code: 81, h: 0.7)
+
     }
 
     override var acceptsFirstResponder: Bool { true }
     override func viewDidMoveToWindow() { window?.makeFirstResponder(self) }
     override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self) }
 
-    /// 中文 IME 合成期间 keyDown 可能被输入法接管，insertText 兜底按首字符点亮。
+    override func keyDown(with event: NSEvent) {
+        hit(event.keyCode)
+    }
+    /// 修饰键 / Globe(中英切换) / caps 只发 flagsChanged。
+    override func flagsChanged(with event: NSEvent) {
+        hit(event.keyCode)
+    }
+    /// 中文 IME 合成兜底。
     override func insertText(_ insertString: Any) {
         var ch: Character?
         if let str = insertString as? String { ch = str.lowercased().first }
         else if let attr = insertString as? NSAttributedString { ch = attr.string.lowercased().first }
-        if let c = ch, c != ESC {
-            if let i = cells.firstIndex(where: { $0.label.lowercased().contains(String(c)) }) {
-                lit = i; litAt = Date(); tested.insert(i); needsDisplay = true
+        if let c = ch, c != Character(UnicodeScalar(27)) {
+            if let i = cells.firstIndex(where: { $0.main.lowercased() == String(c) || $0.shift.lowercased() == String(c) }) {
+                flash(i)
             }
         }
     }
-    private let ESC = Character(UnicodeScalar(27))
 
-    override func keyDown(with event: NSEvent) {
-        let hit = cells.firstIndex(where: { $0.codes.contains(event.keyCode) })
-        if let i = hit { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
+    private func hit(_ code: UInt16) {
+        if let i = cells.firstIndex(where: { $0.codes.contains(code) }) { flash(i) }
     }
-
-    /// 修饰键与 Globe（中英切换）键不产生 keyDown，只产生 flagsChanged——必须单独监听。
-    /// keyCode 自带左右区分：⇧56/60 control59/62 option58/61 command55/54 fn/Globe63 caps57。
-    override func flagsChanged(with event: NSEvent) {
-        let hit = cells.firstIndex(where: { $0.codes.contains(event.keyCode) })
-        if let i = hit { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
-    }
+    private func flash(_ i: Int) { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
-        let pad: CGFloat = 10, gap: CGFloat = 3
+        // 键盘外壳
+        let shell = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 12, yRadius: 12)
+        NSColor(calibratedWhite: 0.5, alpha: 0.10).setFill(); shell.fill()
+        NSColor(calibratedWhite: 0.5, alpha: 0.28).setStroke(); shell.lineWidth = 1; shell.stroke()
+
+        let pad: CGFloat = 9, gap: CGFloat = 3
         let area = bounds.insetBy(dx: pad, dy: pad)
-        let unitX = area.width / 24.6
-        let bandH = (area.height - 22) / 5.7            // 5 主行 + fn(0.7)
-        let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.3
+        let unitX = area.width / 24.55
+        let bandH = (area.height) / 5.75
+        let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
+
         for (idx, c) in cells.enumerated() {
-            let topOffset: CGFloat = c.y == 0 ? bandH - bandH * 0.7 : c.y * bandH
+            let isFn = c.y == 0
+            let topOffset: CGFloat = isFn ? bandH * 0.3 : c.y * bandH
             let rect = NSRect(x: area.minX + c.x * unitX,
-                              y: area.maxY - topOffset - (c.y == 0 ? bandH * 0.7 : c.h * bandH),
-                              width: max(c.w * unitX - gap, 8),
-                              height: (c.y == 0 ? bandH * 0.7 : c.h * bandH) - gap)
+                              y: area.maxY - topOffset - (isFn ? bandH * 0.7 : c.h * bandH),
+                              width: max(c.w * unitX - gap, 9),
+                              height: (isFn ? bandH * 0.7 : c.h * bandH) - gap)
             let isLit = flashAlive && lit == idx
             let isTested = tested.contains(idx)
-            (isLit ? NSColor.controlAccentColor
-                    : isTested ? NSColor.systemGreen.withAlphaComponent(0.6)
-                    : NSColor(calibratedWhite: 0.5, alpha: 0.15)).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
+
+            // 键帽底座阴影
+            if !isLit {
+                NSColor(calibratedWhite: 0.0, alpha: 0.16).setFill()
+                NSBezierPath(roundedRect: rect.offsetBy(dx: 0, dy: -1.4), xRadius: 4.5, yRadius: 4.5).fill()
+            }
+            // 键帽面
+            if isLit {
+                NSColor.controlAccentColor.setFill()
+            } else if isTested {
+                NSColor.systemGreen.withAlphaComponent(0.5).setFill()
+            } else {
+                let grad = NSGradient(starting: NSColor(calibratedWhite: 1.0, alpha: isDark ? 0.16 : 0.9),
+                                      ending: NSColor(calibratedWhite: 0.55, alpha: isDark ? 0.10 : 0.62))
+                grad?.draw(in: NSBezierPath(roundedRect: rect, xRadius: 4.5, yRadius: 4.5), angle: -90)
+            }
+            NSColor(calibratedWhite: 0.5, alpha: isLit ? 0.0 : 0.35).setStroke()
+            let cap = NSBezierPath(roundedRect: rect, xRadius: 4.5, yRadius: 4.5); cap.lineWidth = 0.6; cap.stroke()
+
+            // 标签：双字符键上下两行
             let ps = NSMutableParagraphStyle(); ps.alignment = .center
-            NSAttributedString(string: c.label, attributes: [
-                .font: NSFont.systemFont(ofSize: min(8.5, rect.height * 0.3), weight: isLit ? .bold : .medium),
-                .foregroundColor: isLit ? NSColor.white : NSColor.labelColor,
-                .paragraphStyle: ps
-            ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
+            let fg: NSColor = isLit ? .white : (isTested ? .labelColor : (isDark ? .secondaryLabelColor : .labelColor))
+            if c.shift.isEmpty {
+                NSAttributedString(string: c.main, attributes: [
+                    .font: NSFont.systemFont(ofSize: min(9, rect.height * 0.3), weight: isLit ? .bold : .medium),
+                    .foregroundColor: fg, .paragraphStyle: ps
+                ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
+            } else {
+                let upper = NSAttributedString(string: c.shift, attributes: [
+                    .font: NSFont.systemFont(ofSize: min(7, rect.height * 0.2), weight: .regular),
+                    .foregroundColor: fg.withAlphaComponent(0.75)])
+                upper.draw(at: NSPoint(x: rect.midX - upper.size().width / 2, y: rect.maxY - rect.height * 0.34))
+                let lower = NSAttributedString(string: c.main, attributes: [
+                    .font: NSFont.systemFont(ofSize: min(8.5, rect.height * 0.28), weight: isLit ? .bold : .medium),
+                    .foregroundColor: fg])
+                lower.draw(at: NSPoint(x: rect.midX - lower.size().width / 2, y: rect.minY + rect.height * 0.16))
+            }
         }
+
+        // 进度条 + 文案
         let remain = cells.count - tested.count
-        let text = tested.isEmpty ? "逐键按下（F 键无反应请按 fn+F）· 共 \(cells.count) 键，含小键盘/方向键"
+        let pct = cells.isEmpty ? 0 : CGFloat(tested.count) / CGFloat(cells.count)
+        let barW: CGFloat = 150, barY = pad / 2 + 2
+        let track = NSBezierPath(roundedRect: NSRect(x: bounds.midX - barW/2, y: barY, width: barW, height: 3), xRadius: 1.5, yRadius: 1.5)
+        NSColor(calibratedWhite: 0.5, alpha: 0.25).setFill(); track.fill()
+        if pct > 0 {
+            NSColor.controlAccentColor.setFill()
+            NSBezierPath(roundedRect: NSRect(x: bounds.midX - barW/2, y: barY, width: barW*pct, height: 3), xRadius: 1.5, yRadius: 1.5).fill()
+        }
+        let text = tested.isEmpty ? "点击此处取得焦点后逐键按下（F 键无反应请按 fn+F）"
             : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
         NSAttributedString(string: text, attributes: [
-            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+            .font: NSFont.systemFont(ofSize: 10.5, weight: .semibold),
             .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor,
-        ]).draw(at: NSPoint(x: bounds.midX - 190, y: pad / 2))
+        ]).draw(at: NSPoint(x: bounds.midX - NSAttributedString(string: text).size().width/2, y: barY + 6))
     }
+
+    private var isDark: Bool { effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
 }
 
 // MARK: - 触控板画布
