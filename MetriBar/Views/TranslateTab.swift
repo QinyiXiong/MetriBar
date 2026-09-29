@@ -33,7 +33,7 @@ final class TranslateSettings: ObservableObject {
 
     private init() {
         pipelineDir = d.string(forKey: "translate.pipelineDir") ?? "/Users/qinyixiong/Programer/CodeManager/Person/translation"
-        pythonPath = d.string(forKey: "translate.pythonPath") ?? "/usr/bin/python3"
+        pythonPath = d.string(forKey: "translate.pythonPath") ?? "/opt/anaconda3/envs/work/bin/python3"
         modelDir = d.string(forKey: "translate.modelDir") ?? ""
         translateBaseURL = d.string(forKey: "translate.translateBaseURL") ?? "http://127.0.0.1:18888/v1"
         translateAPIKey = d.string(forKey: "translate.translateAPIKey") ?? ""
@@ -133,6 +133,8 @@ final class TranslateModel: ObservableObject {
         env["METRIBAR_JSON_PROGRESS"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
         env["METRIBAR_TRANSLATE_BASE_URL"] = settings.translateBaseURL
+        // GUI 启动的进程 PATH 很精简：补上 homebrew 等，保证脚本能找到 ffmpeg
+        env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/opt/ffmpeg-full/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
         if !settings.translateAPIKey.isEmpty { env["METRIBAR_TRANSLATE_API_KEY"] = settings.translateAPIKey }
         if !settings.translateModel.isEmpty { env["METRIBAR_TRANSLATE_MODEL"] = settings.translateModel }
 
