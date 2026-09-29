@@ -385,15 +385,13 @@ final class KeyboardLayoutView: NSView {
     private func flash(_ i: Int) { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
 
     override func draw(_ dirtyRect: NSRect) {
-        // 键盘外壳
-        let shell = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 12, yRadius: 12)
-        NSColor(calibratedWhite: 0.5, alpha: 0.10).setFill(); shell.fill()
-        NSColor(calibratedWhite: 0.5, alpha: 0.28).setStroke(); shell.lineWidth = 1; shell.stroke()
+        NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
+        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
 
-        let pad: CGFloat = 9, gap: CGFloat = 3
+        let pad: CGFloat = 10, gap: CGFloat = 3
         let area = bounds.insetBy(dx: pad, dy: pad)
         let unitX = area.width / 24.55
-        let bandH = (area.height) / 5.75
+        let bandH = area.height / 5.75
         let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
 
         for (idx, c) in cells.enumerated() {
@@ -405,61 +403,27 @@ final class KeyboardLayoutView: NSView {
                               height: (isFn ? bandH * 0.7 : c.h * bandH) - gap)
             let isLit = flashAlive && lit == idx
             let isTested = tested.contains(idx)
+            (isLit ? NSColor.controlAccentColor
+                    : isTested ? NSColor.systemGreen.withAlphaComponent(0.55)
+                    : NSColor(calibratedWhite: 0.5, alpha: 0.16)).setFill()
+            NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
 
-            // 键帽底座阴影
-            if !isLit {
-                NSColor(calibratedWhite: 0.0, alpha: 0.16).setFill()
-                NSBezierPath(roundedRect: rect.offsetBy(dx: 0, dy: -1.4), xRadius: 4.5, yRadius: 4.5).fill()
-            }
-            // 键帽面
-            if isLit {
-                NSColor.controlAccentColor.setFill()
-            } else if isTested {
-                NSColor.systemGreen.withAlphaComponent(0.5).setFill()
-            } else {
-                let grad = NSGradient(starting: NSColor(calibratedWhite: 1.0, alpha: isDark ? 0.16 : 0.9),
-                                      ending: NSColor(calibratedWhite: 0.55, alpha: isDark ? 0.10 : 0.62))
-                grad?.draw(in: NSBezierPath(roundedRect: rect, xRadius: 4.5, yRadius: 4.5), angle: -90)
-            }
-            NSColor(calibratedWhite: 0.5, alpha: isLit ? 0.0 : 0.35).setStroke()
-            let cap = NSBezierPath(roundedRect: rect, xRadius: 4.5, yRadius: 4.5); cap.lineWidth = 0.6; cap.stroke()
-
-            // 标签：双字符键上下两行
             let ps = NSMutableParagraphStyle(); ps.alignment = .center
-            let fg: NSColor = isLit ? .white : (isTested ? .labelColor : (isDark ? .secondaryLabelColor : .labelColor))
-            if c.shift.isEmpty {
-                NSAttributedString(string: c.main, attributes: [
-                    .font: NSFont.systemFont(ofSize: min(9, rect.height * 0.3), weight: isLit ? .bold : .medium),
-                    .foregroundColor: fg, .paragraphStyle: ps
-                ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
-            } else {
-                let upper = NSAttributedString(string: c.shift, attributes: [
-                    .font: NSFont.systemFont(ofSize: min(7, rect.height * 0.2), weight: .regular),
-                    .foregroundColor: fg.withAlphaComponent(0.75)])
-                upper.draw(at: NSPoint(x: rect.midX - upper.size().width / 2, y: rect.maxY - rect.height * 0.34))
-                let lower = NSAttributedString(string: c.main, attributes: [
-                    .font: NSFont.systemFont(ofSize: min(8.5, rect.height * 0.28), weight: isLit ? .bold : .medium),
-                    .foregroundColor: fg])
-                lower.draw(at: NSPoint(x: rect.midX - lower.size().width / 2, y: rect.minY + rect.height * 0.16))
-            }
+            NSAttributedString(string: c.main.isEmpty ? c.shift : c.main, attributes: [
+                .font: NSFont.systemFont(ofSize: min(9, rect.height * 0.3), weight: isLit ? .bold : .medium),
+                .foregroundColor: isLit ? NSColor.white : NSColor.labelColor,
+                .paragraphStyle: ps
+            ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
         }
 
-        // 进度条 + 文案
         let remain = cells.count - tested.count
-        let pct = cells.isEmpty ? 0 : CGFloat(tested.count) / CGFloat(cells.count)
-        let barW: CGFloat = 150, barY = pad / 2 + 2
-        let track = NSBezierPath(roundedRect: NSRect(x: bounds.midX - barW/2, y: barY, width: barW, height: 3), xRadius: 1.5, yRadius: 1.5)
-        NSColor(calibratedWhite: 0.5, alpha: 0.25).setFill(); track.fill()
-        if pct > 0 {
-            NSColor.controlAccentColor.setFill()
-            NSBezierPath(roundedRect: NSRect(x: bounds.midX - barW/2, y: barY, width: barW*pct, height: 3), xRadius: 1.5, yRadius: 1.5).fill()
-        }
         let text = tested.isEmpty ? "点击此处取得焦点后逐键按下（F 键无反应请按 fn+F）"
             : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
+        let size = NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold)]).size()
         NSAttributedString(string: text, attributes: [
-            .font: NSFont.systemFont(ofSize: 10.5, weight: .semibold),
+            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
             .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor,
-        ]).draw(at: NSPoint(x: bounds.midX - NSAttributedString(string: text).size().width/2, y: barY + 6))
+        ]).draw(at: NSPoint(x: bounds.midX - size.width / 2, y: pad / 2))
     }
 
     private var isDark: Bool { effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
