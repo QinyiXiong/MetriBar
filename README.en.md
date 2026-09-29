@@ -84,6 +84,16 @@ MetriBar uses macOS's built-in **CoreBluetooth** to read the heart rate your spo
 
 ---
 
+## 🧰 Toolbox (v2.0)
+
+Tap the **🔧 wrench** at the bottom of the menu-bar panel to open a standalone toolbox window with three tabs:
+
+- **🖨 Printer Test** — enumerates CUPS printers (`lpstat`), prints **9 self-drawn A4 test sheets** generated live with CoreGraphics (alignment, color/nozzle/gradients/fine lines/text clarity), with card previews and one-click queueing via `lp`.
+- **🔍 Mac Inspection** — a 24-item checklist (original copy, persisted progress) plus built-in interactive tests: full-screen dead-pixel color cycle, speaker L/C/R sweeps, 5-second mic record & playback, live camera preview, keyboard all-keys test, trackpad canvas. A local read-only hardware snapshot shows serial, battery cycles/health, chip/RAM, disk and MDM enrollment — no network.
+- **🎬 Video Translation** — bridges your local FunASR pipeline (`transcribe.py`): drop videos → per-task **isolated Python subprocess** (transcribe → translate → bilingual SRT, optional ffmpeg burn-in). **Models never stay resident**: the subprocess exits (or is stopped) and the OS reclaims everything. Python path, pipeline dir, **model dir (`METRIBAR_MODEL_DIR`)** and translation endpoint (`METRIBAR_TRANSLATE_*`) are all configurable; the patched script stays backward compatible with plain CLI usage.
+
+---
+
 ## Requirements
 
 - **macOS 13.0 Ventura or later** (`MACOSX_DEPLOYMENT_TARGET = 13.0`)

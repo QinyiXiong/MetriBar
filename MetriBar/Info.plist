@@ -30,6 +30,10 @@
 	<string>© 2025 QinyiXiong · MIT</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>MetriBar 需要蓝牙来连接你开启「心率广播」的手表（如 Garmin fenix），仅读取标准心率数据并显示在菜单栏；完全离线，不会联网或上传任何数据。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>验机工具的摄像头检测：仅在 App 内实时预览画面帮你确认摄像头是否正常；不录制、不保存、不上传。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>验机工具的麦克风检测：录制 5 秒测试音频并立即在本机回放给你听；文件只存在系统临时目录，不联网、不上传。</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

@@ -246,6 +246,14 @@ struct PopoverView: View {
 
             Spacer()
 
+            Button {
+                ToolboxWindow.open()
+            } label: {
+                Image(systemName: "wrench.and.screwdriver")
+            }
+            .buttonStyle(.plain)
+            .help("工具箱：打印机测试 / MacBook 验机 / 视频翻译")
+
             SettingsGearButton()
 
             Button {
