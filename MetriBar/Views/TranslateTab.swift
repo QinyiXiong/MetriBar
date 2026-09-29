@@ -95,8 +95,8 @@ enum ModelCatalog {
     ]
     static let vad = ModelSpec(key: "vad", msRepo: "iic/fsmn-vad", dirName: "fsmn-vad",
                                label: "FSMN-VAD · 长音频断句必需", sizeText: "≈4 MB")
-    static let mt = ModelSpec(key: "mt", msRepo: "mlx-community/Hy-MT2-7B-4bit", dirName: "Hy-MT2-7B-4bit",
-                              label: "Hy-MT2-7B · 翻译大模型（MLX 4bit）", sizeText: "≈4 GB")
+    static let mt = ModelSpec(key: "mt", msRepo: "mlx-community/Hy-MT2-7B", dirName: "Hy-MT2-7B",
+                              label: "Hy-MT2-7B · 翻译大模型（原版未量化）", sizeText: "≈15 GB")
     static var all: [ModelSpec] { asr + [vad, mt] }
 }
 
@@ -521,7 +521,8 @@ struct TranslateTab: View {
             }
             Button("全部下载缺失") { model.downloadAllMissing(settings) }.controlSize(.small)
             Spacer()
-            DisclosureGroup("高级设置（目录 / 端点）") { settingsRows }.font(.system(size: 11))
+            Text("端点与目录由 App 自动管理：内置运行时 + 本地翻译服务 :\(TranslateSettings.shared.serverPort)")
+                .font(.system(size: 10)).foregroundColor(.secondary)
         }
         .padding(14)
     }
@@ -544,35 +545,6 @@ struct TranslateTab: View {
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
-    }
-
-    private var settingsRows: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Python：\(TranslateSettings.shared.effectivePython)")
-                .font(.system(size: 9, design: .monospaced)).foregroundColor(.secondary).textSelection(.enabled)
-            pathRow("模型目录") { settings.modelDir } set: { v in settings.modelDir = v; settings.persist("modelDir", v) }
-            pathRow("转写工程目录") { settings.pipelineDir } set: { v in settings.pipelineDir = v; settings.persist("pipelineDir", v) }
-            TextField("翻译端点 Base URL", text: $settings.translateBaseURL).onSubmit { settings.persist("translateBaseURL", settings.translateBaseURL) }
-            HStack {
-                TextField("服务端口", text: $settings.serverPort).frame(width: 90).onSubmit { settings.persist("serverPort", settings.serverPort) }
-                TextField("翻译模型名", text: $settings.translateModel).onSubmit { settings.persist("translateModel", settings.translateModel) }
-            }
-            SecureField("API Key（本机服务可留空）", text: $settings.translateAPIKey).onSubmit { settings.persist("translateAPIKey", settings.translateAPIKey) }
-            Toggle("烧录字幕进视频（ffmpeg）", isOn: $settings.burnIn).onChange(of: settings.burnIn) { on in settings.persist("burnIn", on ? "1" : "0") }
-        }
-        .textFieldStyle(.roundedBorder)
-        .controlSize(.small)
-        .padding(.top, 4)
-    }
-
-    private func pathRow(_ label: String, get: @escaping () -> String, set: @escaping (String) -> Void) -> some View {
-        HStack {
-            TextField(label, text: Binding(get: get, set: set))
-            Button("选择") {
-                let p = NSOpenPanel(); p.canChooseDirectories = true; p.canChooseFiles = false
-                if p.runModal() == .OK, let url = p.url { set(url.path) }
-            }
-        }
     }
 
     private var logPanel: some View {

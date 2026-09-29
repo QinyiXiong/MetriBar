@@ -86,6 +86,13 @@ final class VerifyModel: ObservableObject {
                     cpuText = "\(chipName) · \(nums[0]) 核 CPU（\(nums[1]) 性能 + \(nums[2]) 能效）"
                 }
             }
+            let dp0 = prof("SPDisplaysDataType")
+            var gpuCores = 0
+            if let node = dp0?["SPDisplaysDataType"] {
+                let gpus: [[String: Any]] = (node as? [[String: Any]]) ?? ((node as? [String: Any])?["_items"] as? [[String: Any]] ?? [])
+                for g in gpus where str(g["sppci_device_type"]) == "spdisplays_gpu" { gpuCores = Int(str(g["sppci_cores"]) ?? "") ?? 0 }
+            }
+            if gpuCores > 0 { cpuText += " · GPU \(gpuCores) 核" }
             rows.append(("处理器", cpuText))
             rows.append(("内存", str(hwItem["physical_memory"]) ?? "—"))
             rows.append(("序列号", str(hwItem["serial_number"]) ?? "读取失败"))
@@ -115,9 +122,19 @@ final class VerifyModel: ObservableObject {
             }
 
             let dp = prof("SPDisplaysDataType")
-            if let res = str(deep(dp, ["spdisplays_resolution"])) {
-                let cnt = (deep(dp, ["number_of_displays"]) as? String) ?? ""
-                rows.append(("显示器", res + (cnt.isEmpty ? "" : " (\(cnt))")))
+            if let node = dp?["SPDisplaysDataType"] {
+                let gpus: [[String: Any]] = (node as? [[String: Any]]) ?? ((node as? [String: Any])?["_items"] as? [[String: Any]] ?? [])
+                var monLines: [String] = []
+                for g in gpus {
+                    let drvrs = g["spdisplays_ndrvs"] as? [[String: Any]] ?? []
+                    for drv in drvrs {
+                        let name = str(drv["_name"]) ?? "未知显示器"
+                        let ext = drv["_spdisplays_display-vendor-id"] != nil
+                        let res = str(drv["spdisplays_resolution"]) ?? str(drv["_spdisplays_pixels"]) ?? ""
+                        monLines.append((ext ? "外接 " : "内建 ") + name + (res.isEmpty ? "" : " · \(res)"))
+                    }
+                }
+                for m in monLines { rows.append(("显示器", m)) }
             }
 
             let st = prof("SPStorageDataType")
