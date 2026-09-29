@@ -96,7 +96,7 @@ final class TranslateModel: ObservableObject {
             }
             rows.append((m.key, m.dirName, bytes, present))
         }
-        modelRows = rows
+        DispatchQueue.main.async { [weak self] in self?.modelRows = rows }
     }
 
     // MARK: 队列执行（串行，一次只跑一个子进程）

@@ -294,24 +294,34 @@ final class PrinterModel: ObservableObject {
     @Published var busy: Bool = false
     @Published var toast: String?
 
-    init() { refresh() }
+    init() {
+        // 关键：绝不能在 init（窗口 HostingController 事务中）同步跑 lpstat 并改 @Published，
+        // 否则 SwiftUI AttributeGraph precondition 崩溃。延后一拍、后台执行、回主线程更新。
+        DispatchQueue.main.async { [weak self] in self?.refresh() }
+    }
 
     func refresh() {
-        let (_, outP) = Shell.run("/usr/bin/lpstat", ["-p"])
-        var names: [String] = []
-        for line in outP.split(separator: "\n") {
-            if line.hasPrefix("printer ") { names.append(String(line.dropFirst(8).split(separator: " ").first ?? "")) }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let (_, outP) = Shell.run("/usr/bin/lpstat", ["-p"])
+            var names: [String] = []
+            for line in outP.split(separator: "\n") {
+                if line.hasPrefix("printer ") { names.append(String(line.dropFirst(8).split(separator: " ").first ?? "")) }
+            }
+            let (_, outD) = Shell.run("/usr/bin/lpstat", ["-d"])
+            var def: String?
+            if let r = outD.range(of: ":(.*)$", options: .regularExpression) {
+                def = String(outD[r]).replacingOccurrences(of: ":", with: "").trimmingCharacters(in: .whitespaces)
+                if def?.isEmpty ?? true { def = nil }
+            }
+            let list = Array(Set(names)).sorted()
+            DispatchQueue.main.async {
+                self.printers = list
+                if self.selectedPrinter == nil { self.selectedPrinter = def ?? list.first }
+                self.statusText = list.isEmpty ? "未检测到打印机" : "检测到 \(list.count) 台打印机"
+                Diag.notice(Diag.lifecycle, "工具箱·打印机：\(list) 默认=\(def ?? "-")")
+            }
         }
-        let (_, outD) = Shell.run("/usr/bin/lpstat", ["-d"])
-        var def: String?
-        if let r = outD.range(of: ":(.*)$", options: .regularExpression) {
-            def = String(outD[r]).replacingOccurrences(of: ":", with: "").trimmingCharacters(in: .whitespaces)
-            if def?.isEmpty ?? true { def = nil }
-        }
-        printers = Array(Set(names)).sorted()
-        if selectedPrinter == nil { selectedPrinter = def ?? printers.first }
-        statusText = printers.isEmpty ? "未检测到打印机" : "检测到 \(printers.count) 台打印机"
-        Diag.notice(Diag.lifecycle, "工具箱·打印机：\(printers) 默认=\(def ?? "-")")
     }
 
     func print(_ pattern: TestPattern) {

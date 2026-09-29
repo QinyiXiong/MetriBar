@@ -57,7 +57,8 @@ final class VerifyModel: ObservableObject {
     // MARK: 硬件快照（全部本机只读，不联网）
 
     func collectHardware() {
-        collecting = true
+        // 同 PrinterModel：onAppear 事务内不要直接改 @Published
+        DispatchQueue.main.async { [weak self] in self?.collecting = true }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var info: [String: String] = [:]
             func grab(_ path: String, _ args: [String]) -> String {
