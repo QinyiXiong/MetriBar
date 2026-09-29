@@ -77,8 +77,16 @@ final class VerifyModel: ObservableObject {
             let hw = prof("SPHardwareDataType")
             let hwItem = items(hw, "SPHardwareDataType")
             rows.append(("机型", [str(hwItem["machine_name"]), str(hwItem["machine_model"])].compactMap { $0 }.joined(separator: " · ")))
-            rows.append(("芯片", str(hwItem["chip_type"]) ?? "Apple Silicon"))
-            rows.append(("处理器", str(hwItem["number_processors"]) ?? "—"))
+            let chipName = str(hwItem["chip_type"]) ?? "Apple Silicon"
+            // "proc 18:6:12:0" → 总核:能效?性能?…→ 翻译成人类语言
+            var cpuText = chipName
+            if let np = str(hwItem["number_processors"]) {
+                let nums = np.split(separator: " ").last.map { $0.split(separator: ":").compactMap { Int($0) } } ?? []
+                if nums.count >= 3 {
+                    cpuText = "\(chipName) · \(nums[0]) 核 CPU（\(nums[1]) 性能 + \(nums[2]) 能效）"
+                }
+            }
+            rows.append(("处理器", cpuText))
             rows.append(("内存", str(hwItem["physical_memory"]) ?? "—"))
             rows.append(("序列号", str(hwItem["serial_number"]) ?? "读取失败"))
             if let lock = str(hwItem["activation_lock_status"]) {
@@ -113,21 +121,42 @@ final class VerifyModel: ObservableObject {
             }
 
             let st = prof("SPStorageDataType")
+            var ssdName = ""
+            if let node = st?["SPStorageDataType"] {
+                let items: [[String: Any]] = (node as? [[String: Any]])
+                    ?? ((node as? [String: Any])?["_items"] as? [[String: Any]] ?? [])
+                for it in items where str(it["mount_point"]) == "/" || (it["physical_drive"] != nil && ssdName.isEmpty) {
+                    if let pd = it["physical_drive"] as? [String: Any],
+                       let dn = str(pd["device_name"]), !(str(pd["media_type"]) ?? "").localizedCaseInsensitiveContains("Disk Image") {
+                        ssdName = dn
+                    }
+                    if str(it["mount_point"]) == "/" || str(it["mount_point"])?.hasSuffix("/Data") == true {
+                        if let sz = it["size_in_bytes"].flatMap({ Int64("\($0)") }),
+                           let free = it["free_space_in_bytes"].flatMap({ Int64("\($0)") }) {
+                            rows.append(("磁盘空间", String(format: "可用 %.0f GB / 总 %.0f GB（%.0f%% 已用）",
+                                                            Double(free) / 1e9, Double(sz) / 1e9,
+                                                            Double(sz - free) / Double(max(sz, 1)) * 100)))
+                        }
+                    }
+                }
+            }
+            if !ssdName.isEmpty { rows.append(("内置硬盘", ssdName)) }
             if let smart = str(deep(st, ["smart_status"])) {
                 rows.append(("磁盘 SMART", smart.localizedCaseInsensitiveContains("verified") ? "Verified ✓（正常）" : smart))
-            }
-            if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: "/"),
-               let totalN = attrs[FileAttributeKey("NSFileSystemSize")] as? NSNumber,
-               let freeN = attrs[FileAttributeKey("NSFileSystemFreeSpace")] as? NSNumber {
-                let total = totalN.int64Value, free = freeN.int64Value
-                rows.append(("磁盘空间", String(format: "可用 %.0f GB / %.2f TB（%.0f%% 已用）",
-                                                Double(free) / 1e9, Double(total) / 1e12, Double(total - free) / Double(total) * 100)))
             }
 
             let (rc, profOut) = Shell.run("/usr/bin/profiles", ["status", "-type", "enrollment"])
             if rc == 0 {
-                let enrolled = profOut.localizedCaseInsensitiveContains("enrolled") && !profOut.localizedCaseInsensitiveContains("not enrolled")
-                rows.append(("MDM 监管", enrolled ? "⚠️ 已注册企业设备！" : "✓ 未注册"))
+                // 逐行解析「Enrolled via DEP: No」「MDM enrollment: No」——只看冒号后的值
+                var enrolled = false
+                for raw in profOut.split(separator: "\n") {
+                    let line = String(raw).trimmingCharacters(in: .whitespaces)
+                    guard line.localizedCaseInsensitiveContains("enroll") else { continue }
+                    guard let colon = line.firstIndex(of: ":") ?? line.firstIndex(of: "：") else { continue }
+                    let val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces).lowercased()
+                    if val.hasPrefix("yes") || val == "是" { enrolled = true }
+                }
+                rows.append(("MDM 监管", enrolled ? "⚠️ 已注册企业设备！" : "✓ 未注册（干净）"))
             } else {
                 rows.append(("MDM 监管", "权限不足（终端：sudo profiles status -type enrollment）"))
             }
@@ -279,12 +308,12 @@ struct VerifyTab: View {
                     .controlSize(.small)
                 }
                 Spacer()
-                Button { model.set(item.id, .pass) } label: {
-                    Image(systemName: model.state(item.id) == .pass ? "checkmark.circle.fill" : "checkmark.circle")
-                }.buttonStyle(.plain).foregroundColor(model.state(item.id) == .pass ? .green : .secondary)
-                Button { model.set(item.id, .fail) } label: {
-                    Image(systemName: model.state(item.id) == .fail ? "xmark.circle.fill" : "xmark.circle")
-                }.buttonStyle(.plain).foregroundColor(model.state(item.id) == .fail ? .red : .secondary)
+                Button("通过") { model.set(item.id, .pass) }
+                    .buttonStyle(.bordered).controlSize(.regular)
+                    .tint(model.state(item.id) == .pass ? .green : .secondary)
+                Button("不通过") { model.set(item.id, .fail) }
+                    .buttonStyle(.bordered).controlSize(.regular)
+                    .tint(model.state(item.id) == .fail ? .red : .secondary)
             }
         }
         .padding(10)

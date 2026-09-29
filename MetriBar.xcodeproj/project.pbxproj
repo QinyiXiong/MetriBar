@@ -7,10 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		PKREF00000000000TESTPGRF0 /* TestPages in Resources */ = {isa = PBXBuildFile; fileRef = PKREF00000000000TESTPG /* TestPages */; };
+		PKREF00000000000PYTHONRF0 /* Resources/python in Resources */ = {isa = PBXBuildFile; fileRef = PKREF00000000000PYTHON /* Resources/python */; };
+		PKREF0000000000PIPELINERF0 /* pipeline in Resources */ = {isa = PBXBuildFile; fileRef = PKREF0000000000PIPELINE /* pipeline */; };
 		AA0000000000000000000B01 /* SMCKit in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B02 /* SMCKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		PKREF00000000000TESTPG /* TestPages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Vendor/TestPages; sourceTree = SOURCE_ROOT; };
+		PKREF00000000000PYTHON /* Resources/python */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Vendor/python; sourceTree = SOURCE_ROOT; };
+		PKREF0000000000PIPELINE /* pipeline */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Vendor/pipeline; sourceTree = SOURCE_ROOT; };
 		3843225B3066350A00CA284E /* MetriBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MetriBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -113,6 +119,9 @@
 		384322593066350A00CA284E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				PKREF00000000000TESTPGRF0 /* TestPages in Resources */,
+				PKREF00000000000PYTHONRF0 /* Resources/python in Resources */,
+				PKREF0000000000PIPELINERF0 /* pipeline in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */

@@ -23,3 +23,4 @@ dist/
 
 # 例外：SwiftPM 解析结果需要入库，保证协作者拉到同一版本
 !MetriBar.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+Vendor/python/
