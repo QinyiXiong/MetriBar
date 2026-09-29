@@ -21,7 +21,10 @@ import UniformTypeIdentifiers
 // MARK: - 内置路径
 
 enum ToolPaths {
-    static var bundledPython: String { (Bundle.main.resourcePath ?? "") + "/python/bin/python3" }
+    /// 独立 CPython 运行时：首次「一键构建环境」时经国内镜像自动下载到数据目录（不再内置于 App）。
+    static let runtimeVersion = "cpython-3.11.13+20250918-aarch64-apple-darwin-install_only"
+    static var runtimeDir: String { supportDir + "/runtime" }
+    static var runtimePython: String { runtimeDir + "/python/bin/python3" }
     static var bundledPipeline: String { (Bundle.main.resourcePath ?? "") + "/pipeline" }
     static var supportDir: String {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -62,12 +65,8 @@ final class TranslateSettings: ObservableObject {
     func persist(_ k: String, _ v: String) { d.set(v, forKey: "translate.\(k)") }
 
     var effectiveModelDir: String { modelDir.isEmpty ? ToolPaths.defaultModelDir : modelDir }
-    var effectivePython: String {
-        if !pythonPath.isEmpty, FileManager.default.isExecutableFile(atPath: pythonPath) { return pythonPath }
-        if FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) { return ToolPaths.envPython }
-        if FileManager.default.isExecutableFile(atPath: ToolPaths.bundledPython) { return ToolPaths.bundledPython }
-        return "/usr/bin/python3"
-    }
+    var effectivePython: String { envPythonReady ? ToolPaths.envPython : "" }
+    var envPythonReady: Bool { FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) }
     var effectivePipeline: String {
         FileManager.default.fileExists(atPath: pipelineDir + "/transcribe.py") ? pipelineDir : ToolPaths.bundledPipeline
     }
@@ -158,8 +157,10 @@ final class TranslateModel: ObservableObject {
 
     func checkEnv() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let (rc, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, mlx_lm"])
-            DispatchQueue.main.async { self?.envOK = rc == 0 }
+            let ready = FileManager.default.isExecutableFile(atPath: ToolPaths.envPython)
+            var pass = false
+            if ready { pass = Shell.run(ToolPaths.envPython, ["-c", "import funasr, mlx_lm"]).0 == 0 }
+            DispatchQueue.main.async { self?.envOK = pass }
         }
     }
 
@@ -195,24 +196,51 @@ final class TranslateModel: ObservableObject {
 
     // MARK: 一键构建 Python 环境（venv + 清华镜像，torch/funasr/mlx-lm）
 
-    /// 一键构建：基于 App 内置 CPython 在数据目录创建独立环境并安装全部依赖（模型除外）。
+    /// 一键构建环境（全自动，不碰系统 Python）：
+    /// ① curl 下载独立 CPython 运行时（npmmirror 国内镜像，约 19MB）
+    /// ② 基于它创建独立虚拟环境 ③ 清华镜像安装全部依赖（不含模型）
     func buildEnv(_ settings: TranslateSettings) {
         guard !envBusy else { return }
         envBusy = true
-        envStage = "创建独立环境…"
-        appendLog("→ 基于内置 Python 构建转写环境：\(ToolPaths.envDir)")
+        appendLog("→ 开始构建转写环境（全自动）")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let fm = FileManager.default
             try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
-            if !fm.fileExists(atPath: ToolPaths.envPython) {
-                let (rc, out) = Shell.run(ToolPaths.bundledPython, ["-m", "venv", ToolPaths.envDir])
-                if rc != 0 { DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 环境创建失败：\(out.prefix(120))" }; return }
+
+            if !fm.fileExists(atPath: ToolPaths.runtimePython) {
+                DispatchQueue.main.async { self?.envStage = "下载 Python 运行时…（npmmirror 国内镜像）" }
+                let tar = ToolPaths.supportDir + "/runtime.tar.gz"
+                let url = "https://registry.npmmirror.com/-/binary/python-build-standalone/20250918/cpython-3.11.13%2B20250918-aarch64-apple-darwin-install_only.tar.gz"
+                let (rc, out) = Shell.run("/usr/bin/curl", ["-fL", "--retry", "3", "-o", tar, url])
+                guard rc == 0 else {
+                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时下载失败（检查网络）：\(out.prefix(100))" }
+                    return
+                }
+                DispatchQueue.main.async { self?.envStage = "解压运行时…" }
+                try? fm.removeItem(atPath: ToolPaths.runtimeDir)
+                let (rcU, _) = Shell.run("/usr/bin/tar", ["-xzf", tar, "-C", ToolPaths.runtimeDir.replacingOccurrences(of: "/runtime", with: "")])
+                guard rcU == 0, fm.fileExists(atPath: ToolPaths.runtimePython) else {
+                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时解压失败" }
+                    return
+                }
+                try? fm.removeItem(atPath: tar)
+                self?.appendLog("✓ Python 运行时就绪（3.11 · Apple Silicon）")
             }
+
+            DispatchQueue.main.async { self?.envStage = "创建独立虚拟环境…" }
+            if !fm.fileExists(atPath: ToolPaths.envPython) {
+                let (rc, out) = Shell.run(ToolPaths.runtimePython, ["-m", "venv", ToolPaths.envDir])
+                guard rc == 0 else {
+                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 虚拟环境创建失败：\(out.prefix(100))" }
+                    return
+                }
+            }
+
             let pkgs = ["funasr==1.4.1", "torch", "torchaudio", "mlx-lm", "openai",
                         "opencc-python-reimplemented", "soundfile", "python-multipart", "librosa"]
             var ok = true
             for pkg in pkgs {
-                DispatchQueue.main.async { self?.envStage = "安装 \(pkg)…（torch 较大，请耐心等待）" }
+                DispatchQueue.main.async { self?.envStage = "安装 \(pkg)…（torch 较大，共约 2GB，视网络 3–15 分钟）" }
                 let (rc, out) = Shell.run(ToolPaths.envPython, ["-m", "pip", "install", "--no-input", "-q",
                          "--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple", pkg])
                 self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(160))")
@@ -221,8 +249,8 @@ final class TranslateModel: ObservableObject {
             let (rcV, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
             DispatchQueue.main.async {
                 self?.envBusy = false
-                if ok, rcV == 0 { self?.envOK = true; self?.envStage = ""; self?.appendLog("✓ 转写环境就绪") }
-                else { self?.envStage = "✗ 构建失败，见日志" }
+                if ok, rcV == 0 { self?.envOK = true; self?.envStage = ""; self?.appendLog("✓ 转写环境已就绪") }
+                else { self?.envStage = "✗ 构建失败，见日志（可重试）" }
             }
         }
     }
@@ -365,6 +393,10 @@ self.appendLog("✗ 服务已退出——可在右侧「修复环境」后重试
         if !settings.translateModel.isEmpty { env["METRIBAR_TRANSLATE_MODEL"] = settings.translateModel }
         env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/opt/ffmpeg-full/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
 
+        guard settings.envPythonReady else {
+            patch(task.id) { $0.status = "失败"; $0.message = "请先在右侧「一键构建环境」" }
+            process = nil; finish(); return
+        }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: settings.effectivePython)
         p.arguments = [settings.effectivePipeline + "/transcribe.py",
