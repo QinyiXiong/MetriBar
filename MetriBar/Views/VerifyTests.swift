@@ -352,7 +352,6 @@ final class KeyboardLayoutView: NSView {
         add(23.3, 4, main: "enter", shift: "↵", code: 76, h: 2)
         add(20.3, 5, main: "0", code: 82, w: 2)
         add(22.3, 5, main: ".", code: 65)
-        add(20.3, 0, main: "=", code: 81, h: 0.7)
 
     }
 
@@ -388,19 +387,25 @@ final class KeyboardLayoutView: NSView {
         NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
         NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
 
-        let pad: CGFloat = 10, gap: CGFloat = 3
-        let area = bounds.insetBy(dx: pad, dy: pad)
-        let unitX = area.width / 24.55
-        let bandH = area.height / 5.75
-        let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
+        let statusH: CGFloat = 24, pad: CGFloat = 12, gap: CGFloat = 3
+        let availW = bounds.width - pad * 2
+        let availH = bounds.height - pad - statusH
+        // 单位键宽：宽/高双重约束并封顶，杜绝拉伸成大方块
+        let unit = min(availW / 24.55, availH / 6.1, 30)
+        let kbW = 24.55 * unit, kbH = 6.1 * unit
+        let ox = bounds.midX - kbW / 2
+        let oyTop = bounds.maxY - pad
 
+        let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
         for (idx, c) in cells.enumerated() {
             let isFn = c.y == 0
-            let topOffset: CGFloat = isFn ? bandH * 0.3 : c.y * bandH
-            let rect = NSRect(x: area.minX + c.x * unitX,
-                              y: area.maxY - topOffset - (isFn ? bandH * 0.7 : c.h * bandH),
-                              width: max(c.w * unitX - gap, 9),
-                              height: (isFn ? bandH * 0.7 : c.h * bandH) - gap)
+            // 网格坐标：y=1..5 主行，每行高 unit；功能行高 0.7unit
+            let colX = ox + c.x * unit
+            let rowY: CGFloat = isFn ? oyTop - 0.7 * unit - gap
+                                      : oyTop - 0.9 * unit - c.y * (unit + gap) + gap
+            let rect = NSRect(x: colX, y: rowY,
+                              width: max(c.w * unit - gap, 10),
+                              height: max((isFn ? 0.7 : c.h) * unit - gap, 10))
             let isLit = flashAlive && lit == idx
             let isTested = tested.contains(idx)
             (isLit ? NSColor.controlAccentColor
@@ -408,22 +413,31 @@ final class KeyboardLayoutView: NSView {
                     : NSColor(calibratedWhite: 0.5, alpha: 0.16)).setFill()
             NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
 
+            // 文字自适应缩字号，禁止截断
+            let text = c.main.isEmpty ? c.shift : c.main
+            var fs = min(10, rect.height * 0.34)
+            var attrs: [NSAttributedString.Key: Any] = [:]
+            while fs > 5 {
+                attrs = [.font: NSFont.systemFont(ofSize: fs, weight: isLit ? .bold : .medium),
+                        .foregroundColor: isLit ? NSColor.white : NSColor.labelColor]
+                if NSAttributedString(string: text, attributes: attrs).size().width <= rect.width - 4 { break }
+                fs -= 0.5
+            }
             let ps = NSMutableParagraphStyle(); ps.alignment = .center
-            NSAttributedString(string: c.main.isEmpty ? c.shift : c.main, attributes: [
-                .font: NSFont.systemFont(ofSize: min(9, rect.height * 0.3), weight: isLit ? .bold : .medium),
-                .foregroundColor: isLit ? NSColor.white : NSColor.labelColor,
-                .paragraphStyle: ps
-            ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
+            attrs[.paragraphStyle] = ps
+            NSAttributedString(string: text, attributes: attrs)
+                .draw(in: NSRect(x: rect.minX, y: rect.midY - fs * 0.62, width: rect.width, height: fs * 1.3))
         }
 
         let remain = cells.count - tested.count
-        let text = tested.isEmpty ? "点击此处取得焦点后逐键按下（F 键无反应请按 fn+F）"
+        let text = tested.isEmpty ? "点击后逐键按下（F 键无反应请按 fn+F）"
             : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
-        let size = NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold)]).size()
-        NSAttributedString(string: text, attributes: [
+        let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor,
-        ]).draw(at: NSPoint(x: bounds.midX - size.width / 2, y: pad / 2))
+            .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor]
+        let w = NSAttributedString(string: text, attributes: attrs).size().width
+        NSAttributedString(string: text, attributes: attrs)
+            .draw(at: NSPoint(x: bounds.midX - w / 2, y: pad * 0.5))
     }
 
     private var isDark: Bool { effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
