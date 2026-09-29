@@ -55,7 +55,7 @@ final class TranslateSettings: ObservableObject {
         translateBaseURL = d.string(forKey: "translate.translateBaseURL") ?? "http://127.0.0.1:18888/v1"
         translateAPIKey = d.string(forKey: "translate.translateAPIKey") ?? ""
         translateModel = d.string(forKey: "translate.translateModel") ?? "hy-mt2-7b"
-        serverPort = d.string(forKey: "translate.serverPort") ?? "18888"
+        serverPort = d.string(forKey: "translate.serverPort") ?? ""
         burnIn = (d.string(forKey: "translate.burnIn") ?? "1") == "1"
     }
 
@@ -96,7 +96,7 @@ enum ModelCatalog {
     static let vad = ModelSpec(key: "vad", msRepo: "iic/fsmn-vad", dirName: "fsmn-vad",
                                label: "FSMN-VAD · 长音频断句必需", sizeText: "≈4 MB")
     static let mt = ModelSpec(key: "mt", msRepo: "mlx-community/Hy-MT2-7B", dirName: "Hy-MT2-7B",
-                              label: "Hy-MT2-7B · 翻译大模型（原版未量化）", sizeText: "≈15 GB")
+                              label: "Hy-MT2-7B · 翻译大模型", sizeText: "≈15 GB")
     static var all: [ModelSpec] { asr + [vad, mt] }
 }
 
@@ -126,14 +126,42 @@ final class TranslateModel: ObservableObject {
     @Published var tasks: [TranslateTask] = []
     @Published var selectedModelKey = "sensevoice"
     @Published var downloads: [DownloadState] = ModelCatalog.all.map { DownloadState(spec: $0) }
-    @Published var envStatus: String = "未初始化"
+    @Published var envOK = false
     @Published var envBusy = false
     @Published var serverRunning = false
     @Published var log: [String] = []
 
     private var process: Process?
     private var serverProcess: Process?
+    /// 翻译服务随机端口（不固定、不在界面展示）。
+    private(set) var runtimePort: UInt16 = 0
+
+    private static func findFreePort() -> UInt16 {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        guard fd >= 0 else { return 0 }
+        defer { close(fd) }
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = 0
+        addr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let ok = withUnsafeMutablePointer(to: &addr) { ptr -> Bool in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                bind(fd, sa, len) == 0 && getsockname(fd, sa, &len) == 0
+            }
+        }
+        guard ok else { return 0 }
+        return UInt16(bigEndian: addr.sin_port)
+    }
     private var stopRequested = false
+
+    func checkEnv() {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let py = TranslateSettings.shared.effectivePython
+            let (rc, _) = Shell.run(py, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
+            DispatchQueue.main.async { self?.envOK = rc == 0 }
+        }
+    }
 
     func appendLog(_ s: String) {
         DispatchQueue.main.async { [weak self] in
@@ -167,45 +195,28 @@ final class TranslateModel: ObservableObject {
 
     // MARK: 一键构建 Python 环境（venv + 清华镜像，torch/funasr/mlx-lm）
 
+    /// 修复模式：把缺失依赖直接补装进 App 内置运行时（正常出厂已构建好，无需点击）。
     func buildEnv(_ settings: TranslateSettings) {
         guard !envBusy else { return }
         envBusy = true
-        envStatus = "创建虚拟环境…"
-        appendLog("→ 基于内置 Python 创建 venv：\(ToolPaths.envDir)")
+        appendLog("→ 向内置运行时补装依赖（清华镜像）…")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let fm = FileManager.default
-            try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
-            if !fm.fileExists(atPath: ToolPaths.envPython) {
-                let (rc, out) = Shell.run(ToolPaths.bundledPython, ["-m", "venv", ToolPaths.envDir])
-                if rc != 0 { self?.failEnv("venv 创建失败：\(out.prefix(200))"); return }
-            }
-            DispatchQueue.main.async { self?.envStatus = "安装依赖（torch 较大，视网络约 3–15 分钟）…" }
-            let pkgs = ["funasr==1.4.1", "openai", "opencc-python-reimplemented",
-                        "soundfile", "python-multipart", "mlx-lm"]
+            let py = ToolPaths.bundledPython
+            let pkgs = ["funasr==1.4.1", "mlx-lm", "openai", "opencc-python-reimplemented",
+                        "soundfile", "python-multipart", "librosa"]
             var ok = true
             for pkg in pkgs {
-                DispatchQueue.main.async { self?.envStatus = "安装 \(pkg)…" }
-                let (rc, out) = Shell.run(ToolPaths.envPython,
-                        ["-m", "pip", "install", "--no-input", "-q",
+                let (rc, out) = Shell.run(py, ["-m", "pip", "install", "--no-input", "-q",
                          "--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple", pkg])
-                self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(200))")
+                self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(160))")
                 if rc != 0 { ok = false; break }
             }
-            let (rcV, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, openai, soundfile"])
+            let (rcV, _) = Shell.run(py, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
             DispatchQueue.main.async {
                 self?.envBusy = false
-                if ok, rcV == 0 {
-                    self?.envStatus = "✓ 转写环境就绪"
-                    self?.appendLog("✓ 环境就绪：\(ToolPaths.envPython)")
-                } else {
-                    self?.envStatus = "✗ 构建失败，见日志"
-                }
+                self?.envOK = ok && rcV == 0
             }
         }
-    }
-
-    private func failEnv(_ msg: String) {
-        DispatchQueue.main.async { self.envBusy = false; self.envStatus = "✗ \(msg)" }
     }
 
     // MARK: ModelScope 直连下载（带进度）
@@ -274,9 +285,12 @@ final class TranslateModel: ObservableObject {
         let mtDir = modelDir(for: ModelCatalog.mt, settings)
         guard FileManager.default.fileExists(atPath: mtDir) else { appendLog("✗ 未找到 Hy-MT2 翻译模型，请先在上方下载"); return }
         guard FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) else { appendLog("✗ 请先「一键构建环境」（需要 mlx-lm）"); return }
+        let port = TranslateModel.findFreePort()
+        guard port > 0 else { appendLog("✗ 无可用端口"); return }
+        runtimePort = port
         let p = Process()
         p.executableURL = URL(fileURLWithPath: ToolPaths.envPython)
-        p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", settings.serverPort]
+        p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", String(port)]
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
         p.environment = env
@@ -287,13 +301,13 @@ final class TranslateModel: ObservableObject {
         }
         do { try p.run() } catch { appendLog("✗ 服务启动失败：\(error.localizedDescription)"); return }
         serverProcess = p; serverRunning = true
-        Diag.notice(Diag.lifecycle, "翻译服务部署 mlx_lm.server :\(settings.serverPort)")
-        appendLog("✓ 翻译服务已启动：\(settings.translateBaseURL)（停止按钮 = 卸载模型）")
+        Diag.notice(Diag.lifecycle, "翻译服务已部署（随机端口）")
+appendLog("✓ 翻译服务已就绪（端口自动分配，界面不展示）")
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
             guard let self else { return }
             if self.serverProcess?.isRunning != true {
                 self.serverRunning = false
-                self.appendLog("✗ 服务已退出——检查 mlx-lm 是否装好、端口 \(settings.serverPort) 是否被占用")
+self.appendLog("✗ 服务已退出——可在右侧「修复环境」后重试")
             }
         }
     }
@@ -337,7 +351,8 @@ final class TranslateModel: ObservableObject {
         env["METRIBAR_MODEL_DIR"] = settings.effectiveModelDir
         env["METRIBAR_JSON_PROGRESS"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
-        env["METRIBAR_TRANSLATE_BASE_URL"] = settings.translateBaseURL
+                let baseURL = serverRunning && runtimePort > 0 ? "http://127.0.0.1:\(runtimePort)/v1" : settings.translateBaseURL
+        env["METRIBAR_TRANSLATE_BASE_URL"] = baseURL
         if !settings.translateAPIKey.isEmpty { env["METRIBAR_TRANSLATE_API_KEY"] = settings.translateAPIKey }
         if !settings.translateModel.isEmpty { env["METRIBAR_TRANSLATE_MODEL"] = settings.translateModel }
         env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/opt/ffmpeg-full/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
@@ -416,7 +431,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
             sideColumn.frame(minWidth: 320, idealWidth: 360, minHeight: 480)
         }
-        .onAppear { model.refreshAvailability(settings) }
+        .onAppear { model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {
@@ -487,6 +502,16 @@ struct TranslateTab: View {
         switch s { case "完成": return .green; case "失败": return .red; case "转写中": return .accentColor; default: return .secondary }
     }
 
+    private func pickModelDir() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true; panel.canChooseFiles = false
+        panel.prompt = "使用此目录"
+        if panel.runModal() == .OK, let url = panel.url {
+            settings.modelDir = url.path; settings.persist("modelDir", url.path)
+            model.refreshAvailability(settings)
+        }
+    }
+
     private func pickFiles() {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
@@ -508,9 +533,13 @@ struct TranslateTab: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("运行时与依赖", systemImage: "shippingbox.fill").font(.system(size: 13, weight: .bold))
             HStack(spacing: 8) {
-                Button(model.envBusy ? "构建中…" : "一键构建环境") { model.buildEnv(settings) }.disabled(model.envBusy)
-                    .help("基于 App 内置独立 Python 建 venv，经清华镜像自动装 funasr/torch/mlx-lm 等全部依赖（模型除外）")
-                Text(model.envStatus).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
+                Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2" : "exclamationmark.triangle.fill"))
+                    .foregroundColor(model.envOK ? .green : model.envBusy ? .secondary : .orange)
+                Text(model.envBusy ? "正在修复内置环境…" : (model.envOK ? "内置转写环境已就绪（funasr · torch · mlx-lm）" : "内置环境不完整")).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
+                Spacer()
+                if !model.envOK && !model.envBusy {
+                    Button("修复环境") { model.buildEnv(settings) }.controlSize(.mini)
+                }
             }
             Divider()
             Label("模型 · ModelScope 魔搭", systemImage: "arrow.down.circle.fill").font(.system(size: 13, weight: .bold))
@@ -519,10 +548,20 @@ struct TranslateTab: View {
                     ForEach(model.downloads) { dl in downloadRow(dl) }
                 }
             }
-            Button("全部下载缺失") { model.downloadAllMissing(settings) }.controlSize(.small)
+            HStack(spacing: 8) {
+                Button("全部下载缺失") { model.downloadAllMissing(settings) }.controlSize(.small)
+                Spacer()
+            }
+            HStack(spacing: 6) {
+                Image(systemName: "folder").foregroundColor(.secondary)
+                Text(settings.effectiveModelDir).font(.system(size: 9, design: .monospaced)).foregroundColor(.secondary).lineLimit(1).textSelection(.enabled)
+                Spacer()
+                Button("更改目录") { pickModelDir() }.controlSize(.mini)
+                    .help("指向已有的模型文件夹（内含 SenseVoiceSmall / Fun-ASR-Nano-2512 等子目录），不必重新下载")
+            }
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
             Spacer()
-            Text("端点与目录由 App 自动管理：内置运行时 + 本地翻译服务 :\(TranslateSettings.shared.serverPort)")
-                .font(.system(size: 10)).foregroundColor(.secondary)
         }
         .padding(14)
     }
