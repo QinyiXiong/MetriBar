@@ -351,8 +351,27 @@ final class KeyboardLayoutView: NSView {
     override func viewDidMoveToWindow() { window?.makeFirstResponder(self) }
     override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self) }
 
+    /// 中文 IME 合成期间 keyDown 可能被输入法接管，insertText 兜底按首字符点亮。
+    override func insertText(_ insertString: Any) {
+        var ch: Character?
+        if let str = insertString as? String { ch = str.lowercased().first }
+        else if let attr = insertString as? NSAttributedString { ch = attr.string.lowercased().first }
+        if let c = ch, c != ESC {
+            if let i = cells.firstIndex(where: { $0.label.lowercased().contains(String(c)) }) {
+                lit = i; litAt = Date(); tested.insert(i); needsDisplay = true
+            }
+        }
+    }
+    private let ESC = Character(UnicodeScalar(27))
+
     override func keyDown(with event: NSEvent) {
-        // 小键盘数字用 keyCode；主区字母数字同用 keyCode（keyCode 全局唯一物理位置）
+        let hit = cells.firstIndex(where: { $0.codes.contains(event.keyCode) })
+        if let i = hit { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
+    }
+
+    /// 修饰键与 Globe（中英切换）键不产生 keyDown，只产生 flagsChanged——必须单独监听。
+    /// keyCode 自带左右区分：⇧56/60 control59/62 option58/61 command55/54 fn/Globe63 caps57。
+    override func flagsChanged(with event: NSEvent) {
         let hit = cells.firstIndex(where: { $0.codes.contains(event.keyCode) })
         if let i = hit { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
     }
@@ -385,7 +404,7 @@ final class KeyboardLayoutView: NSView {
             ]).draw(in: rect.insetBy(dx: 1, dy: rect.height * 0.34))
         }
         let remain = cells.count - tested.count
-        let text = tested.isEmpty ? "点击此处取得焦点后逐键按下 · 共 \(cells.count) 键（全键盘含小键盘/方向键）"
+        let text = tested.isEmpty ? "逐键按下（F 键无反应请按 fn+F）· 共 \(cells.count) 键，含小键盘/方向键"
             : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
         NSAttributedString(string: text, attributes: [
             .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
