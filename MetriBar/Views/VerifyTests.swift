@@ -391,12 +391,14 @@ final class KeyboardLayoutView: NSView {
         let availW = bounds.width - pad * 2
         let availH = bounds.height - pad - statusH
         // 键帽单位：吃满可用空间（宽高双约束），不再封顶 → 更大更清晰
-        let unit = min(availW / 24.55, availH / 6.15)
-        let kbW = 24.55 * unit, kbH = 6.15 * unit
+        // 按内容实际跨度（最右单元格右缘）算块宽，水平严格居中
+        let maxRight = cells.map { $0.x + $0.w }.max() ?? 24.35
+        let unit = min(availW / maxRight, availH / 6.15)
+        let kbW = maxRight * unit, kbH = 6.15 * unit
         let ox = bounds.midX - kbW / 2
         // NSView 坐标 y 向上增：键盘块顶边（功能行上沿），垂直居中留白
-        let topGap = max((availH - kbH) / 2, 0)
-        let blockTopY = bounds.maxY - pad - topGap
+        let vertCenter = bounds.minY + statusH + availH / 2
+        let blockTopY = vertCenter + kbH / 2
 
         let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
         for (idx, c) in cells.enumerated() {

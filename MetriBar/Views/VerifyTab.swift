@@ -358,7 +358,7 @@ struct VerifyTab: View {
                                         "用单指连续画圈、直线覆盖四角与边缘：应跟手无断线。")
                 .font(.system(size: 11)).foregroundColor(.secondary)
             Group {
-                if id == "keyboard" { KeyboardTestView().frame(width: 640, height: 380) } else { TrackpadCanvasView() }
+                if id == "keyboard" { KeyboardTestView().frame(maxWidth: .infinity, minHeight: 340, maxHeight: 420) } else { TrackpadCanvasView() }
             }
             .frame(width: 560, height: 220)
             Button("完成") { inlineSheet = nil }.keyboardShortcut(.cancelAction)
