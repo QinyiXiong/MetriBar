@@ -318,7 +318,7 @@ struct VerifyTab: View {
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 if item.interactive {
-                    Button(item.id == "keyboard" || item.id == "trackpad" ? "打开画布" : "开始") {
+                    Button("开始") {
                         if item.id == "keyboard" || item.id == "trackpad" { inlineSheet = InlineTestID(id: item.id) }
                         else { VerifyTests.launch(item.id) }
                     }

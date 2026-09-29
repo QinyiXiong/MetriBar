@@ -230,69 +230,122 @@ private struct CameraPreviewView: NSViewRepresentable {
 // MARK: - 键盘实时检测（内联小面板）
 
 struct KeyboardTestView: NSViewRepresentable {
-    @StateObject private var store = KeyboardStore()
-
-    func makeNSView(context: Context) -> KeyboardNSView { KeyboardNSView(store: store) }
-    func updateNSView(_ nsView: KeyboardNSView, context: Context) {}
+    func makeNSView(context: Context) -> KeyboardLayoutView { KeyboardLayoutView() }
+    func updateNSView(_ nsView: KeyboardLayoutView, context: Context) {}
 }
 
-@MainActor
-final class KeyboardStore: ObservableObject {
-    @Published var presses: [String] = []
-    @Published var total: Int = 0
+/// 全键键盘画布：ANSI 布局逐格渲染，物理按键实时点亮，未测灰色、已测绿色，底部进度。
+final class KeyboardLayoutView: NSView {
+    private struct Key { let label: String; let chars: Set<String>; let codes: Set<UInt16>; var w: CGFloat }
+    private var keys: [[Int]] = []            // 每行 key 索引
+    private var flat: [Key] = []
+    private var tested: Set<Int> = []
+    private var lit: Int?
+    private var litAt = Date.distantPast
 
-    func record(_ event: NSEvent) {
-        let label = event.charactersIgnoringModifiers?.uppercased().isEmpty == false
-            ? event.charactersIgnoringModifiers!.uppercased()
-            : Self.specialName(event.keyCode)
-        total += 1
-        presses.append(label)
-        if presses.count > 80 { presses.removeFirst(presses.count - 80) }
+    private func k(_ label: String, _ chars: String = "", _ codes: UInt16...) -> Key {
+        var cs = Set(chars.lowercased().map(String.init))
+        if label.count == 1 { cs.insert(label.lowercased()) }
+        return Key(label: label, chars: cs, codes: Set(codes), w: 1)
     }
 
-    static func specialName(_ code: UInt16) -> String {
-        switch code {
-        case 36: return "⏎"; case 48: return "⇥"; case 49: return "␣"; case 51: return "⌫"
-        case 53: return "⎋"; case 123: return "←"; case 124: return "→"; case 125: return "↓"; case 126: return "↑"
-        default: return "键\(code)"
-        }
-    }
-}
-
-final class KeyboardNSView: NSView {
-    private let store: KeyboardStore
-    private var label: NSTextField!
-
-    init(store: KeyboardStore) {
-        self.store = store
-        super.init(frame: .zero)
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(calibratedWhite: 0.5, alpha: 0.10).cgColor
-        layer?.cornerRadius = 8
-        label = NSTextField(labelWithString: "点击此区域后，按下任意键…")
-        label.font = .systemFont(ofSize: 11)
-        label.textColor = .secondaryLabelColor
-        label.alignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: centerYAnchor),
-        ])
+        buildLayout()
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func buildLayout() {
+        func wide(_ key: Key, _ w: CGFloat) -> Key { var x = key; x.w = w; return x }
+        let fnCodes: [UInt16] = [122,120,99,118,96,97,98,100,101,109,103,111]
+        let numLabels = ["`","1","2","3","4","5","6","7","8","9","0","-","="]
+        let numCodes: [UInt16] = [50,18,19,20,21,23,22,26,28,25,24,27,24]
+        let qwerty = zip(["Q","W","E","R","T","Y","U","I","O","P"], [UInt16](repeating: 0, count: 10))
+        let qwertyCodes: [UInt16] = [12,13,14,15,17,16,32,34,31,35]
+        _ = qwerty
+        let asdfCodes: [UInt16] = [0,1,2,3,5,4,6,7,8]
+        let zxcvLabels = ["Z","X","C","V","B","N","M"]
+        let zxcvCodes: [UInt16] = [46,45,47,9,11,45,0x2E]
+        var rows: [[Key]] = []
+        rows.append([k("esc","",53)] + zip(["F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12"], fnCodes).map { k($0,"",$1) } + [k("del","",117)])
+        rows.append(numLabels.enumerated().map { i, l in k(l, l, numCodes[i]) } + [wide(k("delete","",51), 1.6)])
+        rows.append([wide(k("tab","",48), 1.5)] + zip(["Q","W","E","R","T","Y","U","I","O","P"], qwertyCodes).map { k($0, String($0).lowercased(), $1) } + [k("[","[",39), k("]","]",42), k("\\","\\\\",42)])
+        rows.append([wide(k("caps lock","",57), 1.8)] + zip(["A","S","D","F","G","H","J","K","L"], asdfCodes).map { k($0, String($0).lowercased(), $1) } + [k(";", ";", 41), k("'", "'", 39), wide(k("return","",36), 1.9)])
+        rows.append([wide(k("⇧ shift","",56), 2.3)] + zxcvLabels.enumerated().map { i, l in k(l, l.lowercased(), zxcvCodes[i]) } + [k("/","/",76), wide(k("⇧ shift","",60), 2.3)])
+        rows.append([wide(k("control","",59), 1.3), wide(k("option","",58), 1.3), wide(k("command","",55), 1.3),
+                     wide(k("space","",49), 6.2), wide(k("command","",54), 1.3), wide(k("fn","",63), 1.3), wide(k("option","",61), 1.3),
+                     k("←","",123), k("↑","",126), k("↓","",125), k("→","",124)])
+
+        flat = rows.flatMap { $0 }
+        keys = rows.map { row in row.indices.map { _ in 0 } }
+        // 直接按行顺序展开索引即可
+        var cursor = 0
+        keys = rows.map { row in let r = (cursor..<(cursor + row.count)).map { $0 }; cursor += row.count; return r }
     }
 
-    required init?(coder: NSCoder) { fatalError() }
     override var acceptsFirstResponder: Bool { true }
+    override func viewDidMoveToWindow() { window?.makeFirstResponder(self) }
     override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(self) }
 
     override func keyDown(with event: NSEvent) {
-        store.record(event)
-        refresh()
+        let ch = (event.charactersIgnoringModifiers ?? "").lowercased()
+        var hit: Int?
+        if !ch.isEmpty, let c = ch.first {
+            hit = flat.firstIndex(where: { $0.chars.contains(String(c)) })
+        }
+        if hit == nil { hit = flat.firstIndex(where: { $0.codes.contains(event.keyCode) }) }
+        if let i = hit {
+            tested.insert(i); lit = i; litAt = Date()
+            needsDisplay = true
+        }
     }
 
-    func refresh() {
-        let tail = store.presses.suffix(24).reversed().joined(separator: " ")
-        label.stringValue = "已按下 \(store.total) 次｜最近：\(tail)"
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
+        let outer = NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10)
+        outer.fill()
+
+        let pad: CGFloat = 12, gap: CGFloat = 5
+        let bottomBar: CGFloat = 26
+        let area = bounds.insetBy(dx: pad, dy: pad)
+        let rowsN = CGFloat(keys.count)
+        var y = area.maxY
+        let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.28
+        var idx = 0
+        for row in keys {
+            let unitW = (area.width - gap * 12) / 15.0
+            let rowH = (area.height - bottomBar) / rowsN - gap
+            var x = area.minX
+            for _ in row {
+                let key = flat[idx]
+                defer { idx += 1 }
+                let w = unitW * key.w
+                let rect = NSRect(x: x, y: y - rowH, width: w, height: rowH)
+                let isLit = flashAlive && lit == idx
+                let isTested = tested.contains(idx)
+                (isLit ? NSColor.controlAccentColor
+                        : isTested ? NSColor.systemGreen.withAlphaComponent(0.55)
+                        : NSColor(calibratedWhite: 0.5, alpha: 0.16)).setFill()
+                NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
+                let p = NSMutableParagraphStyle(); p.alignment = .center
+                NSAttributedString(string: key.label, attributes: [
+                    .font: NSFont.systemFont(ofSize: rect.height > 34 ? 9 : 8.5, weight: isLit ? .bold : .medium),
+                    .foregroundColor: isLit ? NSColor.white : NSColor.labelColor,
+                    .paragraphStyle: p
+                ]).draw(in: rect.insetBy(dx: 2, dy: rect.height * 0.32))
+                x += w + gap
+            }
+            y -= rowH + gap
+        }
+
+        let remain = flat.count - tested.count
+        let text = tested.isEmpty ? "点击此区域取得焦点后，逐键按下…共 \(flat.count) 键"
+            : (remain == 0 ? "✓ 全部 \(flat.count) 键已点亮 · 按 Esc 退出" : "已测 \(tested.count)/\(flat.count) · 剩余 \(remain)")
+        NSAttributedString(string: text, attributes: [
+            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+            .foregroundColor: remain == 0 && !tested.isEmpty ? NSColor.systemGreen : NSColor.secondaryLabelColor
+        ]).draw(at: NSPoint(x: bounds.midX - 110, y: pad * 0.5 + 2))
     }
 }
 

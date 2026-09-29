@@ -127,6 +127,7 @@ final class TranslateModel: ObservableObject {
     @Published var selectedModelKey = "sensevoice"
     @Published var downloads: [DownloadState] = ModelCatalog.all.map { DownloadState(spec: $0) }
     @Published var envOK = false
+    @Published var envStage: String = ""
     @Published var envBusy = false
     @Published var serverRunning = false
     @Published var log: [String] = []
@@ -157,8 +158,7 @@ final class TranslateModel: ObservableObject {
 
     func checkEnv() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let py = TranslateSettings.shared.effectivePython
-            let (rc, _) = Shell.run(py, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
+            let (rc, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, mlx_lm"])
             DispatchQueue.main.async { self?.envOK = rc == 0 }
         }
     }
@@ -195,26 +195,34 @@ final class TranslateModel: ObservableObject {
 
     // MARK: 一键构建 Python 环境（venv + 清华镜像，torch/funasr/mlx-lm）
 
-    /// 修复模式：把缺失依赖直接补装进 App 内置运行时（正常出厂已构建好，无需点击）。
+    /// 一键构建：基于 App 内置 CPython 在数据目录创建独立环境并安装全部依赖（模型除外）。
     func buildEnv(_ settings: TranslateSettings) {
         guard !envBusy else { return }
         envBusy = true
-        appendLog("→ 向内置运行时补装依赖（清华镜像）…")
+        envStage = "创建独立环境…"
+        appendLog("→ 基于内置 Python 构建转写环境：\(ToolPaths.envDir)")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let py = ToolPaths.bundledPython
-            let pkgs = ["funasr==1.4.1", "mlx-lm", "openai", "opencc-python-reimplemented",
-                        "soundfile", "python-multipart", "librosa"]
+            let fm = FileManager.default
+            try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
+            if !fm.fileExists(atPath: ToolPaths.envPython) {
+                let (rc, out) = Shell.run(ToolPaths.bundledPython, ["-m", "venv", ToolPaths.envDir])
+                if rc != 0 { DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 环境创建失败：\(out.prefix(120))" }; return }
+            }
+            let pkgs = ["funasr==1.4.1", "torch", "torchaudio", "mlx-lm", "openai",
+                        "opencc-python-reimplemented", "soundfile", "python-multipart", "librosa"]
             var ok = true
             for pkg in pkgs {
-                let (rc, out) = Shell.run(py, ["-m", "pip", "install", "--no-input", "-q",
+                DispatchQueue.main.async { self?.envStage = "安装 \(pkg)…（torch 较大，请耐心等待）" }
+                let (rc, out) = Shell.run(ToolPaths.envPython, ["-m", "pip", "install", "--no-input", "-q",
                          "--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple", pkg])
                 self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(160))")
                 if rc != 0 { ok = false; break }
             }
-            let (rcV, _) = Shell.run(py, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
+            let (rcV, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
             DispatchQueue.main.async {
                 self?.envBusy = false
-                self?.envOK = ok && rcV == 0
+                if ok, rcV == 0 { self?.envOK = true; self?.envStage = ""; self?.appendLog("✓ 转写环境就绪") }
+                else { self?.envStage = "✗ 构建失败，见日志" }
             }
         }
     }
@@ -533,12 +541,15 @@ struct TranslateTab: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("运行时与依赖", systemImage: "shippingbox.fill").font(.system(size: 13, weight: .bold))
             HStack(spacing: 8) {
-                Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2" : "exclamationmark.triangle.fill"))
-                    .foregroundColor(model.envOK ? .green : model.envBusy ? .secondary : .orange)
-                Text(model.envBusy ? "正在修复内置环境…" : (model.envOK ? "内置转写环境已就绪（funasr · torch · mlx-lm）" : "内置环境不完整")).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
+                Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2.fill" : "seal"))
+                    .foregroundColor(model.envOK ? .green : model.envBusy ? .accentColor : .secondary)
+                Text(model.envBusy ? (model.envStage.isEmpty ? "正在构建环境…" : model.envStage)
+                                   : (model.envOK ? "转写环境已就绪" : "点右侧按钮一键构建（首次约 3–15 分钟）"))
+                    .font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
                 Spacer()
-                if !model.envOK && !model.envBusy {
-                    Button("修复环境") { model.buildEnv(settings) }.controlSize(.mini)
+                if !model.envBusy {
+                    Button(model.envOK ? "重建" : "一键构建环境") { model.buildEnv(settings) }.controlSize(.small)
+                        .help("基于 App 内置 Python 创建独立环境，经清华镜像安装 funasr/torch/mlx-lm（不含模型）")
                 }
             }
             Divider()
