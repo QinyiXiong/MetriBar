@@ -387,22 +387,24 @@ final class KeyboardLayoutView: NSView {
         NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
         NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
 
-        let statusH: CGFloat = 24, pad: CGFloat = 12, gap: CGFloat = 3
+        let statusH: CGFloat = 26, pad: CGFloat = 12, gap: CGFloat = 3
         let availW = bounds.width - pad * 2
         let availH = bounds.height - pad - statusH
-        // 单位键宽：宽/高双重约束并封顶，杜绝拉伸成大方块
-        let unit = min(availW / 24.55, availH / 6.1, 30)
-        let kbW = 24.55 * unit, kbH = 6.1 * unit
+        // 键帽单位：吃满可用空间（宽高双约束），不再封顶 → 更大更清晰
+        let unit = min(availW / 24.55, availH / 6.15)
+        let kbW = 24.55 * unit, kbH = 6.15 * unit
         let ox = bounds.midX - kbW / 2
-        let oyTop = bounds.maxY - pad
+        // 垂直居中并略偏上，确保功能行完整可见
+        let oyTop = bounds.minY + statusH + (availH - kbH) / 2 + kbH + 4
 
         let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
         for (idx, c) in cells.enumerated() {
             let isFn = c.y == 0
             // 网格坐标：y=1..5 主行，每行高 unit；功能行高 0.7unit
             let colX = ox + c.x * unit
-            let rowY: CGFloat = isFn ? oyTop - 0.7 * unit - gap
-                                      : oyTop - 0.9 * unit - c.y * (unit + gap) + gap
+            let blockTop = oyTop - kbH + 0.05 * unit
+            let rowY: CGFloat = isFn ? blockTop
+                                      : blockTop + 0.7 * unit + gap + (c.y - 1) * (unit + gap)
             let rect = NSRect(x: colX, y: rowY,
                               width: max(c.w * unit - gap, 10),
                               height: max((isFn ? 0.7 : c.h) * unit - gap, 10))
@@ -415,7 +417,7 @@ final class KeyboardLayoutView: NSView {
 
             // 文字自适应缩字号，禁止截断
             let text = c.main.isEmpty ? c.shift : c.main
-            var fs = min(10, rect.height * 0.34)
+            var fs = min(11, max(8.5, rect.height * 0.36))
             var attrs: [NSAttributedString.Key: Any] = [:]
             while fs > 5 {
                 attrs = [.font: NSFont.systemFont(ofSize: fs, weight: isLit ? .bold : .medium),
