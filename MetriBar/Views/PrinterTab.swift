@@ -129,9 +129,30 @@ final class PrinterModel: ObservableObject {
         }
     }
 
-    func printEssentials() {
-        for id in ["basic-bw", "basic-color", "nozzle-check"] {
-            if let p = TestPattern.all.first(where: { $0.id == id }) { print(p) }
+    func printAll() {
+        if busy { return }
+        let items = TestPattern.all.compactMap { p -> (TestPattern, URL)? in
+            guard let url = p.url else { return nil }
+            return (p, url)
+        }
+        guard !items.isEmpty else { toast = "模板缺失"; return }
+        busy = true
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var failed: [String] = []
+            for (p, url) in items {
+                var args = ["-t", "MetriBar · \(p.title)"]
+                if let printer = self?.selectedPrinter, !printer.isEmpty { args += ["-d", printer] }
+                args.append(url.path)
+                let (rc, _) = Shell.run("/usr/bin/lp", args)
+                if rc != 0 { failed.append(p.title) }
+                Diag.notice(Diag.lifecycle, "工具箱·打印 \(p.id) rc=\(rc)")
+            }
+            DispatchQueue.main.async {
+                self?.busy = false
+                self?.toast = failed.isEmpty ? "全部 \(items.count) 张已发送到打印队列 ✓"
+                                             : "已发送，\(failed.count) 张失败：\(failed.joined(separator: "、"))"
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { self?.toast = nil }
         }
     }
 }
@@ -168,7 +189,7 @@ struct PrinterTab: View {
             }
             .labelsHidden().frame(width: 240)
             Button { model.refresh() } label: { Image(systemName: "arrow.clockwise") }.help("刷新打印机列表")
-            Button { model.printEssentials() } label: { Label("打印常用 3 张", systemImage: "printer") }
+            Button { model.printAll() } label: { Label("全部打印", systemImage: "printer.fill") }
                 .disabled(model.selectedPrinter == nil)
             Spacer()
             Text(model.statusText).font(.system(size: 11)).foregroundColor(.secondary)
