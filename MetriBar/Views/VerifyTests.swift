@@ -394,20 +394,22 @@ final class KeyboardLayoutView: NSView {
         let unit = min(availW / 24.55, availH / 6.15)
         let kbW = 24.55 * unit, kbH = 6.15 * unit
         let ox = bounds.midX - kbW / 2
-        // 垂直居中并略偏上，确保功能行完整可见
-        let oyTop = bounds.minY + statusH + (availH - kbH) / 2 + kbH + 4
+        // NSView 坐标 y 向上增：键盘块顶边（功能行上沿），垂直居中留白
+        let topGap = max((availH - kbH) / 2, 0)
+        let blockTopY = bounds.maxY - pad - topGap
 
         let flashAlive = lit != nil && Date().timeIntervalSince(litAt) < 0.32
         for (idx, c) in cells.enumerated() {
             let isFn = c.y == 0
             // 网格坐标：y=1..5 主行，每行高 unit；功能行高 0.7unit
             let colX = ox + c.x * unit
-            let blockTop = oyTop - kbH + 0.05 * unit
-            let rowY: CGFloat = isFn ? blockTop
-                                      : blockTop + 0.7 * unit + gap + (c.y - 1) * (unit + gap)
+            // y 向上增 → 行往下 = y 递减。功能行贴块顶，主行逐行向下排。
+            let rowTopY: CGFloat = isFn ? blockTopY
+                                         : blockTopY - 0.7 * unit - gap - (c.y - 1) * (unit + gap)
+            let rowY = rowTopY - (isFn ? 0.7 : c.h) * unit
             let rect = NSRect(x: colX, y: rowY,
                               width: max(c.w * unit - gap, 10),
-                              height: max((isFn ? 0.7 : c.h) * unit - gap, 10))
+                              height: max((isFn ? 0.7 : c.h) * unit - gap, 12))
             let isLit = flashAlive && lit == idx
             let isTested = tested.contains(idx)
             (isLit ? NSColor.controlAccentColor
