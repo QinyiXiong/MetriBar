@@ -112,7 +112,7 @@ if '"-lc", "command -v ffmpeg"' not in swift_main:
 _ff = subprocess.run(["/bin/bash","-lc","command -v ffmpeg"],capture_output=True,text=True).stdout.strip()
 if _ff: ok(f"ffmpeg 实际可检出: {_ff}")
 else: warn("本机bash -lc查不到ffmpeg（若已装请检查PATH）")
-if "dlPaused" not in swift_main or "哨兵" not in swift_main:
+if "dlPaused.insert(key)" not in swift_main or "dlPaused.contains(key)" not in swift_main:
     fails.append("暂停哨兵缺失(暂停停不住事故)")
 if "只前进不回退" not in swift_main:
     fails.append("进度账本clamp缺失(进度回滑事故)")
