@@ -302,6 +302,7 @@ final class TranslateModel: ObservableObject {
     func buildEnv(_ settings: TranslateSettings, full: Bool = false) {
         guard !envBusy else { return }
         envBusy = true; envProgress = 0
+        envStage = "正在启动构建脚本…"
         appendLog(full ? "→ 全量重建：清除所有依赖后重装" : "→ 开始构建转写环境")
         if full {
             try? FileManager.default.removeItem(atPath: ToolPaths.envDir)
@@ -333,6 +334,10 @@ final class TranslateModel: ObservableObject {
                 for line in txt.split(separator: "\n") {
                     let l = String(line)
                     self?.appendLog("[构建] " + l)
+                    if l.contains("STEP") || l.contains("依赖 ") {
+                        let stepTxt = l.range(of: "] ").map { String(l[$0.upperBound...]) } ?? l
+                        DispatchQueue.main.async { self?.envStage = stepTxt }
+                    }
                     if l.contains("依赖 "), let num = Int(l.replacingOccurrences(of: "依赖 ", with: "").split(separator: "/").first.map(String.init) ?? "") {
                         DispatchQueue.main.async { self?.envProgress = Double(num)/9.0 }
                     }
