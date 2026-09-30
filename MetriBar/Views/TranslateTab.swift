@@ -1051,25 +1051,6 @@ struct TranslateTab: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: model.ffmpegOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundColor(model.ffmpegOK ? .green : .orange)
-                        if model.ffmpegOK {
-                            Text("ffmpeg 已安装（烧录字幕可用）").font(.system(size: 11))
-                        } else {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("未检测到 ffmpeg — 烧录字幕不可用").font(.system(size: 11, weight: .semibold)).foregroundColor(.orange)
-                                HStack(spacing: 6) {
-                                    Text("brew install ffmpeg").font(.system(size: 10, design: .monospaced))
-                                        .padding(4).background(Color.primary.opacity(0.06)).cornerRadius(4)
-                                    Button("复制") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("brew install ffmpeg", forType: .string) }
-                                        .controlSize(.mini)
-                                }
-                                Text("未安装时仅生成字幕文件(.srt)，成片烧录将被拦截").font(.system(size: 9)).foregroundColor(.secondary)
-                            }
-                        }
-                        Spacer()
-                    }.padding(10).background(Color.primary.opacity(0.04)).cornerRadius(8)
                     sideDetail
                 }.padding(12)
             }
@@ -1080,6 +1061,25 @@ struct TranslateTab: View {
     private var sideDetail: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("运行时与依赖", systemImage: "shippingbox.fill").font(.system(size: 13, weight: .bold))
+            HStack(spacing: 8) {
+                Image(systemName: model.ffmpegOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    .foregroundColor(model.ffmpegOK ? .green : .orange)
+                if model.ffmpegOK {
+                    Text("ffmpeg 已安装（烧录字幕可用）").font(.system(size: 10)).foregroundColor(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("未检测到 ffmpeg — 烧录字幕不可用").font(.system(size: 11, weight: .semibold)).foregroundColor(.orange)
+                        HStack(spacing: 6) {
+                            Text("brew install ffmpeg").font(.system(size: 10, design: .monospaced))
+                                .padding(4).background(Color.primary.opacity(0.06)).cornerRadius(4)
+                            Button("复制") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("brew install ffmpeg", forType: .string) }
+                                .controlSize(.mini)
+                        }
+                        Text("未安装时仅生成字幕文件(.srt)，成片烧录将被拦截").font(.system(size: 9)).foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+            }.padding(8).background(Color.primary.opacity(0.04)).cornerRadius(6)
             HStack(spacing: 8) {
                 Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2.fill" : "seal"))
                     .foregroundColor(model.envOK ? .green : model.envBusy ? .accentColor : .secondary)
