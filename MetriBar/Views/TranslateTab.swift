@@ -484,13 +484,16 @@ final class TranslateModel: ObservableObject {
 struct TranslateTab: View {
     @ObservedObject private var settings = TranslateSettings.shared
     @StateObject private var model = TranslateModel()
+    @State private var dirDraft: String = ""
+    @State private var dirMsg: String = ""
+    @State private var dirOK = false
 
     var body: some View {
         HSplitView {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
             sideColumn.frame(minWidth: 320, idealWidth: 360, minHeight: 480)
         }
-        .onAppear { model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear { dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {
@@ -561,10 +564,24 @@ struct TranslateTab: View {
         switch s { case "完成": return .green; case "失败": return .red; case "转写中": return .accentColor; default: return .secondary }
     }
 
+    private func applyDir() {
+        var path = dirDraft.trimmingCharacters(in: .whitespaces)
+        if path.hasPrefix("~") { path = NSHomeDirectory() + path.dropFirst() }
+        let fm = FileManager.default
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            dirOK = false; dirMsg = "路径无效（需已存在的文件夹）"; return
+        }
+        settings.modelDir = path; settings.persist("modelDir", path)
+        model.refreshAvailability(settings)
+        dirOK = true; dirMsg = "✓ 已应用"
+    }
+
     private func pickModelDir() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = "使用此目录"
+        panel.prompt = "选择"
+        panel.message = "选择模型文件夹（内含 SenseVoiceSmall 等子目录）· ⌘⇧. 可显示隐藏文件夹"
         if panel.runModal() == .OK, let url = panel.url {
             settings.modelDir = url.path; settings.persist("modelDir", url.path)
             model.refreshAvailability(settings)
@@ -614,12 +631,20 @@ struct TranslateTab: View {
                 Button("全部下载缺失") { model.downloadAllMissing(settings) }.controlSize(.small)
                 Spacer()
             }
-            HStack(spacing: 6) {
-                Image(systemName: "folder").foregroundColor(.secondary)
-                Text(settings.effectiveModelDir).font(.system(size: 9, design: .monospaced)).foregroundColor(.secondary).lineLimit(1).textSelection(.enabled)
-                Spacer()
-                Button("更改目录") { pickModelDir() }.controlSize(.mini)
-                    .help("指向已有的模型文件夹（内含 SenseVoiceSmall / Fun-ASR-Nano-2512 等子目录），不必重新下载")
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Image(systemName: "folder").foregroundColor(.secondary)
+                    TextField("模型目录（可直接粘贴路径）", text: $dirDraft)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 10, design: .monospaced))
+                }
+                HStack(spacing: 8) {
+                    Button("应用") { applyDir() }.controlSize(.mini).disabled(dirDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("浏览…") { pickModelDir() }.controlSize(.mini)
+                        .help("Finder 面板中可按 ⌘⇧. 显示隐藏文件夹")
+                    Spacer()
+                    if !dirMsg.isEmpty { Text(dirMsg).font(.system(size: 9)).foregroundColor(dirOK ? .green : .orange) }
+                }
             }
             .padding(8)
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
