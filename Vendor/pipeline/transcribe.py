@@ -744,7 +744,7 @@ if __name__ == "__main__":
                               "message": message}, ensure_ascii=False), flush=True)
     run(sys.argv[1], sys.argv[2], srt_path, audio_path, lock, log,
         progress=_progress_cb, model_key=model_key)
-    translate_srt(srt_path, sys.argv[1], log)
-    merge_bilingual_srt(srt_path, sys.argv[1], log)
+    translate_srt(srt_path, sys.argv[1], log, progress=_progress_cb, should_stop=should_stop)
+    merge_bilingual_srt(srt_path, sys.argv[1], log, progress=_progress_cb)
     dt = time.monotonic() - t0
     log.info(f"程序总耗时: {_fmt_duration(dt)}")

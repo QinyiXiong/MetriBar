@@ -106,7 +106,22 @@ import io as _io
 swift = _io.open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
 if 'env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv' not in swift: fails.append("翻译 model id 未注入绝对路径(旧版会400)")
 
-# transcribe.py 进度 JSON 消费格式（Swift consume 依赖）
+# transcribe.py 进度 JSON 消费格式（Swift consume 依赖）# ── 结构性守卫（冷启动/并发类事故回归）──
+swift_main = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
+if "settings.translateBaseURL" in swift_main and "fallback" not in "".lower():
+    # 只允许显示用；env 注入路径不得再引用兜底地址
+    inject_zone = swift_main[swift_main.index("func execute"):swift_main.index("func consume")]
+    if "settings.translateBaseURL" in inject_zone:
+        fails.append("execute 仍在注入死地址 translateBaseURL（新闻1/2事故根因）")
+py_main = open("Vendor/pipeline/transcribe.py", encoding="utf-8").read()
+if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
+    fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
+if "TRANSLATE_CONCURRENCY = 100" in py_main:
+    fails.append("翻译并发仍是100（会打爆本地 mlx server）")
+if 'guard autoRunning else { return }' not in swift_main:
+    fails.append("队列闸门缺失（拖入即跑的失控事故）")
+
+
 try:
     sample = {"stage": "翻译", "percent": 46.5, "message": "translating seg 12"}
     json.dumps(sample)
@@ -229,15 +244,27 @@ for c in [home+'/.lmstudio/models/mlx-community/Hy-MT2-7B', home+'/Library/Appli
       if [ -n "${MT:-}" ]; then
         say -v Samantha -o "$TMPV/en.aiff" "Hello, this is an end to end translation test." 2>/dev/null
         "$FFMPEG" -y -f lavfi -i color=c=black:s=640x360:d=4 -i "$TMPV/en.aiff" -shortest -pix_fmt yuv420p "$TMPV/en.mp4" >/dev/null 2>&1
+        cp "$TMPV/en.mp4" "$TMPV/en_b.mp4"
+        # 冷启动：确保无旧服务残留（模拟用户点"开始处理"时的干净状态）
+        pkill -f "mlx_lm.server.*18901" 2>/dev/null; sleep 1
         nohup "$ENV_PY" -m mlx_lm.server --model "$MT" --port 18901 >/tmp/metribar_selftest_server.log 2>&1 & SRV=$!
         R=0; for _ in $(seq 1 45); do sleep 2; curl -fsS -m 2 http://127.0.0.1:18901/v1/models >/dev/null 2>&1 && { R=1; break; }; done
         [ "$R" = "1" ] && ok "翻译服务 就绪（model id=绝对路径）" || bad "翻译服务启动失败"
         METRIBAR_SENSEVOICE_DIR="$SVDIR" METRIBAR_VAD_DIR="$(dirname "$SVDIR")/fsmn-vad" \
         METRIBAR_TRANSLATE_BASE_URL=http://127.0.0.1:18901/v1 METRIBAR_TRANSLATE_MODEL="$MT" \
         "$ENV_PY" "$APP/Contents/Resources/pipeline/transcribe.py" en.mp4 "$TMPV/en.mp4" "$TMPV/en.srt" sensevoice >"$TMPV/en.log" 2>&1
-        if python3 -c "import sys,re;t=open(sys.argv[1],encoding='utf-8').read();sys.exit(0 if re.search(r'[\u4e00-\u9fa5]',t) else 1)" "$TMPV/en.(双语).srt" 2>/dev/null; then
-          ok "英→中翻译成功（双语字幕含中文）"
-        else bad "翻译失败：双语字幕无中文"; grep -i "失败" "$TMPV/en.log" | tail -2 | sed 's/^/      /'; fi
+        # ── 并发双路：同时开跑两个转写进程，都必须翻译成功 ──
+        run_en() { METRIBAR_SENSEVOICE_DIR="$SVDIR" METRIBAR_VAD_DIR="$(dirname "$SVDIR")/fsmn-vad" \
+          METRIBAR_TRANSLATE_BASE_URL=http://127.0.0.1:18901/v1 METRIBAR_TRANSLATE_MODEL="$MT" \
+          "$ENV_PY" "$APP/Contents/Resources/pipeline/transcribe.py" "$1" "$TMPV/$1" "$TMPV/$2" sensevoice >"$TMPV/$2.log" 2>&1; }
+        run_en en_b.mp4 parB.srt & PB=$!
+        run_en en.mp4 en.srt & PA=$!
+        wait $PA; wait $PB
+        CNOK=1
+        for f in "en.(双语).srt" "parB.(双语).srt"; do
+          if ! python3 -c "import sys,re;t=open(sys.argv[1],encoding='utf-8').read();sys.exit(0 if re.search(r'[\u4e00-\u9fa5]',t) else 1)" "$TMPV/$f" 2>/dev/null; then CNOK=0; bad "并发路 $f 无中文翻译"; fi
+        done
+        [ "$CNOK" = "1" ] && ok "并发双路 英→中翻译均成功（冷启动场景）"
         "$ENV_PY" "$APP/Contents/Resources/pipeline/embed_subtitle.py" "$TMPV/en.mp4" -s "$TMPV/en.(双语).srt" -o "$TMPV/final.mp4" >/dev/null 2>&1
         FS=$(stat -f%z "$TMPV/final.mp4" 2>/dev/null || echo 0)
         [ "$FS" -gt 10000 ] && ok "烧录产出成片（$((FS/1024)) KB）" || bad "烧录失败（无成片）"

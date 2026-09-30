@@ -588,7 +588,7 @@ struct TranslateTab: View {
     var body: some View {
         HSplitView {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
-            envStatusBar.frame(width: 230)
+
         }
         .onAppear { dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
@@ -625,12 +625,28 @@ struct TranslateTab: View {
                     Button("全部停止") { model.stopAll() }.controlSize(.small).tint(.red)
                 }
                 Spacer()
-                HStack(spacing: 5) {
-                    Circle().fill(model.serverRunning ? Color.green : Color.secondary.opacity(0.4))
-                        .frame(width: 7, height: 7)
-                    Text(model.serverRunning ? "翻译服务运行中（自动）" : "翻译服务待机")
-                        .font(.system(size: 10)).foregroundColor(.secondary)
+                HStack(spacing: 10) {
+                    HStack(spacing: 5) {
+                        Circle().fill(model.serverRunning ? Color.green : Color.secondary.opacity(0.4))
+                            .frame(width: 7, height: 7)
+                        Text(model.serverRunning ? "翻译服务运行中" : "翻译服务待机")
+                            .font(.system(size: 10)).foregroundColor(.secondary)
+                    }
+                    if model.envOK {
+                        Label("环境就绪", systemImage: "checkmark.seal.fill").font(.system(size: 10)).foregroundColor(.green)
+                    } else {
+                        Label("环境未构建", systemImage: "xmark.seal").font(.system(size: 10)).foregroundColor(.orange)
+                    }
+                    let ready = model.downloads.filter { $0.status.hasPrefix("✓") }.count
+                    if ready == model.downloads.count {
+                        Text("模型 5/5 ✓").font(.system(size: 10)).foregroundColor(.green)
+                    } else {
+                        Text("模型 \(ready)/\(model.downloads.count)").font(.system(size: 10)).foregroundColor(.orange)
+                    }
+                    Button { showEnvSheet = true } label: { Label("环境配置", systemImage: "shippingbox") }
+                        .controlSize(.small)
                 }
+                .sheet(isPresented: $showEnvSheet) { envSheet }
                 .help("全自动：转写开始时自动拉起翻译服务，队列跑完自动停止并卸载模型")
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
@@ -725,39 +741,6 @@ struct TranslateTab: View {
             if FileManager.default.fileExists(atPath: cand) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: cand)]); return }
         }
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: videoPath).deletingLastPathComponent()])
-    }
-
-    private var readyCount: Int { model.downloads.filter { $0.status.hasPrefix("✓") }.count }
-
-    private var envStatusBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button { showEnvSheet = true } label: {
-                Label("运行时与模型", systemImage: "shippingbox")
-                    .frame(maxWidth: .infinity)
-            }
-            .controlSize(.large)
-            if model.envOK {
-                Label("转写环境已就绪", systemImage: "checkmark.seal.fill")
-                    .foregroundColor(.green).font(.system(size: 11))
-            } else {
-                Label(model.envStage.isEmpty ? "转写环境未构建" : model.envStage, systemImage: "hourglass")
-                    .foregroundColor(.orange).font(.system(size: 11)).lineLimit(2)
-            }
-            if readyCount < model.downloads.count {
-                Text("模型 \(readyCount)/\(model.downloads.count) 就绪")
-                    .font(.system(size: 11)).foregroundColor(.secondary)
-                Text("缺失项点上方按钮下载")
-                    .font(.system(size: 10)).foregroundColor(.secondary)
-            } else {
-                Text("模型全部就绪 ✓").font(.system(size: 11)).foregroundColor(.green)
-            }
-            Spacer()
-        }
-        .padding(12)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.03)))
-        .padding(10)
-        .sheet(isPresented: $showEnvSheet) { envSheet }
     }
 
     private var envSheet: some View {
