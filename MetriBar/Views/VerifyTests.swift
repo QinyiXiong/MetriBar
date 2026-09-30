@@ -384,9 +384,7 @@ final class KeyboardLayoutView: NSView {
     private func flash(_ i: Int) { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor(calibratedWhite: 0.5, alpha: 0.08).setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 10, yRadius: 10).fill()
-
+        // 画布背景透明，直接坐在弹窗底色上（不再叠自己的灰块）
         let statusH: CGFloat = 26, pad: CGFloat = 12, gap: CGFloat = 3
         let availW = bounds.width - pad * 2
         let availH = bounds.height - pad - statusH
