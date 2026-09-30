@@ -636,6 +636,18 @@ struct TranslateTab: View {
     @StateObject private var model = TranslateModel()
     @State private var dirDraft: String = ""
     @State private var showLogWin = false
+    private func barColor(_ t: TranslateTask) -> Color {
+        switch t.status {
+        case "完成":   return .green
+        case "失败":   return .red
+        case "排队中": return Color.gray.opacity(0.35)
+        default:
+            let m = t.message + t.stage
+            if m.contains("烧录") || m.contains("字幕版") { return .purple }
+            if m.contains("翻译") { return .orange }
+            return .accentColor
+        }
+    }
     @State private var showEnvSheet = false
     @State private var dirMsg: String = ""
     @State private var dirOK = false
@@ -739,8 +751,7 @@ struct TranslateTab: View {
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
             ProgressView(value: task.status == "完成" ? 100 : task.percent)
-                .tint(task.status == "完成" ? .green : task.status == "失败" ? .red
-                      : task.status == "排队中" ? Color.gray.opacity(0.35) : .accentColor)
+                .tint(barColor(task))
             Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             HStack(spacing: 10) {
                 Button("打开输出") { reveal(task.videoPath) }.controlSize(.mini)
