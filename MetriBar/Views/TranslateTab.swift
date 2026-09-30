@@ -394,6 +394,7 @@ final class TranslateModel: ObservableObject {
     // ── 下载控制：进程句柄与取消标记 ──
     private var dlProcs: [String: Process] = [:]
     private var dlCancel: Set<String> = []
+    private var dlPaused: Set<String> = []
 
     /// 完整性凭证：文件数+总字节，写入模型目录；校验不过一律视为未就绪
     static func completionMarkPath(_ dir: String) -> String { dir + "/.metribar_ok.json" }
@@ -410,17 +411,19 @@ final class TranslateModel: ObservableObject {
         let key = spec.id.uuidString
         guard let idx = downloads.firstIndex(where: { $0.id == key }), downloads[idx].status != "下载中" || downloads[idx].paused else { return }
         dlCancel.remove(key)
+        dlPaused.remove(key)
         downloads[idx].paused = false
         downloads[idx].status = "下载中"
         appendLog("→ ModelScope \(spec.msRepo) → \(settings.effectiveModelDir)/\(spec.dirName)")
         DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let self else { return }
             let (rc, out) = Shell.run("/usr/bin/curl", ["-fsSL",
                 "https://modelscope.cn/api/v1/models/\(spec.msRepo)/repo/files?Revision=master&Recursive=true"])
             guard rc == 0, let data = out.data(using: .utf8),
                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let d = obj["Data"] as? [String: Any],
                   let files = d["Files"] as? [[String: Any]] else {
-                self?.updateDL(spec) { $0.status = "✗ 清单获取失败" }
+                updateDL(spec) { $0.status = "✗ 清单获取失败" }
                 return
             }
             var items: [(String, Int64)] = []
@@ -437,77 +440,87 @@ final class TranslateModel: ObservableObject {
             let totalBytes = items.reduce(Int64(0)) { $0 + $1.1 }
             let destRoot = settings.effectiveModelDir + "/" + spec.dirName
             try? FileManager.default.createDirectory(atPath: destRoot, withIntermediateDirectories: true)
-            DispatchQueue.main.async { if let i = self?.downloads.firstIndex(where: { $0.id == key }) {
-                self?.downloads[i].filesTotal = items.count; self?.downloads[i].bytesTotal = totalBytes } }
+            DispatchQueue.main.async { if let i = self.downloads.firstIndex(where: { $0.id == key }) {
+                self.downloads[i].filesTotal = items.count; self.downloads[i].bytesTotal = totalBytes } }
 
             var bytesDone: Int64 = 0
             let fm = FileManager.default
-            func bytesOf(_ p: String) -> Int64 { (try? fm.attributesOfItem(atPath: p)[.size] as? Int64) ?? 0 }
+            func bytesOf(_ pth: String) -> Int64 { (try? fm.attributesOfItem(atPath: pth)[.size] as? Int64) ?? 0 }
+            func setDL(_ patch: @escaping (inout DownloadState) -> Void) {
+                DispatchQueue.main.async { if let i = self.downloads.firstIndex(where: { $0.id == key }) { patch(&self.downloads[i]) } }
+            }
 
             for (path, size) in items {
-                if self?.dlCancel.contains(key) == true { break }
+                if dlCancel.contains(key) || dlPaused.contains(key) { break }
                 let dest = destRoot + "/" + path
                 try? fm.createDirectory(atPath: (dest as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
-                // 断点续传：已有完整且大小匹配的文件跳过
+                // 已完成文件跳过（大小精确匹配）
                 if size > 0, bytesOf(dest) == size {
                     bytesDone += size
-                    DispatchQueue.main.async { if let i = self?.downloads.firstIndex(where: { $0.id == key }) {
-                        self?.downloads[i].bytesDone = bytesDone; self?.downloads[i].filesDone += 1
-                        self?.downloads[i].percent = totalBytes > 0 ? Double(bytesDone)/Double(totalBytes)*100 : 0 } }
+                    setDL { $0.bytesDone = bytesDone; $0.filesDone += 1
+                           $0.percent = totalBytes > 0 ? Double(bytesDone)/Double(totalBytes)*100 : 0 }
                     continue
                 }
                 let encoded = path.split(separator: "/").map { $0.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? String($0) }.joined(separator: "/")
                 let url = "https://modelscope.cn/models/\(spec.msRepo)/resolve/master/\(encoded)"
                 let p = Process()
                 p.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
-                p.arguments = ["-fSL", "-C", "-", "-o", dest, url]
+                // append模式续传：dest已有部分字节则接着下
+                let resumed = bytesOf(dest)
+                var args = ["-fSL", "-o", dest, url]
+                if resumed > 0 && (size == 0 || resumed < size) { args = ["-fSL", "-C", "-", "-o", dest, url] }
+                else if resumed > 0 { try? fm.removeItem(atPath: dest) }
+                p.arguments = args
                 p.standardOutput = FileHandle.nullDevice; p.standardError = FileHandle.nullDevice
                 do { try p.run() } catch { continue }
-                self?.dlProcs[key] = p
-                // 单文件内字节轮询：真实平滑进度
+                dlProcs[key] = p
                 while p.isRunning {
-                    if self?.dlCancel.contains(key) == true { p.terminate(); break }
-                    let cur = bytesOf(dest)
-                    let snapshot = bytesDone + min(cur, size > 0 ? cur : 0)
-                    let doneNow = self?.downloads.first(where: { $0.id == key })?.filesDone ?? 0
-                    DispatchQueue.main.async { if let i = self?.downloads.firstIndex(where: { $0.id == key }) {
-                        self?.downloads[i].bytesDone = snapshot
-                        self?.downloads[i].percent = totalBytes > 0 ? Double(snapshot)/Double(totalBytes)*100 : 0
-                        self?.downloads[i].status = "下载中 \(doneNow)/\(items.count) · \(Int((self?.downloads[i].percent ?? 0)))%" } }
+                    if dlCancel.contains(key) || dlPaused.contains(key) { p.terminate(); break }
+                    let cur = min(bytesOf(dest), size > 0 ? max(size, bytesOf(dest)) : bytesOf(dest))
+                    let snap = bytesDone + cur
+                    let doneNow = self.downloads.first(where: { $0.id == key })?.filesDone ?? 0
+                    setDL { st in
+                        if snap >= st.bytesDone { st.bytesDone = snap }   // 只前进不回退
+                        st.percent = totalBytes > 0 ? Double(st.bytesDone)/Double(totalBytes)*100 : 0
+                        st.status = "下载中 \(doneNow)/\(items.count) · \(Int(st.percent))%"
+                    }
                     usleep(600_000)
                 }
                 p.waitUntilExit()
-                self?.dlProcs.removeValue(forKey: key)
-                if self?.dlCancel.contains(key) == true { break }
-                bytesDone += size > 0 ? size : bytesOf(dest)
-                let okFile = p.terminationStatus == 0 || (size > 0 && bytesOf(dest) == size)
-                if !okFile { self?.appendLog("✗ \(path)") }
-                DispatchQueue.main.async { if let i = self?.downloads.firstIndex(where: { $0.id == key }) {
-                    self?.downloads[i].filesDone += 1; self?.downloads[i].bytesDone = bytesDone
-                    self?.downloads[i].percent = totalBytes > 0 ? Double(bytesDone)/Double(totalBytes)*100 : 0 } }
+                dlProcs.removeValue(forKey: key)
+                if dlCancel.contains(key) { break }
+                let complete = (size > 0 && bytesOf(dest) == size) || (size == 0 && p.terminationStatus == 0)
+                if complete {
+                    bytesDone += size > 0 ? size - min(resumed, size) : bytesOf(dest)
+                    setDL { $0.filesDone += 1; $0.bytesDone = bytesDone
+                           $0.percent = totalBytes > 0 ? Double(bytesDone)/Double(totalBytes)*100 : 0 }
+                } else if p.terminationStatus != 0 { appendLog("✗ \(path)（下次自动续传）") }
             }
 
-            if self?.dlCancel.contains(key) == true {
+            if dlCancel.contains(key) == true {
                 // 停止 = 删除已下载缓存，回到未下载
                 try? fm.removeItem(atPath: destRoot)
-                self?.dlCancel.remove(key)
-                DispatchQueue.main.async { if let i = self?.downloads.firstIndex(where: { $0.id == key }) {
-                    self?.downloads[i].status = "已停止（缓存已删除）"; self?.downloads[i].percent = 0; self?.downloads[i].bytesDone = 0; self?.downloads[i].filesDone = 0 } }
-                self?.appendLog("■ \(spec.label) 已停止，下载缓存已删除")
+                dlCancel.remove(key); dlPaused.remove(key)
+                setDL { $0.status = "已停止（缓存已删除）"; $0.percent = 0; $0.bytesDone = 0; $0.filesDone = 0 }
+                appendLog("■ \(spec.label) 已停止，下载缓存已删除")
                 return
             }
-            let totalNow = bytesOf(destRoot + "/.") // 占位防优化
-            _ = totalNow
+            if dlPaused.contains(key) {
+                setDL { $0.status = "已暂停"; $0.paused = true }
+                appendLog("‖ \(spec.label) 已暂停（可继续，断点保留）")
+                return
+            }
             let mark: [String: Any] = ["files": items.count, "bytes": bytesDone, "at": ISO8601DateFormatter().string(from: Date())]
             if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: Self.completionMarkPath(destRoot))) }
-            self?.updateDL(spec) { $0.status = "✓ 已就绪"; $0.percent = 100; $0.bytesDone = bytesDone }
-            self?.appendLog("✓ \(spec.label) 下载完成（\(bytesDone/1048576) MB）")
+            updateDL(spec) { $0.status = "✓ 已就绪"; $0.percent = 100; $0.bytesDone = bytesDone }
+            appendLog("✓ \(spec.label) 下载完成（\(bytesDone/1048576) MB）")
         }
     }
 
     func pauseDownload(_ spec: ModelSpec) {
         let key = spec.id.uuidString
-        dlProcs[key]?.interrupt()   // SIGINT: curl退出但保留已下部分(-C-下次续传)
+        dlPaused.insert(key)                 // 循环哨兵：当前文件终止后不再开下一个
+        dlProcs[key]?.terminate()          // 杀掉当前curl，已下部分保留可续传
         if let i = downloads.firstIndex(where: { $0.id == key }) { downloads[i].paused = true; downloads[i].status = "已暂停" }
     }
     func resumeDownload(_ spec: ModelSpec, _ settings: TranslateSettings) {
