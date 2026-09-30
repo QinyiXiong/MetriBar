@@ -1240,7 +1240,10 @@ struct LogTextView: View {
         let size = h.seekToEndOfFile()
         let window: UInt64 = 65536
         if size > window { h.seek(toFileOffset: size - window) }
-        let c = String(data: h.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        var data = h.readDataToEndOfFile()
+        // 截断点可能劈开UTF-8多字节汉字：跳到第一个完整换行，否则中文日志解码失败显示空
+        if size > window, let nl = data.firstIndex(of: 0x0A) { data = data[data.index(after: nl)...] }
+        let c = String(data: data, encoding: .utf8) ?? ""
         let next = c.split(separator: "\n").suffix(500).joined(separator: "\n")
         if next != text { text = next }
         revision += 1
