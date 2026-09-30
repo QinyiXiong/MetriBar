@@ -428,6 +428,30 @@ final class TranslateModel: ObservableObject {
 
     @Published var autoRunning = false
 
+    // ── 进度补间：每秒向阶段上限推进，杜绝蓝条静止 ──
+    private var progressTimer: Timer?
+    func startTicker() {
+        stopTicker()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                var anyActive = false
+                for i in self.tasks.indices {
+                    let t = self.tasks[i]
+                    guard t.status == "转写中" || t.status == "准备中" else { continue }
+                    anyActive = true
+                    let m = t.message + t.stage
+                    let ceil: Double = m.contains("翻译") ? 95 : (m.contains("烧录") || m.contains("字幕版") ? 99 : 68)
+                    if t.percent < ceil - 0.5 {
+                        self.tasks[i].percent = min(ceil, t.percent + max(0.35, (ceil - t.percent) * 0.012))
+                    }
+                }
+                if !anyActive { self.stopTicker() }
+            }
+        }
+    }
+    func stopTicker() { progressTimer?.invalidate(); progressTimer = nil }
+
     func startQueue() {
         // 点开始：先确保翻译服务就绪（只等这一次），再放行队列
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -435,7 +459,7 @@ final class TranslateModel: ObservableObject {
             if FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) {
                 self.ensureServer(TranslateSettings.shared)
             }
-            DispatchQueue.main.async { self.autoRunning = true; self.runNext() }
+            DispatchQueue.main.async { self.autoRunning = true; self.startTicker(); self.runNext() }
         }
     }
 
@@ -528,7 +552,7 @@ final class TranslateModel: ObservableObject {
         if line.hasPrefix("{"), line.contains("\"metriBarProgress\""), let data = line.data(using: .utf8),
            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             patch(taskId) { $0.stage = obj["stage"] as? String ?? ""
-                           $0.percent = (obj["percent"] as? NSNumber)?.doubleValue ?? 0
+                           $0.percent = max($0.percent, min((obj["percent"] as? NSNumber)?.doubleValue ?? 0, 99))
                            $0.message = obj["message"] as? String ?? "" }
             return
         }
@@ -580,7 +604,7 @@ final class TranslateModel: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let active = !self.workers.isEmpty || self.tasks.contains { $0.status == "排队中" }
-            if !active { self.autoRunning = false; self.stopServer() }   // 排空 → 关闸 + 卸载模型
+            if !active { self.autoRunning = false; self.stopTicker(); self.stopServer() }   // 排空 → 关闸 + 卸载模型
             self.runNext()
         }
     }
