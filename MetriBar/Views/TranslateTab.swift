@@ -770,9 +770,10 @@ final class TranslateModel: ObservableObject {
         guard !line.isEmpty else { return }
         if line.hasPrefix("{"), line.contains("\"metriBarProgress\""), let data = line.data(using: .utf8),
            let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let newMsg = obj["message"] as? String ?? ""
             patch(taskId) { $0.stage = obj["stage"] as? String ?? ""
                            $0.percent = max($0.percent, min((obj["percent"] as? NSNumber)?.doubleValue ?? 0, 99))
-                           $0.message = obj["message"] as? String ?? "" }
+                           if !newMsg.isEmpty { $0.message = newMsg } }   // 空消息不覆盖：细节常驻不再闪没
             return
         }
         // HTTP访问日志等非结构化输出：只进日志文件，不刷卡片（杜绝闪烁）
@@ -1221,7 +1222,13 @@ struct LogTextView: View {
         .onReceive(timer) { _ in load(scroll: true) }
     }
     private func load(scroll: Bool = false) {
-        guard let c = try? String(contentsOfFile: file, encoding: .utf8) else { return }
+        // 尾部读取：只取最后64KB（日志可达数MB，全量读每秒一次会卡UI且首帧空白显"暂无"）
+        guard let h = try? FileHandle(forReadingFrom: URL(fileURLWithPath: file)) else { return }
+        defer { try? h.closeFile() }
+        let size = h.seekToEndOfFile()
+        let window: UInt64 = 65536
+        if size > window { h.seek(toFileOffset: size - window) }
+        let c = String(data: h.readDataToEndOfFile(), encoding: .utf8) ?? ""
         let next = c.split(separator: "\n").suffix(500).joined(separator: "\n")
         if next != text { text = next }
         revision += 1
