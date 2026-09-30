@@ -199,6 +199,24 @@ final class TranslateModel: ObservableObject {
     }
 
     /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
+    /// 安装外部看门狗：App被强退(SIGKILL)后，孤儿下载/服务进程30秒内被系统清掉
+    static func installWatchdog() {
+        let dst = ToolPaths.supportDir + "/cleanup_watchdog.sh"
+        if let src = Bundle.main.url(forResource: "cleanup_watchdog", withExtension: "sh"), let data = try? Data(contentsOf: src) {
+            try? FileManager.default.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
+            try? data.write(to: URL(fileURLWithPath: dst))
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dst)
+        }
+        guard FileManager.default.isExecutableFile(atPath: dst) else { return }
+        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" + "<plist version=\"1.0\"><dict>" + "<key>Label</key><string>com.qyx.MetriBar.watchdog</string>" + "<key>ProgramArguments</key><array><string>/bin/bash</string><string>" + dst + "</string></array>" + "<key>StartInterval</key><integer>30</integer><key>RunAtLoad</key><true/>" + "</dict></plist>"
+        let plPath = NSHomeDirectory() + "/Library/LaunchAgents/com.qyx.MetriBar.watchdog.plist"
+        try? FileManager.default.createDirectory(atPath: NSHomeDirectory() + "/Library/LaunchAgents", withIntermediateDirectories: true)
+        try? plist.write(toFile: plPath, atomically: true, encoding: .utf8)
+        let uid = String(getuid())
+        _ = Shell.run("/bin/launchctl", ["unload", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
+        _ = Shell.run("/bin/launchctl", ["load", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
+    }
+
     static func reapOrphanServers() {
         let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
         // 孤儿翻译服务 / 本App孤儿下载curl / 残留pip安装，一并清扫
@@ -723,7 +741,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
 
         }
-        .onAppear { TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear { TranslateModel.installWatchdog(); TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {
