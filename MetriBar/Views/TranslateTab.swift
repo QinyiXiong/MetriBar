@@ -191,17 +191,19 @@ final class TranslateModel: ObservableObject {
     }
 
     static let logFile = ToolPaths.supportDir + "/logs/MetriBar.log"
+    static let logQueue = DispatchQueue(label: "metribar.log", qos: .utility)
+
     func appendLog(_ s: String) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.log.append(s)
             if self.log.count > 200 { self.log.removeFirst(self.log.count - 200) }
         }
-        DispatchQueue.global(qos: .utility).async {
+        Self.logQueue.async {
             try? FileManager.default.createDirectory(atPath: (Self.logFile as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
             let stamp = ISO8601DateFormatter().string(from: Date())
             let entry = "[" + stamp + "] " + s + "\n"
-            if let h = FileHandle(forWritingAtPath: Self.logFile) { h.seekToEndOfFile(); h.write(entry.data(using: .utf8)!) }
+            if let h = FileHandle(forWritingAtPath: Self.logFile) { defer { try? h.close() }; h.seekToEndOfFile(); try? h.write(entry.data(using: .utf8)!) }
             else { try? entry.write(toFile: Self.logFile, atomically: true, encoding: .utf8) }
         }
     }
