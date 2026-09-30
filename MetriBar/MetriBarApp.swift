@@ -18,7 +18,6 @@ struct MetriBarApp: App {
     @StateObject private var store: MetricsStore
 
     init() {
-        TranslateModel.installWatchdog()
         TranslateModel.reapOrphanServers()
         let defaults = UserDefaults.standard
         let storedInterval = (defaults.object(forKey: AppSettings.Keys.refreshInterval) as? Double) ?? 2

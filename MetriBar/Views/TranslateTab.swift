@@ -209,33 +209,6 @@ final class TranslateModel: ObservableObject {
     }
 
     /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
-    /// 安装外部看门狗：App被强退(SIGKILL)后，孤儿下载/服务进程30秒内被系统清掉
-    static func staticLog(_ m: String) {
-        if FileManager.default.fileExists(atPath: logFile) {
-            if let h = FileHandle(forWritingAtPath: logFile) { defer { try? h.close() }; h.seekToEndOfFile(); try? h.write(("\n" + m).data(using: .utf8)!) }
-        } else {
-            try? m.write(toFile: logFile, atomically: true, encoding: .utf8)
-        }
-    }
-
-    static func installWatchdog() {
-        let dst = ToolPaths.supportDir + "/cleanup_watchdog.sh"
-        if let src = Bundle.main.url(forResource: "cleanup_watchdog", withExtension: "sh"), let data = try? Data(contentsOf: src) {
-            try? FileManager.default.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
-            try? data.write(to: URL(fileURLWithPath: dst))
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dst)
-        }
-        guard FileManager.default.isExecutableFile(atPath: dst) else { TranslateModel.staticLog("✗ 看门狗脚本不可执行"); return }
-        let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" + "<plist version=\"1.0\"><dict>" + "<key>Label</key><string>com.qyx.MetriBar.watchdog</string>" + "<key>ProgramArguments</key><array><string>/bin/bash</string><string>" + dst + "</string></array>" + "<key>StartInterval</key><integer>30</integer><key>RunAtLoad</key><true/>" + "</dict></plist>"
-        let plPath = NSHomeDirectory() + "/Library/LaunchAgents/com.qyx.MetriBar.watchdog.plist"
-        try? FileManager.default.createDirectory(atPath: NSHomeDirectory() + "/Library/LaunchAgents", withIntermediateDirectories: true)
-        try? plist.write(toFile: plPath, atomically: true, encoding: .utf8)
-        let uid = String(getuid())
-        _ = Shell.run("/bin/launchctl", ["unload", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
-        let (rcL, outL) = Shell.run("/bin/launchctl", ["load", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
-        TranslateModel.staticLog(rcL == 0 ? "✓ 看门狗已注册(30秒自动清理孤儿下载/服务)" : "✗ launchctl: " + String(outL.prefix(120)))
-    }
-
     static func reapOrphanServers() {
         let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
         // 孤儿翻译服务 / 本App孤儿下载curl / 残留pip安装，一并清扫
@@ -328,65 +301,49 @@ final class TranslateModel: ObservableObject {
 
     func buildEnv(_ settings: TranslateSettings, full: Bool = false) {
         guard !envBusy else { return }
-        envBusy = true
-        appendLog(full ? "→ 全量重建：清除所有依赖与缓存后重装" : "→ 开始构建转写环境（全自动）")
+        envBusy = true; envProgress = 0
+        appendLog(full ? "→ 全量重建：清除所有依赖后重装" : "→ 开始构建转写环境")
         if full {
-            envStage = "清除旧环境与缓存…"
             try? FileManager.default.removeItem(atPath: ToolPaths.envDir)
             try? FileManager.default.removeItem(atPath: NSHomeDirectory() + "/.cache/pip")
-            envOK = false; refreshAvailability(settings)
+            envOK = false
+        }
+        // 定位随包构建脚本（bundle缺失回退到磁盘缓存副本）
+        var script = Bundle.main.path(forResource: "install_runtime", ofType: "sh") ?? ""
+        let cached = ToolPaths.supportDir + "/install_runtime.sh"
+        if script.isEmpty, FileManager.default.fileExists(atPath: cached) { script = cached }
+        else if !script.isEmpty { try? FileManager.default.copyItem(atPath: script, toPath: cached) }
+        guard !script.isEmpty, FileManager.default.isExecutableFile(atPath: script) else {
+            envBusy = false; envStage = "✗ 构建脚本缺失（请重新安装App）"; return
         }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let fm = FileManager.default
-            try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
-
-            if !fm.fileExists(atPath: ToolPaths.runtimePython) {
-                DispatchQueue.main.async { self?.envStage = "下载 Python 运行时…（npmmirror 国内镜像）" }; self?.appendLog("→ 下载独立 CPython 运行时（19MB，npmmirror 镜像）")
-                let tar = ToolPaths.supportDir + "/runtime.tar.gz"
-                let url = "https://registry.npmmirror.com/-/binary/python-build-standalone/20250918/cpython-3.11.13%2B20250918-aarch64-apple-darwin-install_only.tar.gz"
-                let (rc, out) = Shell.run("/usr/bin/curl", ["-fL", "--retry", "3", "-o", tar, url])
-                guard rc == 0 else {
-                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时下载失败（检查网络）：\(out.prefix(100))" }
-                    return
-                }
-                DispatchQueue.main.async { self?.envStage = "解压运行时…" }; self?.appendLog("→ 解压运行时…")
-                try? fm.removeItem(atPath: ToolPaths.runtimeDir)
-                let (rcU, _) = Shell.run("/usr/bin/tar", ["-xzf", tar, "-C", ToolPaths.supportDir])
-                // tar包内是 python/，统一重命名为 runtime/（路径错配曾导致venv静默创建失败）
-                let pyDir = ToolPaths.supportDir + "/python"
-                if fm.fileExists(atPath: pyDir) { try? fm.moveItem(atPath: pyDir, toPath: ToolPaths.runtimeDir) }
-                guard rcU == 0, fm.fileExists(atPath: ToolPaths.runtimePython) else {
-                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时解压失败" }
-                    return
-                }
-                try? fm.removeItem(atPath: tar)
-                self?.appendLog("✓ Python 运行时就绪（3.11 · Apple Silicon）")
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/bash")
+            p.arguments = [script]
+            let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe
+            do { try p.run() } catch {
+                DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 无法启动构建脚本" }
+                return
             }
-
-            DispatchQueue.main.async { self?.envStage = "创建独立虚拟环境…" }; self?.appendLog("→ 创建虚拟环境 \(ToolPaths.envDir)")
-            if !fm.fileExists(atPath: ToolPaths.envPython) {
-                let (rc, out) = Shell.run(ToolPaths.runtimePython, ["-m", "venv", ToolPaths.envDir])
-                guard rc == 0 else {
-                    DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 虚拟环境创建失败：\(out.prefix(100))" }
-                    return
+            let h = pipe.fileHandleForReading
+            while true {
+                let chunk = h.availableData
+                if chunk.isEmpty { break }
+                let txt = String(data: chunk, encoding: .utf8) ?? ""
+                for line in txt.split(separator: "\n") {
+                    let l = String(line)
+                    self?.appendLog("[构建] " + l)
+                    if l.contains("依赖 "), let num = Int(l.replacingOccurrences(of: "依赖 ", with: "").split(separator: "/").first.map(String.init) ?? "") {
+                        DispatchQueue.main.async { self?.envProgress = Double(num)/9.0 }
+                    }
                 }
             }
-
-            let pkgs = ["funasr==1.4.1", "torch", "torchaudio", "mlx-lm", "openai",
-                        "opencc-python-reimplemented", "soundfile", "python-multipart", "librosa"]
-            var ok = true
-            for (n, pkg) in pkgs.enumerated() {
-                DispatchQueue.main.async { self?.envStage = "安装依赖 \(n+1)/\(pkgs.count)：\(pkg)（torch 约2GB，共3–15分钟）"; self?.envProgress = Double(n)/Double(pkgs.count) }
-                let (rc, out) = Shell.run(ToolPaths.envPython, ["-m", "pip", "install", "--no-input", "-q",
-                         "--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple", pkg])
-                self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(160))")
-                if rc != 0 { ok = false; break }
-            }
-            let (rcV, _) = Shell.run(ToolPaths.envPython, ["-c", "import funasr, torch, mlx_lm, openai, soundfile, opencc"])
+            p.waitUntilExit()
+            let ok = p.terminationStatus == 0
             DispatchQueue.main.async {
                 self?.envBusy = false
-                if ok, rcV == 0 { self?.envOK = true; self?.envStage = ""; self?.appendLog("✓ 转写环境已就绪") }
-                else { self?.envStage = "✗ 构建失败，见日志（可重试）" }
+                if ok { self?.envOK = true; self?.envProgress = 1; self?.envStage = ""; self?.appendLog("✓ 转写环境已就绪") }
+                else { self?.envStage = "✗ 构建失败——查日志[构建]段的FAIL行（含具体步骤）"; }
             }
         }
     }
@@ -906,7 +863,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
 
         }
-        .onAppear { TranslateModel.staticLog("[dbg] onAppear触发"); TranslateModel.installWatchdog(); TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear { TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {
