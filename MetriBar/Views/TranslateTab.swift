@@ -316,11 +316,16 @@ final class TranslateModel: ObservableObject {
 
     // MARK: 翻译服务部署（mlx_lm.server）/停止=卸载
 
-    func toggleServer(_ settings: TranslateSettings) {
-        if serverRunning || serverProcess?.isRunning == true { stopServer(); return }
+    /// 转写开始前自动确保翻译服务在线；模型/环境缺失则跳过并提示（不阻塞转写本身）。
+    private func ensureServer(_ settings: TranslateSettings) {
+        if serverRunning, serverProcess?.isRunning == true { return }
         let mtDir = modelDir(for: ModelCatalog.mt, settings)
-        guard FileManager.default.fileExists(atPath: mtDir) else { appendLog("✗ 未找到 Hy-MT2 翻译模型，请先在上方下载"); return }
-        guard FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) else { appendLog("✗ 请先「一键构建环境」（需要 mlx-lm）"); return }
+        guard FileManager.default.fileExists(atPath: mtDir) else {
+            appendLog("⚠ 未找到 Hy-MT2 翻译模型 → 本次仅转写不翻译（可在右侧下载）"); return
+        }
+        guard FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) else {
+            appendLog("⚠ 环境未构建 → 请先「一键构建环境」"); return
+        }
         let port = TranslateModel.findFreePort()
         guard port > 0 else { appendLog("✗ 无可用端口"); return }
         runtimePort = port
@@ -333,19 +338,24 @@ final class TranslateModel: ObservableObject {
         let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe
         pipe.fileHandleForReading.readabilityHandler = { [weak self] h in
             let chunk = String(data: h.availableData, encoding: .utf8) ?? ""
-            for l in chunk.split(separator: "\n") where !l.isEmpty { DispatchQueue.main.async { self?.appendLog("[服务] \(l.prefix(120))") } }
-        }
-        do { try p.run() } catch { appendLog("✗ 服务启动失败：\(error.localizedDescription)"); return }
-        serverProcess = p; serverRunning = true
-        Diag.notice(Diag.lifecycle, "翻译服务已部署（随机端口）")
-appendLog("✓ 翻译服务已就绪（端口自动分配，界面不展示）")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
-            guard let self else { return }
-            if self.serverProcess?.isRunning != true {
-                self.serverRunning = false
-self.appendLog("✗ 服务已退出——可在右侧「修复环境」后重试")
+            for l in chunk.split(separator: "\n") where !l.isEmpty {
+                DispatchQueue.main.async { self?.appendLog("[服务] \(l.prefix(120))") }
             }
         }
+        do { try p.run() } catch { appendLog("✗ 翻译服务启动失败：\(error.localizedDescription)"); return }
+        serverProcess = p
+        appendLog("→ 翻译服务启动中（加载 Hy-MT2-7B，约 10–40 秒）…")
+        // 轮询健康检查：/v1/models 返回 200 即就绪
+        let base = "http://127.0.0.1:\(port)/v1/models"
+        var ready = false
+        for _ in 0..<60 {
+            Thread.sleep(forTimeInterval: 2)
+            let (rc, _) = Shell.run("/usr/bin/curl", ["-fsS", "-m", "3", base])
+            if rc == 0 { ready = true; break }
+            if p.isRunning == false { break }
+        }
+        if ready { serverRunning = true; appendLog("✓ 翻译服务就绪") }
+        else { appendLog("✗ 翻译服务未能就绪（模型损坏或内存不足？）") }
     }
 
     func stopServer() {
@@ -379,6 +389,8 @@ self.appendLog("✗ 服务已退出——可在右侧「修复环境」后重试
 
     private func execute(_ task: TranslateTask) {
         let settings = TranslateSettings.shared
+        patch(task.id) { $0.status = "准备中"; $0.message = "自动拉起翻译服务…" }
+        ensureServer(settings)
         patch(task.id) { $0.status = "转写中"; $0.message = "启动子进程（模型加载…跑完自动卸载）" }
         let stem = (task.videoPath as NSString).deletingPathExtension
         let outSrt = stem + ".srt"
@@ -450,14 +462,21 @@ self.appendLog("✗ 服务已退出——可在右侧「修复环境」后重试
         return rc == 0
     }
 
-    func stopCurrent() { stopRequested = true; process?.terminate() }
+    func stopCurrent() { stopRequested = true; process?.terminate(); stopServer() }
     func remove(_ id: UUID) { if let i = tasks.firstIndex(where: { $0.id == id }), tasks[i].status != "转写中" { tasks.remove(at: i) } }
     func retry(_ id: UUID) {
         if let i = tasks.firstIndex(where: { $0.id == id }), tasks[i].status != "转写中" {
             tasks[i].status = "排队中"; tasks[i].percent = 0; runNext()
         }
     }
-    private func finish() { DispatchQueue.main.async { [weak self] in self?.runNext() } }
+    private func finish() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let active = self.tasks.contains { $0.status == "转写中" || $0.status == "排队中" || $0.status == "准备中" }
+            if !active { self.stopServer() }   // 队列跑完 → 自动停止服务、卸载翻译模型
+            self.runNext()
+        }
+    }
 }
 
 // MARK: - 视图
@@ -482,13 +501,13 @@ struct TranslateTab: View {
                     ForEach(ModelCatalog.asr) { Text($0.dirName).tag($0.key) }
                 }.frame(width: 220).labelsHidden()
                 Spacer()
-                Button { model.toggleServer(settings) } label: {
-                    Label(model.serverRunning ? "停止翻译服务" : "部署翻译服务",
-                          systemImage: model.serverRunning ? "stop.circle.fill" : "play.circle.fill")
+                HStack(spacing: 5) {
+                    Circle().fill(model.serverRunning ? Color.green : Color.secondary.opacity(0.4))
+                        .frame(width: 7, height: 7)
+                    Text(model.serverRunning ? "翻译服务运行中（自动）" : "翻译服务待机")
+                        .font(.system(size: 10)).foregroundColor(.secondary)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(model.serverRunning ? .red : .accentColor)
-                .help("启停本地 Hy-MT2 翻译服务（mlx_lm.server）。停止 = 模型从内存卸载")
+                .help("全自动：转写开始时自动拉起翻译服务，队列跑完自动停止并卸载模型")
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider()
