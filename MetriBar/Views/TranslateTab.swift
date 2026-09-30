@@ -200,6 +200,14 @@ final class TranslateModel: ObservableObject {
 
     /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
     /// 安装外部看门狗：App被强退(SIGKILL)后，孤儿下载/服务进程30秒内被系统清掉
+    static func staticLog(_ m: String) {
+        if FileManager.default.fileExists(atPath: logFile) {
+            if let h = FileHandle(forWritingAtPath: logFile) { defer { try? h.close() }; h.seekToEndOfFile(); try? h.write(("\n" + m).data(using: .utf8)!) }
+        } else {
+            try? m.write(toFile: logFile, atomically: true, encoding: .utf8)
+        }
+    }
+
     static func installWatchdog() {
         let dst = ToolPaths.supportDir + "/cleanup_watchdog.sh"
         if let src = Bundle.main.url(forResource: "cleanup_watchdog", withExtension: "sh"), let data = try? Data(contentsOf: src) {
@@ -207,14 +215,15 @@ final class TranslateModel: ObservableObject {
             try? data.write(to: URL(fileURLWithPath: dst))
             try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dst)
         }
-        guard FileManager.default.isExecutableFile(atPath: dst) else { return }
+        guard FileManager.default.isExecutableFile(atPath: dst) else { TranslateModel.staticLog("✗ 看门狗脚本不可执行"); return }
         let plist = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" + "<plist version=\"1.0\"><dict>" + "<key>Label</key><string>com.qyx.MetriBar.watchdog</string>" + "<key>ProgramArguments</key><array><string>/bin/bash</string><string>" + dst + "</string></array>" + "<key>StartInterval</key><integer>30</integer><key>RunAtLoad</key><true/>" + "</dict></plist>"
         let plPath = NSHomeDirectory() + "/Library/LaunchAgents/com.qyx.MetriBar.watchdog.plist"
         try? FileManager.default.createDirectory(atPath: NSHomeDirectory() + "/Library/LaunchAgents", withIntermediateDirectories: true)
         try? plist.write(toFile: plPath, atomically: true, encoding: .utf8)
         let uid = String(getuid())
         _ = Shell.run("/bin/launchctl", ["unload", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
-        _ = Shell.run("/bin/launchctl", ["load", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
+        let (rcL, outL) = Shell.run("/bin/launchctl", ["load", "gui/" + uid + "/com.qyx.MetriBar.watchdog"])
+        TranslateModel.staticLog(rcL == 0 ? "✓ 看门狗已注册(30秒自动清理孤儿下载/服务)" : "✗ launchctl: " + String(outL.prefix(120)))
     }
 
     static func reapOrphanServers() {
@@ -741,7 +750,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
 
         }
-        .onAppear { TranslateModel.installWatchdog(); TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear { TranslateModel.staticLog("[dbg] onAppear触发"); TranslateModel.installWatchdog(); TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {

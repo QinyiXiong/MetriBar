@@ -14,11 +14,12 @@ import SwiftUI
 @main
 @MainActor
 struct MetriBarApp: App {
-
     @StateObject private var settings: AppSettings
     @StateObject private var store: MetricsStore
 
     init() {
+        TranslateModel.installWatchdog()
+        TranslateModel.reapOrphanServers()
         let defaults = UserDefaults.standard
         let storedInterval = (defaults.object(forKey: AppSettings.Keys.refreshInterval) as? Double) ?? 2
         let appSettings = AppSettings()
