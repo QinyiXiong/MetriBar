@@ -592,17 +592,30 @@ final class TranslateModel: ObservableObject {
         return rc == 0
     }
 
+    /// 从原始日志行提取人类可读细节（去时间戳、级别、冗余前缀）
+    static func detailOf(_ raw: String) -> String {
+        var d = raw
+        if let r = d.range(of: "^\\s*\\d{4}-\\d{2}-\\d{2}[T ][\\d:,]+Z?\\s*", options: .regularExpression) { d.removeSubrange(r) }
+        d = d.replacingOccurrences(of: "[INFO]", with: "").replacingOccurrences(of: "[WARNING]", with: "").trimmingCharacters(in: .whitespaces)
+        if d.hasPrefix("[") , let e = d.firstIndex(of: "]") { d.removeSubrange(...e) }
+        d = d.trimmingCharacters(in: .whitespaces)
+        return d.count > 90 ? String(d.prefix(90)) + "…" : d
+    }
+
     static func friendlyStage(_ t: TranslateTask) -> String {
         switch t.status {
         case "排队中":  return "排队等待中…"
         case "准备中":  return "准备中（启动翻译引擎）…"
         case "转写中":
             let m = t.message
-            if m.contains("翻译") { return "正在翻译成目标语言…" }
+            if m.contains("翻译") {
+                if let r = m.range(of: "已翻译[^)）]*", options: .regularExpression) { return "正在翻译成目标语言…（\(m[r])）" }
+                return "正在翻译成目标语言…"
+            }
             if m.contains("字幕") || m.contains("烧录") { return "正在把字幕烧进视频…" }
             if m.contains("对齐") || m.contains("时间轴") { return "正在校对时间轴…" }
             if m.contains("Retrying") || m.contains("retry") { return "服务繁忙，正在自动重试翻译请求…" }
-            if !m.isEmpty { return "正在识别语音…" }
+            if !m.isEmpty { return "正在识别语音…（\(detailOf(m))）" }
             return "正在识别语音…"
         case "完成":    return "✓ 完成，字幕已生成"
         case "失败":    return "✗ 失败：\(t.message)"
@@ -757,6 +770,11 @@ struct TranslateTab: View {
             ProgressView(value: (task.status == "完成" ? 100 : task.percent) / 100.0)
                 .tint(barColor(task))
             Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
+            if task.status == "转写中" && !task.message.isEmpty {
+                Text(TranslateModel.detailOf(task.message))
+                    .font(.system(size: 9)).foregroundColor(.secondary.opacity(0.75))
+                    .lineLimit(1).textSelection(.enabled)
+            }
             HStack(spacing: 10) {
                 Button("打开输出") { reveal(task.videoPath) }.controlSize(.mini)
                 if task.status == "失败" || task.status == "已停止" { Button("重试") { model.retry(task.id) }.controlSize(.mini) }
