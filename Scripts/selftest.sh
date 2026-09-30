@@ -184,6 +184,9 @@ for _r in set(_repos):
     except Exception as _e:
         bad += 1; print("  ✗ 仓库不可达:", _r, _e)
 import os
+if "--no-cache-dir" not in sh or "Library/Caches/pip" not in sh:
+    bad += 1; print("  ✗ pip缓存路径错误(macOS应清~/Library/Caches/pip)")
+else: print("  ✓ pip缓存走macOS正确路径+no-cache双保险")
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")
@@ -272,7 +275,7 @@ ENV_PY="/Users/qinyixiong/Library/Application Support/MetriBar/env/bin/python3"
 if [ -x "$ENV_PY" ]; then
   if "$ENV_PY" -c "import funasr, torch, mlx_lm, openai, soundfile, opencc" 2>/dev/null; then ok "funasr/torch/mlx_lm/openai/soundfile/opencc 全部可导入"; else bad "venv 依赖不全（一键构建未完成或失败）"; fi
 else
-  bad "venv python 不存在（未构建）"
+  warn "venv 未构建（干净状态，点构建环境即可）"
 fi
 
 # ──────────────── 8. 端到端转写（可选 --full-e2e）────────────────

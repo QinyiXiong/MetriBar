@@ -20,11 +20,12 @@ if [ ! -x "$S/env/bin/python3" ]; then
   log "STEP3 创建venv"
   "$S/runtime/bin/python3" -m venv "$S/env" || { log "FAIL STEP3 venv失败"; exit 1; }
 fi
-log "STEP4 安装依赖(9包 清华镜像)"
+rm -rf "$HOME/Library/Caches/pip"  # macOS真实缓存位置(macOS不在~/.cache/pip)
+log "STEP4 安装依赖(9包 清华镜像 无缓存直连)"
 P=(funasr==1.4.1 torch torchaudio mlx-lm openai opencc-python-reimplemented soundfile python-multipart librosa)
 for i in "${!P[@]}"; do
   log "依赖 $((i+1))/9 ${P[$i]}"
-  "$S/env/bin/python3" -m pip install --no-input -q --index-url "$MIRROR" "${P[$i]}" || { log "FAIL ${P[$i]}"; exit 1; }
+  "$S/env/bin/python3" -m pip install --no-input -q --no-cache-dir --index-url "$MIRROR" "${P[$i]}" || { log "FAIL ${P[$i]}"; exit 1; }
 done
 log "STEP5 验证导入"
 "$S/env/bin/python3" -c "import funasr, torch, mlx_lm, openai, soundfile, opencc" || { log "FAIL import验证"; exit 1; }

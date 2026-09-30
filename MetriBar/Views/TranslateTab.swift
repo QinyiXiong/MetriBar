@@ -289,6 +289,7 @@ final class TranslateModel: ObservableObject {
             let fm = FileManager.default
             try? fm.removeItem(atPath: ToolPaths.envDir)
             try? fm.removeItem(atPath: ToolPaths.runtimeDir)
+            try? fm.removeItem(atPath: NSHomeDirectory() + "/Library/Caches/pip")
             try? fm.removeItem(atPath: NSHomeDirectory() + "/.cache/pip")
             DispatchQueue.main.async {
                 self?.envOK = false; self?.envBusy = false
@@ -306,6 +307,7 @@ final class TranslateModel: ObservableObject {
         appendLog(full ? "→ 全量重建：清除所有依赖后重装" : "→ 开始构建转写环境")
         if full {
             try? FileManager.default.removeItem(atPath: ToolPaths.envDir)
+            try? FileManager.default.removeItem(atPath: NSHomeDirectory() + "/Library/Caches/pip")
             try? FileManager.default.removeItem(atPath: NSHomeDirectory() + "/.cache/pip")
             envOK = false
         }
