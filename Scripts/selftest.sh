@@ -163,10 +163,13 @@ else: print("  ✓ 进度只前进不回退")
 if "verifyAndMark" not in swift_main:
     bad += 1; print("  ✗ 联网完整性校验缺失")
 else: print("  ✓ 联网逐文件大小校验在位")
-if 'supportDir + "/python"' not in swift_main:
+try:
+    sh = open("MetriBar/Resources/install_runtime.sh", encoding="utf-8").read()
+except OSError: sh = ""
+if 'mv "$S/python" "$S/runtime"' not in sh:
     bad += 1; print("  ✗ runtime解压目录对齐缺失")
 else: print("  ✓ runtime解压目录对齐(python→runtime)")
-_m=re.search(r"pkgs = \[([^\]]+)\]", swift_main)
+_m=re.search(r"P=\(([^)]+)\)", sh)
 if _m and all(k in _m.group(1) for k in ["funasr","torch","mlx-lm","openai","soundfile","opencc"]):
     print("  ✓ 构建依赖清单完整(9包)")
 else:
@@ -180,6 +183,13 @@ for _r in set(_repos):
             print("  ✓ 仓库在线:", _r)
     except Exception as _e:
         bad += 1; print("  ✗ 仓库不可达:", _r, _e)
+import os
+if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
+    bad += 1; print("  ✗ 已安装App缺构建脚本")
+else: print("  ✓ 已安装App自带构建脚本")
+if os.path.exists(os.path.expanduser("~/Library/LaunchAgents/com.qyx.MetriBar.watchdog.plist")):
+    bad += 1; print("  ✗ 看门狗LaunchAgent残留")
+else: print("  ✓ 看门狗已彻底移除")
 if bad: exit(1)
 GUARDEOF
 [ $? -eq 0 ] || F=$((F+1))
