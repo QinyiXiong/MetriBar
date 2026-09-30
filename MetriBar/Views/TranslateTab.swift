@@ -944,14 +944,17 @@ struct TranslateTab: View {
                 }
             }
             Divider()
-            Label("模型 · ModelScope 魔搭", systemImage: "arrow.down.circle.fill").font(.system(size: 13, weight: .bold))
+            HStack(spacing: 4) {
+                Label("模型 · ModelScope 魔搭", systemImage: "arrow.down.circle.fill").font(.system(size: 13, weight: .bold))
+                Text("（国内直连，无需科学上网）").font(.system(size: 10)).foregroundColor(.secondary)
+            }
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(model.downloads) { dl in downloadRow(dl) }
                 }
             }
             HStack(spacing: 8) {
-                Button("全部下载缺失") { model.downloadAllMissing(settings) }.controlSize(.small)
+                Button("全部下载缺失（ModelScope）") { model.downloadAllMissing(settings) }.controlSize(.small)
                 Spacer()
             }
             VStack(alignment: .leading, spacing: 5) {
@@ -991,7 +994,7 @@ struct TranslateTab: View {
                         .padding(.horizontal, 8).padding(.vertical, 2.5)
                         .background(Capsule().fill(Color.green.opacity(0.16))).foregroundColor(.green)
                 } else {
-                    Button("下载") { model.download(dl.spec, settings) }.controlSize(.mini)
+                    Button("ModelScope 下载") { model.download(dl.spec, settings) }.controlSize(.mini)
                 }
             }
             if dl.status.hasPrefix("下载中") { ProgressView(value: min(dl.percent, 100) / 100.0).tint(.accentColor) }
