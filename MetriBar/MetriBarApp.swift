@@ -18,7 +18,7 @@ struct MetriBarApp: App {
     @StateObject private var store: MetricsStore
 
     init() {
-        TranslateModel.reapOrphanServers()
+        DispatchQueue.global(qos: .utility).async { DispatchQueue.main.asyncAfter(deadline: .now()+1) { TranslateModel.reapOrphanServers() } }
         let defaults = UserDefaults.standard
         let storedInterval = (defaults.object(forKey: AppSettings.Keys.refreshInterval) as? Double) ?? 2
         let appSettings = AppSettings()

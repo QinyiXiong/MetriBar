@@ -181,7 +181,11 @@ final class TranslateModel: ObservableObject {
     private var stopRequested = false
 
     func checkEnv() {
-        ffmpegOK = (TranslateModel.detectFFmpeg() != nil)
+        // ffmpeg探测(登录shell ~200ms)移出主线程：UI先显示缓存值，结果稍后自动刷新
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let ok = TranslateModel.detectFFmpeg() != nil
+            DispatchQueue.main.async { self?.ffmpegOK = ok }
+        }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let ready = FileManager.default.isExecutableFile(atPath: ToolPaths.envPython)
             var pass = false
