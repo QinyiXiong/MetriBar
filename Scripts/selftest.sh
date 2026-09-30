@@ -106,24 +106,6 @@ import io as _io
 swift = _io.open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
 if 'env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv' not in swift: fails.append("翻译 model id 未注入绝对路径(旧版会400)")
 
-# ── 下载/环境功能守护（本轮事故教训常驻化）──
-if '"-lc", "command -v ffmpeg"' not in swift_main:
-    fails.append("ffmpeg检测未走登录shell(ffmpeg-full等安装会误报未装)")
-_ff = subprocess.run(["/bin/bash","-lc","command -v ffmpeg"],capture_output=True,text=True).stdout.strip()
-if _ff: ok(f"ffmpeg 实际可检出: {_ff}")
-else: warn("本机bash -lc查不到ffmpeg（若已装请检查PATH）")
-if "dlPaused.insert(key)" not in swift_main or "dlPaused.contains(key)" not in swift_main:
-    fails.append("暂停哨兵缺失(暂停停不住事故)")
-if "只前进不回退" not in swift_main:
-    fails.append("进度账本clamp缺失(进度回滑事故)")
-if "verifyAndMark" not in swift_main:
-    fails.append("联网完整性校验缺失(半成品误报就绪事故)")
-if swift_main.count('pkgs = [') == 1:
-    import re as _re
-    _p=_re.search(r'pkgs = \[([^\]]+)\]', swift_main)
-    if _p and all(k in _p.group(1) for k in ["funasr","torch","mlx-lm","openai","soundfile","opencc"]):
-        ok("构建依赖清单完整(funasr/torch/mlx-lm等9包)")
-    else: bad("构建依赖清单缺项")
 
 # transcribe.py 进度 JSON 消费格式（Swift consume 依赖）# ── 结构性守卫（冷启动/并发类事故回归）──
 swift_main = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
@@ -163,6 +145,36 @@ PYEOF
 [ $? -eq 0 ] && P=$((P+1)) || F=$((F+1))
 
 # ──────────────── 5. 键位映射表校验（官方 kVK）────────────────
+sec "下载/环境功能守护"
+python3 <<'GUARDEOF'
+import re, subprocess
+swift_main = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
+bad=0
+if '"-lc", "command -v ffmpeg"' not in swift_main:
+    bad += 1; print("  ✗ ffmpeg检测未走登录shell")
+_ff = subprocess.run(["/bin/bash","-lc","command -v ffmpeg"],capture_output=True,text=True).stdout.strip()
+print("  ✓ ffmpeg 实际可检出:", _ff if _ff else "无")
+if "dlPaused.insert(key)" not in swift_main or "dlPaused.contains(key)" not in swift_main:
+    bad += 1; print("  ✗ 暂停哨兵缺失")
+else: print("  ✓ 暂停哨兵在位")
+if "只前进不回退" not in swift_main:
+    bad += 1; print("  ✗ 进度账本clamp缺失")
+else: print("  ✓ 进度只前进不回退")
+if "verifyAndMark" not in swift_main:
+    bad += 1; print("  ✗ 联网完整性校验缺失")
+else: print("  ✓ 联网逐文件大小校验在位")
+if 'supportDir + "/python"' not in swift_main:
+    bad += 1; print("  ✗ runtime解压目录对齐缺失")
+else: print("  ✓ runtime解压目录对齐(python→runtime)")
+_m=re.search(r"pkgs = \[([^\]]+)\]", swift_main)
+if _m and all(k in _m.group(1) for k in ["funasr","torch","mlx-lm","openai","soundfile","opencc"]):
+    print("  ✓ 构建依赖清单完整(9包)")
+else:
+    bad += 1; print("  ✗ 构建依赖清单缺项")
+if bad: exit(1)
+GUARDEOF
+[ $? -eq 0 ] || F=$((F+1))
+
 sec "键盘键位映射 vs 官方 keycode 表"
 python3 - <<'PYEOF'
 import re, sys
