@@ -19,6 +19,14 @@ from opencc import OpenCC
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 MODEL_DIR = os.environ.get("METRIBAR_MODEL_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
+# MetriBar: 每个模型目录可用 env 覆盖（支持 LM Studio 等「发布者/模型」两级嵌套布局）
+MODEL_PATH_OVERRIDES = {
+    "sensevoice": os.environ.get("METRIBAR_SENSEVOICE_DIR", ""),
+    "nano": os.environ.get("METRIBAR_NANO_DIR", ""),
+    "mlt-nano": os.environ.get("METRIBAR_MLT_NANO_DIR", ""),
+    "vad": os.environ.get("METRIBAR_VAD_DIR", ""),
+}
+
 
 def _fmt_duration(seconds):
     h = int(seconds // 3600)
@@ -86,6 +94,13 @@ FUNASR_MODELS = {
     },
 }
 FUNASR_VAD_MODEL = os.path.join(MODEL_DIR, "fsmn-vad")
+# MetriBar: env 覆盖生效（LM Studio 等两级嵌套布局下由 App 注入真实路径）
+for _k, _p in MODEL_PATH_OVERRIDES.items():
+    if _p and os.path.isdir(_p):
+        if _k == "vad":
+            FUNASR_VAD_MODEL = _p
+        elif _k in FUNASR_MODELS:
+            FUNASR_MODELS[_k]["model"] = _p
 DEFAULT_ASR_MODEL = "sensevoice"
 _FUNASR_MODEL_INSTANCES = {}
 _FUNASR_WARMED_MODELS = set()
