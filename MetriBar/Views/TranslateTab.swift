@@ -173,25 +173,50 @@ final class TranslateModel: ObservableObject {
     }
 
     func refreshAvailability(_ settings: TranslateSettings) {
-        let fm = FileManager.default
-        let roots = [settings.effectiveModelDir, settings.pipelineDir + "/models"]
+        let roots = [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             for i in self.downloads.indices {
                 let spec = self.downloads[i].spec
                 guard self.downloads[i].status != "下载中" else { continue }
-                let present = roots.contains { fm.fileExists(atPath: $0 + "/" + spec.dirName) }
-                self.downloads[i].status = present ? "✓ 已就绪" : "未下载"
+                if let dir = TranslateModel.resolveModelDir(spec: spec, roots: roots) {
+                    self.downloads[i].status = "✓ 已就绪"
+                    self.appendLog("扫描命中 \(spec.dirName) → \(dir)")
+                } else {
+                    self.downloads[i].status = "未下载"
+                }
             }
         }
     }
 
-    func modelDir(for spec: ModelSpec, _ settings: TranslateSettings) -> String {
+    /// 根目录内解析模型：直接子目录 + 「发布者/模型」两级嵌套（LM Studio 布局），大小写兜底。
+    static func resolveModelDir(spec: ModelSpec, roots: [String]) -> String? {
         let fm = FileManager.default
-        if !settings.modelDir.isEmpty, fm.fileExists(atPath: settings.modelDir + "/" + spec.dirName) { return settings.modelDir + "/" + spec.dirName }
-        let legacy = settings.pipelineDir + "/" + spec.dirName
-        if fm.fileExists(atPath: legacy) { return legacy }
-        return settings.effectiveModelDir + "/" + spec.dirName
+        var seen = Set<String>()
+        for root in roots {
+            if seen.contains(root) { continue }
+            seen.insert(root)
+            let exact = root + "/" + spec.dirName
+            if fm.fileExists(atPath: exact) { return exact }
+            guard let firsts = try? fm.contentsOfDirectory(atPath: root) else { continue }
+            for f in firsts.sorted() {
+                if f.hasPrefix(".") { continue }
+                let cand = root + "/" + f + "/" + spec.dirName
+                if fm.fileExists(atPath: cand) { return cand }
+                if f.lowercased() == spec.dirName.lowercased() { return root + "/" + f }
+                if let seconds = try? fm.contentsOfDirectory(atPath: root + "/" + f) {
+                    for g in seconds where g.lowercased() == spec.dirName.lowercased() {
+                        return root + "/" + f + "/" + g
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    func modelDir(for spec: ModelSpec, _ settings: TranslateSettings) -> String {
+        TranslateModel.resolveModelDir(spec: spec, roots: [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir])
+            ?? settings.effectiveModelDir + "/" + spec.dirName
     }
 
     // MARK: 一键构建 Python 环境（venv + 清华镜像，torch/funasr/mlx-lm）
@@ -396,7 +421,12 @@ final class TranslateModel: ObservableObject {
         let outSrt = stem + ".srt"
 
         var env = ProcessInfo.processInfo.environment
-        env["METRIBAR_MODEL_DIR"] = settings.effectiveModelDir
+                let rootsForEnv = [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
+        for (spec, key) in [(ModelCatalog.asr[0], "METRIBAR_SENSEVOICE_DIR"), (ModelCatalog.asr[1], "METRIBAR_NANO_DIR"),
+                             (ModelCatalog.asr[2], "METRIBAR_MLT_NANO_DIR"), (ModelCatalog.vad, "METRIBAR_VAD_DIR")] {
+            if let dir = TranslateModel.resolveModelDir(spec: spec, roots: rootsForEnv) { env[key] = dir }
+        }
+        env["METRIBAR_MODEL_DIR"] = env["METRIBAR_VAD_DIR"] ?? settings.effectiveModelDir
         env["METRIBAR_JSON_PROGRESS"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
                 let baseURL = serverRunning && runtimePort > 0 ? "http://127.0.0.1:\(runtimePort)/v1" : settings.translateBaseURL
@@ -656,14 +686,18 @@ struct TranslateTab: View {
     private func downloadRow(_ dl: DownloadState) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Image(systemName: dl.status.hasPrefix("✓") ? "checkmark.circle.fill" : (dl.status == "下载中" ? "arrow.triangle.2.circlepath" : "circle"))
-                    .foregroundColor(dl.status.hasPrefix("✓") ? .green : dl.status == "下载中" ? .accentColor : .secondary)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(dl.spec.label).font(.system(size: 11, weight: .medium))
                     Text("\(dl.spec.msRepo) · \(dl.spec.sizeText)").font(.system(size: 9)).foregroundColor(.secondary)
                 }
                 Spacer()
-                if dl.status != "下载中", !dl.status.hasPrefix("✓") {
+                if dl.status == "下载中" {
+                    Text("↓ \(Int(dl.percent))%").font(.system(size: 9, weight: .semibold)).foregroundColor(.accentColor)
+                } else if dl.status.hasPrefix("✓") {
+                    Text("✓ 已就绪").font(.system(size: 10, weight: .semibold))
+                        .padding(.horizontal, 8).padding(.vertical, 2.5)
+                        .background(Capsule().fill(Color.green.opacity(0.16))).foregroundColor(.green)
+                } else {
                     Button("下载") { model.download(dl.spec, settings) }.controlSize(.mini)
                 }
             }
