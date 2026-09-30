@@ -132,7 +132,9 @@ final class TranslateModel: ObservableObject {
     @Published var log: [String] = []
 
     var workers: [UUID: Process] = [:]
-        @Published var concurrencyLimit: Int = {
+        var activeCount: Int { tasks.filter { $0.status == "转写中" || $0.status == "准备中" }.count }
+    var taskCount: Int { tasks.count }
+    @Published var concurrencyLimit: Int = {
         let v = UserDefaults.standard.integer(forKey: "translate.concurrency")
         return (1...8).contains(v) ? v : 5
     }()
@@ -608,7 +610,7 @@ struct TranslateTab: View {
                     }
                 Button { model.startQueue() } label: {
                     if model.autoRunning && !model.workers.isEmpty {
-                        HStack(spacing: 4) { ProgressView().controlSize(.small); Text("处理中 (\(model.workers.count))") }
+                        HStack(spacing: 4) { ProgressView().controlSize(.small); Text("处理中 \(model.activeCount)/\(model.taskCount)") }
                     } else { Label("开始处理", systemImage: "play.fill") }
                 }
                 .buttonStyle(.borderedProminent)
