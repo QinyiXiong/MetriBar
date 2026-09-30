@@ -100,6 +100,12 @@ Storage:
       Mount Point: /'''
 if "40" not in prof: fails.append("GPU 核数样例异常")
 
+
+# 翻译 model id 必须注入绝对路径（与 mlx_lm.server model id 一致）——回归防线
+import io as _io
+swift = _io.open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
+if 'env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv' not in swift: fails.append("翻译 model id 未注入绝对路径(旧版会400)")
+
 # transcribe.py 进度 JSON 消费格式（Swift consume 依赖）
 try:
     sample = {"stage": "翻译", "percent": 46.5, "message": "translating seg 12"}
@@ -214,6 +220,31 @@ PYEOF
       METRIBAR_SENSEVOICE_DIR="$SVDIR" METRIBAR_VAD_DIR="$(dirname "$SVDIR")/fsmn-vad" \
       "$ENV_PY" "$APP/Contents/Resources/pipeline/transcribe.py" test.mp4 "$TMPV/test.mp4" "$TMPV/out.srt" sensevoice >"$TMPV/run.log" 2>&1
       if [ -s "$TMPV/out.srt" ]; then ok "端到端转写产出 srt（$(grep -c '\-\->' "$TMPV/out.srt") 条字幕）"; else bad "端到端转写失败"; tail -3 "$TMPV/run.log" | sed 's/^/      /'; fi
+      # ── 英→中翻译 + 双语 + 烧录 全链路 ──
+      MT=$(python3 -c "
+import os
+home=os.path.expanduser('~')
+for c in [home+'/.lmstudio/models/mlx-community/Hy-MT2-7B', home+'/Library/Application Support/MetriBar/models/Hy-MT2-7B']:
+    if os.path.isdir(c): print(c); break")
+      if [ -n "${MT:-}" ]; then
+        say -v Samantha -o "$TMPV/en.aiff" "Hello, this is an end to end translation test." 2>/dev/null
+        "$FFMPEG" -y -f lavfi -i color=c=black:s=640x360:d=4 -i "$TMPV/en.aiff" -shortest -pix_fmt yuv420p "$TMPV/en.mp4" >/dev/null 2>&1
+        nohup "$ENV_PY" -m mlx_lm.server --model "$MT" --port 18901 >/tmp/metribar_selftest_server.log 2>&1 & SRV=$!
+        R=0; for _ in $(seq 1 45); do sleep 2; curl -fsS -m 2 http://127.0.0.1:18901/v1/models >/dev/null 2>&1 && { R=1; break; }; done
+        [ "$R" = "1" ] && ok "翻译服务 就绪（model id=绝对路径）" || bad "翻译服务启动失败"
+        METRIBAR_SENSEVOICE_DIR="$SVDIR" METRIBAR_VAD_DIR="$(dirname "$SVDIR")/fsmn-vad" \
+        METRIBAR_TRANSLATE_BASE_URL=http://127.0.0.1:18901/v1 METRIBAR_TRANSLATE_MODEL="$MT" \
+        "$ENV_PY" "$APP/Contents/Resources/pipeline/transcribe.py" en.mp4 "$TMPV/en.mp4" "$TMPV/en.srt" sensevoice >"$TMPV/en.log" 2>&1
+        if python3 -c "import sys,re;t=open(sys.argv[1],encoding='utf-8').read();sys.exit(0 if re.search(r'[\u4e00-\u9fa5]',t) else 1)" "$TMPV/en.(双语).srt" 2>/dev/null; then
+          ok "英→中翻译成功（双语字幕含中文）"
+        else bad "翻译失败：双语字幕无中文"; grep -i "失败" "$TMPV/en.log" | tail -2 | sed 's/^/      /'; fi
+        "$ENV_PY" "$APP/Contents/Resources/pipeline/embed_subtitle.py" "$TMPV/en.mp4" -s "$TMPV/en.(双语).srt" -o "$TMPV/final.mp4" >/dev/null 2>&1
+        FS=$(stat -f%z "$TMPV/final.mp4" 2>/dev/null || echo 0)
+        [ "$FS" -gt 10000 ] && ok "烧录产出成片（$((FS/1024)) KB）" || bad "烧录失败（无成片）"
+        kill $SRV 2>/dev/null
+      else
+        warn "无 Hy-MT2 模型，跳过翻译/烧录链路"
+      fi
     else
       warn "无 SenseVoiceSmall，跳过 e2e"
     fi

@@ -169,11 +169,19 @@ final class TranslateModel: ObservableObject {
         }
     }
 
+    static let logFile = ToolPaths.supportDir + "/logs/MetriBar.log"
     func appendLog(_ s: String) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.log.append(s)
             if self.log.count > 200 { self.log.removeFirst(self.log.count - 200) }
+        }
+        DispatchQueue.global(qos: .utility).async {
+            try? FileManager.default.createDirectory(atPath: (Self.logFile as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            let stamp = ISO8601DateFormatter().string(from: Date())
+            let entry = "[" + stamp + "] " + s + "\n"
+            if let h = FileHandle(forWritingAtPath: Self.logFile) { h.seekToEndOfFile(); h.write(entry.data(using: .utf8)!) }
+            else { try? entry.write(toFile: Self.logFile, atomically: true, encoding: .utf8) }
         }
     }
 
@@ -445,7 +453,9 @@ final class TranslateModel: ObservableObject {
                 let baseURL = serverRunning && runtimePort > 0 ? "http://127.0.0.1:\(runtimePort)/v1" : settings.translateBaseURL
         env["METRIBAR_TRANSLATE_BASE_URL"] = baseURL
         if !settings.translateAPIKey.isEmpty { env["METRIBAR_TRANSLATE_API_KEY"] = settings.translateAPIKey }
-        if !settings.translateModel.isEmpty { env["METRIBAR_TRANSLATE_MODEL"] = settings.translateModel }
+        // mlx_lm.server 的 model id = 模型绝对路径；必须一致，否则服务端拒收
+        let mtDirForEnv = modelDir(for: ModelCatalog.mt, settings)
+        env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv
         env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/opt/ffmpeg-full/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
 
         guard settings.envPythonReady else {
@@ -500,7 +510,7 @@ final class TranslateModel: ObservableObject {
         let stem = (task.videoPath as NSString).deletingPathExtension
         let srt = FileManager.default.fileExists(atPath: stem + ".(双语).srt") ? stem + ".(双语).srt" : outSrt
         guard FileManager.default.fileExists(atPath: srt) else { return false }
-        patch(task.id) { $0.message = "烧录字幕中（ffmpeg）…" }
+        patch(task.id) { $0.percent = 92; $0.message = "烧录字幕中（ffmpeg）…" }
         let (rc, _) = Shell.run(settings.effectivePython,
                                  [settings.effectivePipeline + "/embed_subtitle.py", task.videoPath, "-s", srt, "-o", stem + ".字幕版.mp4"])
         return rc == 0
@@ -551,6 +561,7 @@ struct TranslateTab: View {
     @ObservedObject private var settings = TranslateSettings.shared
     @StateObject private var model = TranslateModel()
     @State private var dirDraft: String = ""
+    @State private var showLogWin = false
     @State private var dirMsg: String = ""
     @State private var dirOK = false
 
@@ -574,6 +585,14 @@ struct TranslateTab: View {
                 }.fixedSize()
                     .onChange(of: model.concurrencyLimit) { v in
                         UserDefaults.standard.set(v, forKey: "translate.concurrency"); model.runNext()
+                    }
+                Toggle(isOn: $settings.burnIn) { Text("烧录字幕进视频").font(.system(size: 11)) }
+                    .toggleStyle(.checkbox)
+                    .onChange(of: settings.burnIn) { v in settings.persist("translate.burnIn", v ? "1" : "0") }
+                Button { showLogWin = true } label: { Image(systemName: "text.alignleft") }
+                    .buttonStyle(.borderless).help("查看详细日志")
+                    .popover(isPresented: $showLogWin, arrowEdge: .bottom) {
+                        LogTextView(file: TranslateModel.logFile).frame(width: 640, height: 380)
                     }
                 if !model.workers.isEmpty {
                     Button("全部停止") { model.stopAll() }.controlSize(.small).tint(.red)
@@ -752,4 +771,32 @@ struct TranslateTab: View {
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
     }
 
+}
+
+struct LogTextView: View {
+    let file: String
+    @State private var text = ""
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("详细日志").font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Button("刷新") { load() }
+                Button("打开文件") { NSWorkspace.shared.open(URL(fileURLWithPath: file)) }
+            }.padding(8)
+            Divider()
+            ScrollView {
+                Text(text.isEmpty ? "（暂无日志）" : text)
+                    .font(.system(size: 10, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+            }
+        }.onAppear { load() }
+    }
+    private func load() {
+        if let c = try? String(contentsOfFile: file, encoding: .utf8) {
+            text = c.split(separator: "\n").suffix(400).joined(separator: "\n")
+        }
+    }
 }
