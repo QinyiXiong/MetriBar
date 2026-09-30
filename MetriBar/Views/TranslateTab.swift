@@ -259,10 +259,35 @@ final class TranslateModel: ObservableObject {
     /// 一键构建环境（全自动，不碰系统 Python）：
     /// ① curl 下载独立 CPython 运行时（npmmirror 国内镜像，约 19MB）
     /// ② 基于它创建独立虚拟环境 ③ 清华镜像安装全部依赖（不含模型）
-    func buildEnv(_ settings: TranslateSettings) {
+    /// 删除全部运行时与依赖（回到全新未安装状态）
+    func nukeRuntime(_ settings: TranslateSettings) {
         guard !envBusy else { return }
         envBusy = true
-        appendLog("→ 开始构建转写环境（全自动）")
+        appendLog("→ 删除全部运行时与依赖")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let fm = FileManager.default
+            try? fm.removeItem(atPath: ToolPaths.envDir)
+            try? fm.removeItem(atPath: ToolPaths.runtimeDir)
+            try? fm.removeItem(atPath: NSHomeDirectory() + "/.cache/pip")
+            DispatchQueue.main.async {
+                self?.envOK = false; self?.envBusy = false
+                self?.envStage = "已删除全部运行时与依赖，可重新一键构建"
+                self?.refreshAvailability(settings)
+                self?.appendLog("✓ 运行时与依赖已删除")
+            }
+        }
+    }
+
+    func buildEnv(_ settings: TranslateSettings, full: Bool = false) {
+        guard !envBusy else { return }
+        envBusy = true
+        appendLog(full ? "→ 全量重建：清除所有依赖与缓存后重装" : "→ 开始构建转写环境（全自动）")
+        if full {
+            envStage = "清除旧环境与缓存…"
+            try? FileManager.default.removeItem(atPath: ToolPaths.envDir)
+            try? FileManager.default.removeItem(atPath: NSHomeDirectory() + "/.cache/pip")
+            envOK = false; refreshAvailability(settings)
+        }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let fm = FileManager.default
             try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
@@ -682,6 +707,7 @@ struct TranslateTab: View {
         }
     }
     @State private var showEnvSheet = false
+    @State private var showNukeConfirm = false
     @State private var dirMsg: String = ""
     @State private var dirOK = false
 
@@ -748,6 +774,12 @@ struct TranslateTab: View {
                         .controlSize(.small)
                 }
                 .sheet(isPresented: $showEnvSheet) { envSheet }
+        .alert("确认删除？", isPresented: $showNukeConfirm) {
+            Button("删除全部", role: .destructive) { model.nukeRuntime(settings) }
+            Button("取消", role: .cancel) { }
+        } message: {
+            Text("将删除独立 Python 运行时、转写环境(venv)及全部依赖缓存（共约数GB，不含已下载模型）。之后可重新一键构建。")
+        }
                 .help("全自动：转写开始时自动拉起翻译服务，队列跑完自动停止并卸载模型")
             }
             .padding(.horizontal, 14).padding(.vertical, 10)
@@ -827,6 +859,7 @@ struct TranslateTab: View {
         panel.message = "选择模型文件夹（内含 SenseVoiceSmall 等子目录）· ⌘⇧. 可显示隐藏文件夹"
         if panel.runModal() == .OK, let url = panel.url {
             settings.modelDir = url.path; settings.persist("modelDir", url.path)
+            dirDraft = url.path   // 同步回显到「模型目录」输入框
             model.refreshAvailability(settings)
         }
     }
@@ -895,7 +928,12 @@ struct TranslateTab: View {
                     .font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
                 Spacer()
                 if !model.envBusy {
-                    Button(model.envOK ? "重建" : "一键构建环境") { model.buildEnv(settings) }.controlSize(.small)
+                    HStack(spacing: 6) {
+                        Button(model.envOK ? "全量重建" : "一键构建环境") { model.buildEnv(settings, full: true) }.controlSize(.small).disabled(model.envBusy)
+                        if model.envOK || model.envBusy {
+                            Button("删除运行时与依赖", role: .destructive) { showNukeConfirm = true }.controlSize(.small)
+                        }
+                    }
                         .help("基于 App 内置 Python 创建独立环境，经清华镜像安装 funasr/torch/mlx-lm（不含模型）")
                 }
             }
@@ -950,7 +988,7 @@ struct TranslateTab: View {
                     Button("下载") { model.download(dl.spec, settings) }.controlSize(.mini)
                 }
             }
-            if dl.status == "下载中" { ProgressView(value: dl.percent) }
+            if dl.status.hasPrefix("下载中") { ProgressView(value: min(dl.percent, 100) / 100.0).tint(.accentColor) }
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
