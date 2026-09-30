@@ -636,7 +636,7 @@ struct TranslateTab: View {
     @StateObject private var model = TranslateModel()
     @State private var dirDraft: String = ""
     @State private var showLogWin = false
-    private func barColor(_ t: TranslateTask) -> Color {
+    private func barColor(_ t: TranslateModel.TranslateTask) -> Color {
         switch t.status {
         case "完成":   return .green
         case "失败":   return .red
