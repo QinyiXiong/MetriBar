@@ -1062,7 +1062,7 @@ struct TranslateTab: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("运行时与依赖", systemImage: "shippingbox.fill").font(.system(size: 13, weight: .bold))
             HStack(spacing: 8) {
-                Image(systemName: model.ffmpegOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                Image(systemName: model.ffmpegOK ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
                     .foregroundColor(model.ffmpegOK ? .green : .orange)
                 if model.ffmpegOK {
                     Text("ffmpeg 已安装（烧录字幕可用）").font(.system(size: 10)).foregroundColor(.secondary)
@@ -1079,7 +1079,7 @@ struct TranslateTab: View {
                     }
                 }
                 Spacer()
-            }.padding(8).background(Color.primary.opacity(0.04)).cornerRadius(6)
+            }
             HStack(spacing: 8) {
                 Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2.fill" : "seal"))
                     .foregroundColor(model.envOK ? .green : model.envBusy ? .accentColor : .secondary)
