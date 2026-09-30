@@ -106,7 +106,7 @@ _FUNASR_MODEL_INSTANCES = {}
 _FUNASR_WARMED_MODELS = set()
 _FUNASR_MODEL_LOCK = None
 
-TRANSLATE_CONCURRENCY = 100
+TRANSLATE_CONCURRENCY = int(os.environ.get("METRIBAR_TRANSLATE_CONCURRENCY", "8"))
 _API_CONFIG = {"base_url": os.environ.get("METRIBAR_TRANSLATE_BASE_URL", "http://127.0.0.1:18888/v1"),
               "api_key": os.environ.get("METRIBAR_TRANSLATE_API_KEY", "pehwqyx6")}
 TRANSLATE_MODEL = os.environ.get("METRIBAR_TRANSLATE_MODEL", "hy-mt2-7b")
@@ -603,6 +603,7 @@ def translate_srt(srt_path, video_name, log, progress=None, should_stop=None):
         else:
             pending[i] = (idx_str, ts, text)
 
+    done_count = [0]
     log.info(
         f"[{video_name}] 开始处理中文字幕 "
         f"({total} 条, 翻译 {len(pending)} 条, 并发 {TRANSLATE_CONCURRENCY})"
@@ -616,6 +617,9 @@ def translate_srt(srt_path, video_name, log, progress=None, should_stop=None):
             for i, entry in pending.items()
         }
         for done, fut in enumerate(as_completed(fut_map), 1):
+            done_count[0] += 1
+            _progress(progress, "translate", 76 + 19.0 * done_count[0] / max(total, 1),
+                           f"已翻译 {done_count[0]}/{len(pending)} 条")
             if should_stop and should_stop():
                 for pending_future in fut_map:
                     pending_future.cancel()

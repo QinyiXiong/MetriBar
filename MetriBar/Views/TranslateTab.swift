@@ -416,7 +416,16 @@ final class TranslateModel: ObservableObject {
 
     @Published var autoRunning = false
 
-    func startQueue() { autoRunning = true; runNext() }
+    func startQueue() {
+        // 点开始：先确保翻译服务就绪（只等这一次），再放行队列
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            if FileManager.default.isExecutableFile(atPath: ToolPaths.envPython) {
+                self.ensureServer(TranslateSettings.shared)
+            }
+            DispatchQueue.main.async { self.autoRunning = true; self.runNext() }
+        }
+    }
 
     func runNext() {
         guard autoRunning else { return }
@@ -441,9 +450,7 @@ final class TranslateModel: ObservableObject {
 
     private func execute(_ task: TranslateTask) {
         let settings = TranslateSettings.shared
-        patch(task.id) { $0.status = "准备中"; $0.message = "自动拉起翻译服务…" }
-        ensureServer(settings)
-        patch(task.id) { $0.status = "转写中"; $0.message = "启动子进程（模型加载…跑完自动卸载）" }
+        patch(task.id) { $0.status = "转写中"; $0.message = "语音识别中…" }
         let stem = (task.videoPath as NSString).deletingPathExtension
         let outSrt = stem + ".srt"
 
@@ -456,8 +463,9 @@ final class TranslateModel: ObservableObject {
         env["METRIBAR_MODEL_DIR"] = env["METRIBAR_VAD_DIR"] ?? settings.effectiveModelDir
         env["METRIBAR_JSON_PROGRESS"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
-                let baseURL = serverRunning && runtimePort > 0 ? "http://127.0.0.1:\(runtimePort)/v1" : settings.translateBaseURL
-        env["METRIBAR_TRANSLATE_BASE_URL"] = baseURL
+        if serverRunning && runtimePort > 0 {
+            env["METRIBAR_TRANSLATE_BASE_URL"] = "http://127.0.0.1:\(runtimePort)/v1"
+        }
         if !settings.translateAPIKey.isEmpty { env["METRIBAR_TRANSLATE_API_KEY"] = settings.translateAPIKey }
         // mlx_lm.server 的 model id = 模型绝对路径；必须一致，否则服务端拒收
         let mtDirForEnv = modelDir(for: ModelCatalog.mt, settings)
@@ -573,13 +581,14 @@ struct TranslateTab: View {
     @StateObject private var model = TranslateModel()
     @State private var dirDraft: String = ""
     @State private var showLogWin = false
+    @State private var showEnvSheet = false
     @State private var dirMsg: String = ""
     @State private var dirOK = false
 
     var body: some View {
         HSplitView {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
-            sideColumn.frame(minWidth: 320, idealWidth: 360, minHeight: 480)
+            envStatusBar.frame(width: 230)
         }
         .onAppear { dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
@@ -718,7 +727,54 @@ struct TranslateTab: View {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: videoPath).deletingLastPathComponent()])
     }
 
-    private var sideColumn: some View {
+    private var readyCount: Int { model.downloads.filter { $0.status.hasPrefix("✓") }.count }
+
+    private var envStatusBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button { showEnvSheet = true } label: {
+                Label("运行时与模型", systemImage: "shippingbox")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            if model.envOK {
+                Label("转写环境已就绪", systemImage: "checkmark.seal.fill")
+                    .foregroundColor(.green).font(.system(size: 11))
+            } else {
+                Label(model.envStage.isEmpty ? "转写环境未构建" : model.envStage, systemImage: "hourglass")
+                    .foregroundColor(.orange).font(.system(size: 11)).lineLimit(2)
+            }
+            if readyCount < model.downloads.count {
+                Text("模型 \(readyCount)/\(model.downloads.count) 就绪")
+                    .font(.system(size: 11)).foregroundColor(.secondary)
+                Text("缺失项点上方按钮下载")
+                    .font(.system(size: 10)).foregroundColor(.secondary)
+            } else {
+                Text("模型全部就绪 ✓").font(.system(size: 11)).foregroundColor(.green)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.03)))
+        .padding(10)
+        .sheet(isPresented: $showEnvSheet) { envSheet }
+    }
+
+    private var envSheet: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("运行时与模型").font(.system(size: 14, weight: .bold))
+                Spacer()
+                Button("完成") { showEnvSheet = false }.keyboardShortcut(.cancelAction)
+            }.padding(12)
+            Divider()
+            ScrollView { sideDetail }
+                .frame(width: 520)
+        }
+        .frame(width: 540, height: 620)
+    }
+
+    private var sideDetail: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("运行时与依赖", systemImage: "shippingbox.fill").font(.system(size: 13, weight: .bold))
             HStack(spacing: 8) {
