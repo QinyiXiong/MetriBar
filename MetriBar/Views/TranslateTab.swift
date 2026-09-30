@@ -134,6 +134,11 @@ final class TranslateModel: ObservableObject {
     @Published var serverRunning = false
     @Published var ffmpegOK = false
     @Published var envProgress: Double = 0
+    /// 阅完即删：截断磁盘日志（App内存缓冲不受影响）
+    static func purgeLogFile() {
+        logQueue.async { try? "".write(toFile: logFile, atomically: true, encoding: .utf8) }
+    }
+
     static func detectFFmpeg() -> String? {
         // 登录shell解析（含用户自定义PATH，覆盖 ffmpeg-full / conda / macports）
         let probe = Process()
@@ -207,7 +212,11 @@ final class TranslateModel: ObservableObject {
             try? FileManager.default.createDirectory(atPath: (Self.logFile as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
             let stamp = ISO8601DateFormatter().string(from: Date())
             let entry = "[" + stamp + "] " + s + "\n"
-            if let h = FileHandle(forWritingAtPath: Self.logFile) { defer { try? h.close() }; h.seekToEndOfFile(); try? h.write(entry.data(using: .utf8)!) }
+            if let h = FileHandle(forWritingAtPath: Self.logFile) { defer { try? h.close() }
+                if h.seekToEndOfFile() > 2_000_000 { try? "".write(toFile: Self.logFile, atomically: true, encoding: .utf8); h.closeFile()
+                    if let h2 = FileHandle(forWritingAtPath: Self.logFile) { defer { try? h2.close() }; try? h2.write(entry.data(using: .utf8)!) }
+                    return }
+                try? h.write(entry.data(using: .utf8)!) }
             else { try? entry.write(toFile: Self.logFile, atomically: true, encoding: .utf8) }
         }
     }
@@ -906,6 +915,9 @@ struct TranslateTab: View {
                     .buttonStyle(.borderless).help("查看详细日志")
                     .popover(isPresented: $showLogWin, arrowEdge: .bottom) {
                         LogTextView(file: TranslateModel.logFile).frame(width: 640, height: 380)
+                    }
+                    .onChange(of: showLogWin) { open in
+                        if !open { TranslateModel.purgeLogFile() }   // 阅完即删：关闭浮窗清空磁盘日志
                     }
                 if !model.workers.isEmpty {
                     Button("全部停止") { model.stopAll() }.controlSize(.small).tint(.red)
