@@ -254,7 +254,17 @@ final class TranslateModel: ObservableObject {
                         self.downloads[i].status = "✓ 已就绪"
                         self.appendLog("扫描命中 \(spec.dirName) → \(dir)")
                     } else {
-                        self.downloads[i].status = "⚠ 不完整（曾被中断）"
+                        // 旧版完整目录补凭证：含模型权重文件且无残留下载分片(.part)即认定完整，免重下
+                        let fm2 = FileManager.default
+                        let hasWeights = (try? fm2.contentsOfDirectory(atPath: dir))?.contains { $0.hasSuffix(".pt") || $0.hasSuffix(".safetensors") || $0.hasSuffix(".bin") } ?? false
+                        let hasPart = (try? fm2.contentsOfDirectory(atPath: dir))?.contains { $0.hasSuffix(".part") } ?? false
+                        if hasWeights && !hasPart {
+                            let mark: [String: Any] = ["files": -1, "bytes": -1, "at": "legacy"]
+                            if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: TranslateModel.completionMarkPath(dir))) }
+                            self.downloads[i].status = "✓ 已就绪"
+                        } else {
+                            self.downloads[i].status = "⚠ 不完整（曾被中断）"
+                        }
                     }
                 } else {
                     self.downloads[i].status = "未下载"
