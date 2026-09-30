@@ -414,7 +414,13 @@ final class TranslateModel: ObservableObject {
         if !tasks.isEmpty { runNext() }
     }
 
+    @Published var autoRunning = false
+
+    func startQueue() { autoRunning = true; runNext() }
+
     func runNext() {
+        guard autoRunning else { return }
+
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             while self.workers.count < self.concurrencyLimit,
@@ -461,6 +467,10 @@ final class TranslateModel: ObservableObject {
         guard settings.envPythonReady else {
             patch(task.id) { $0.status = "失败"; $0.message = "请先在右侧「一键构建环境」" }
             finish(); return
+        }
+        // 强制重做：清掉旧 srt/中文/双语/meta/成片，避免"秒完成"假象与旧错误结果复用
+        for old in [outSrt, stem + ".(中文).srt", stem + ".(双语).srt", outSrt + ".meta.json", stem + ".字幕版.mp4"] {
+            try? FileManager.default.removeItem(atPath: old)
         }
         let p = Process()
         workers[task.id] = p
@@ -536,6 +546,7 @@ final class TranslateModel: ObservableObject {
 
     func stopAll() {
         stopRequested = true
+        autoRunning = false
         workers.values.forEach { $0.terminate() }
         stopServer()
     }
@@ -549,7 +560,7 @@ final class TranslateModel: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let active = !self.workers.isEmpty || self.tasks.contains { $0.status == "排队中" }
-            if !active { self.stopServer() }   // 队列跑完 → 自动停止服务、卸载翻译模型
+            if !active { self.autoRunning = false; self.stopServer() }   // 排空 → 关闸 + 卸载模型
             self.runNext()
         }
     }
@@ -586,6 +597,13 @@ struct TranslateTab: View {
                     .onChange(of: model.concurrencyLimit) { v in
                         UserDefaults.standard.set(v, forKey: "translate.concurrency"); model.runNext()
                     }
+                Button { model.startQueue() } label: {
+                    if model.autoRunning && !model.workers.isEmpty {
+                        HStack(spacing: 4) { ProgressView().controlSize(.small); Text("处理中 (\(model.workers.count))") }
+                    } else { Label("开始处理", systemImage: "play.fill") }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(model.autoRunning || !model.tasks.contains { $0.status == "排队中" })
                 Toggle(isOn: $settings.burnIn) { Text("烧录字幕进视频").font(.system(size: 11)) }
                     .toggleStyle(.checkbox)
                     .onChange(of: settings.burnIn) { v in settings.persist("translate.burnIn", v ? "1" : "0") }
@@ -640,8 +658,9 @@ struct TranslateTab: View {
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
-            ProgressView(value: max(task.percent, task.status == "排队中" ? 0 : 2))
-                .tint(task.status == "失败" ? .red : .accentColor)
+            ProgressView(value: task.status == "完成" ? 100 : task.percent)
+                .tint(task.status == "完成" ? .green : task.status == "失败" ? .red
+                      : task.status == "排队中" ? Color.gray.opacity(0.35) : .accentColor)
             Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             HStack(spacing: 10) {
                 Button("打开输出") { reveal(task.videoPath) }.controlSize(.mini)
@@ -776,27 +795,42 @@ struct TranslateTab: View {
 struct LogTextView: View {
     let file: String
     @State private var text = ""
+    @State private var lineCount = 0
+    private let timer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("详细日志").font(.system(size: 12, weight: .semibold))
+                Circle().fill(Color.green.opacity(0.8)).frame(width: 6, height: 6)
+                    .help("每 1.5 秒自动刷新并滚动到底部")
                 Spacer()
-                Button("刷新") { load() }
                 Button("打开文件") { NSWorkspace.shared.open(URL(fileURLWithPath: file)) }
             }.padding(8)
             Divider()
-            ScrollView {
-                Text(text.isEmpty ? "（暂无日志）" : text)
-                    .font(.system(size: 10, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(8)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Text(text.isEmpty ? "（暂无日志）" : text)
+                        .font(.system(size: 10, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                    Color.clear.frame(height: 1).id("BOTTOM")
+                }
+                .onChange(of: lineCount) { _ in
+                    withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("BOTTOM", anchor: .bottom) }
+                }
             }
-        }.onAppear { load() }
+        }
+        .onAppear { load() }
+        .onReceive(timer) { _ in load() }
     }
     private func load() {
-        if let c = try? String(contentsOfFile: file, encoding: .utf8) {
-            text = c.split(separator: "\n").suffix(400).joined(separator: "\n")
+        guard let c = try? String(contentsOfFile: file, encoding: .utf8) else { return }
+        let lines = c.split(separator: "\n")
+        let next = lines.suffix(500).joined(separator: "\n")
+        if next != text {
+            text = next
+            lineCount = lines.count
         }
     }
 }
