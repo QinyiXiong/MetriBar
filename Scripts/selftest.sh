@@ -171,6 +171,15 @@ if _m and all(k in _m.group(1) for k in ["funasr","torch","mlx-lm","openai","sou
     print("  ✓ 构建依赖清单完整(9包)")
 else:
     bad += 1; print("  ✗ 构建依赖清单缺项")
+# 在线校验：所有ModelScope仓库必须存在(404仓库曾致三个模型无法下载)
+import re as _re2, urllib.request
+_repos = _re2.findall(r'msRepo: "([^"]+)"', swift_main)
+for _r in set(_repos):
+    try:
+        with urllib.request.urlopen("https://modelscope.cn/api/v1/models/"+_r+"/repo/files?Revision=master&Recursive=true", timeout=12):
+            print("  ✓ 仓库在线:", _r)
+    except Exception as _e:
+        bad += 1; print("  ✗ 仓库不可达:", _r, _e)
 if bad: exit(1)
 GUARDEOF
 [ $? -eq 0 ] || F=$((F+1))

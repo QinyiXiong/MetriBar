@@ -87,12 +87,12 @@ enum ModelCatalog {
     static let asr: [ModelSpec] = [
         ModelSpec(key: "sensevoice", msRepo: "iic/SenseVoiceSmall", dirName: "SenseVoiceSmall",
                   label: "SenseVoice Small · 中英快速", sizeText: "≈900 MB"),
-        ModelSpec(key: "nano", msRepo: "iic/Fun-ASR-Nano-2512", dirName: "Fun-ASR-Nano-2512",
+        ModelSpec(key: "nano", msRepo: "FunAudioLLM/Fun-ASR-Nano-2512", dirName: "Fun-ASR-Nano-2512",
                   label: "Fun-ASR Nano · 中文更强", sizeText: "≈2 GB"),
-        ModelSpec(key: "mlt-nano", msRepo: "iic/Fun-ASR-MLT-Nano-2512", dirName: "Fun-ASR-MLT-Nano-2512",
+        ModelSpec(key: "mlt-nano", msRepo: "FunAudioLLM/Fun-ASR-MLT-Nano-2512", dirName: "Fun-ASR-MLT-Nano-2512",
                   label: "Fun-ASR MLT Nano · 多语种", sizeText: "≈1.9 GB"),
     ]
-    static let vad = ModelSpec(key: "vad", msRepo: "iic/fsmn-vad", dirName: "fsmn-vad",
+    static let vad = ModelSpec(key: "vad", msRepo: "iic/speech_fsmn_vad_zh-cn-16k-common-pytorch", dirName: "fsmn-vad",
                                label: "FSMN-VAD · 长音频断句必需", sizeText: "≈4 MB")
     static let mt = ModelSpec(key: "mt", msRepo: "mlx-community/Hy-MT2-7B", dirName: "Hy-MT2-7B",
                               label: "Hy-MT2-7B · 翻译大模型", sizeText: "≈15 GB")
@@ -1191,15 +1191,15 @@ struct TranslateTab: View {
                 } else {
                     if dl.status.hasPrefix("下载中") && !dl.paused {
                         HStack(spacing: 4) {
-                            Button("暂停") { model.pauseDownload(dl.spec) }.controlSize(.mini)
-                            Button("停止", role: .destructive) { model.stopDownload(dl.spec) }.controlSize(.mini)
+                            Button("暂停") { model.pauseDownload(dl.spec) }.controlSize(.regular)
+                            Button("停止", role: .destructive) { model.stopDownload(dl.spec) }.controlSize(.regular)
                         }
                     } else if dl.paused {
-                        Button("继续") { model.resumeDownload(dl.spec, settings) }.controlSize(.mini)
+                        Button("继续") { model.resumeDownload(dl.spec, settings) }.controlSize(.regular)
                     } else if dl.status.hasPrefix("✓") {
                         EmptyView()
                     } else {
-                        Button(dl.status.contains("不完整") ? "重新下载" : "ModelScope 下载") { model.download(dl.spec, settings) }.controlSize(.mini)
+                        Button(dl.status.contains("不完整") ? "重新下载" : "ModelScope 下载") { model.download(dl.spec, settings) }.controlSize(.regular)
                     }
                 }
             }
