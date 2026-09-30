@@ -201,10 +201,15 @@ final class TranslateModel: ObservableObject {
     /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
     static func reapOrphanServers() {
         let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
-        let p = Process()
-        p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-        p.arguments = ["-f", me + ".*-m mlx_lm.server"]
-        try? p.run()
+        // 孤儿翻译服务 / 本App孤儿下载curl / 残留pip安装，一并清扫
+        for pat in [me + ".*-m mlx_lm.server",
+                    "curl.*modelscope[.].cn/models/",
+                    me + ".*pip install"] {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            p.arguments = ["-f", pat]
+            try? p.run(); p.waitUntilExit()
+        }
     }
 
     func refreshAvailability(_ settings: TranslateSettings) {
@@ -469,13 +474,14 @@ final class TranslateModel: ObservableObject {
     static var serverPID: pid_t = 0
     private func installTerminationChain() {
         signal(SIGTERM) { _ in
-            if TranslateModel.serverPID > 0 { kill(TranslateModel.serverPID, SIGTERM) }
-            usleep(250_000)
+            // 向本进程组全体子进程发TERM：下载curl/pip/mlx server 一个不留
+            kill(0, SIGTERM)
+            usleep(300_000)
             _exit(0)
         }
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification,
                                              object: nil, queue: .main) { _ in
-            if TranslateModel.serverPID > 0 { kill(TranslateModel.serverPID, SIGTERM) }
+            kill(0, SIGTERM)   // 含下载/构建/服务全部子进程
         }
     }
 
