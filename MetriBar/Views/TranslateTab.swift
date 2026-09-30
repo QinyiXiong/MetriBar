@@ -525,6 +525,9 @@ final class TranslateModel: ObservableObject {
         // mlx_lm.server 的 model id = 模型绝对路径；必须一致，否则服务端拒收
         let mtDirForEnv = modelDir(for: ModelCatalog.mt, settings)
         env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv
+        // 按当前活跃任务数分摊并发额度：总8路，避免多任务×8连接打爆 server
+        let activeNow = max(workers.count + 1, 1)
+        env["METRIBAR_TRANSLATE_CONCURRENCY"] = String(max(2, 8 / activeNow))
         env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/opt/ffmpeg-full/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
 
         guard settings.envPythonReady else {
@@ -598,7 +601,8 @@ final class TranslateModel: ObservableObject {
             if m.contains("翻译") { return "正在翻译成目标语言…" }
             if m.contains("字幕") || m.contains("烧录") { return "正在把字幕烧进视频…" }
             if m.contains("对齐") || m.contains("时间轴") { return "正在校对时间轴…" }
-            if !m.isEmpty { return "正在识别语音…（\(m)）" }
+            if m.contains("Retrying") || m.contains("retry") { return "服务繁忙，正在自动重试翻译请求…" }
+            if !m.isEmpty { return "正在识别语音…" }
             return "正在识别语音…"
         case "完成":    return "✓ 完成，字幕已生成"
         case "失败":    return "✗ 失败：\(t.message)"
@@ -900,14 +904,14 @@ struct TranslateTab: View {
 struct LogTextView: View {
     let file: String
     @State private var text = ""
-    @State private var lineCount = 0
-    private let timer = Timer.publish(every: 1.5, on: .main, in: .common).autoconnect()
+    @State private var revision = 0
+    private let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("详细日志").font(.system(size: 12, weight: .semibold))
                 Circle().fill(Color.green.opacity(0.8)).frame(width: 6, height: 6)
-                    .help("每 1.5 秒自动刷新并滚动到底部")
+                    .help("每 1 秒自动刷新并滚动到底部")
                 Spacer()
                 Button("打开文件") { NSWorkspace.shared.open(URL(fileURLWithPath: file)) }
             }.padding(8)
@@ -921,21 +925,19 @@ struct LogTextView: View {
                         .padding(8)
                     Color.clear.frame(height: 1).id("BOTTOM")
                 }
-                .onChange(of: lineCount) { _ in
-                    withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("BOTTOM", anchor: .bottom) }
+                .onChange(of: revision) { _ in
+                    // 每次刷新无条件贴底（超过500行时行数恒定，不能依赖行数变化）
+                    proxy.scrollTo("BOTTOM", anchor: .bottom)
                 }
             }
         }
-        .onAppear { load() }
-        .onReceive(timer) { _ in load() }
+        .onAppear { load(scroll: true) }
+        .onReceive(timer) { _ in load(scroll: true) }
     }
-    private func load() {
+    private func load(scroll: Bool = false) {
         guard let c = try? String(contentsOfFile: file, encoding: .utf8) else { return }
-        let lines = c.split(separator: "\n")
-        let next = lines.suffix(500).joined(separator: "\n")
-        if next != text {
-            text = next
-            lineCount = lines.count
-        }
+        let next = c.split(separator: "\n").suffix(500).joined(separator: "\n")
+        if next != text { text = next }
+        revision += 1
     }
 }
