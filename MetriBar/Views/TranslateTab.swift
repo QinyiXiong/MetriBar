@@ -129,6 +129,16 @@ final class TranslateModel: ObservableObject {
     @Published var envStage: String = ""
     @Published var envBusy = false
     @Published var serverRunning = false
+    @Published var ffmpegOK = false
+    static func detectFFmpeg() -> String? {
+        for pth in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"] where FileManager.default.isExecutableFile(atPath: pth) { return pth }
+        let probe = Process()
+        probe.executableURL = URL(fileURLWithPath: "/usr/bin/which"); probe.arguments = ["ffmpeg"]
+        let pipe = Pipe(); probe.standardOutput = pipe
+        try? probe.run(); probe.waitUntilExit()
+        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return out.isEmpty ? nil : out
+    }
     @Published var log: [String] = []
 
     var workers: [UUID: Process] = [:]
@@ -163,6 +173,7 @@ final class TranslateModel: ObservableObject {
     private var stopRequested = false
 
     func checkEnv() {
+        ffmpegOK = (TranslateModel.detectFFmpeg() != nil)
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let ready = FileManager.default.isExecutableFile(atPath: ToolPaths.envPython)
             var pass = false
@@ -505,6 +516,10 @@ final class TranslateModel: ObservableObject {
 
     private func execute(_ task: TranslateTask) {
         let settings = TranslateSettings.shared
+        if settings.burnIn && !ffmpegOK {
+            patch(task.id) { $0.status = "失败"; $0.message = "未安装 ffmpeg，无法烧录字幕。请在终端执行：brew install ffmpeg（或取消勾选「烧录字幕进视频」）" }
+            finish(); return
+        }
         patch(task.id) { $0.status = "转写中"; $0.message = "语音识别中…" }
         let stem = (task.videoPath as NSString).deletingPathExtension
         let outSrt = stem + ".srt"
@@ -578,7 +593,8 @@ final class TranslateModel: ObservableObject {
                            $0.message = obj["message"] as? String ?? "" }
             return
         }
-        patch(taskId) { $0.message = String(line.suffix(90)) }
+        // HTTP访问日志等非结构化输出：只进日志文件，不刷卡片（杜绝闪烁）
+        appendLog("[\(taskId.uuidString.prefix(4))] \(line)")
     }
 
     private func burnIn(_ task: TranslateTask, outSrt: String) -> Bool {
@@ -700,6 +716,7 @@ struct TranslateTab: View {
                 Toggle(isOn: $settings.burnIn) { Text("烧录字幕进视频").font(.system(size: 11)) }
                     .toggleStyle(.checkbox)
                     .onChange(of: settings.burnIn) { v in settings.persist("translate.burnIn", v ? "1" : "0") }
+                if !model.ffmpegOK { Text("需 ffmpeg").font(.system(size: 9)).foregroundColor(.orange) }
                 Button("日志", action: { showLogWin = true })
                     .buttonStyle(.borderless).help("查看详细日志")
                     .popover(isPresented: $showLogWin, arrowEdge: .bottom) {
@@ -727,7 +744,7 @@ struct TranslateTab: View {
                     } else {
                         Text("模型 \(ready)/\(model.downloads.count)").font(.system(size: 10)).foregroundColor(.orange)
                     }
-                    Button { showEnvSheet = true } label: { Label("环境配置", systemImage: "shippingbox") }
+                    Button { model.checkEnv(); showEnvSheet = true } label: { Label("环境配置", systemImage: "shippingbox") }
                         .controlSize(.small)
                 }
                 .sheet(isPresented: $showEnvSheet) { envSheet }
@@ -839,8 +856,30 @@ struct TranslateTab: View {
                 Button("完成") { showEnvSheet = false }.keyboardShortcut(.cancelAction)
             }.padding(12)
             Divider()
-            ScrollView { sideDetail }
-                .frame(width: 520)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: model.ffmpegOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundColor(model.ffmpegOK ? .green : .orange)
+                        if model.ffmpegOK {
+                            Text("ffmpeg 已安装（烧录字幕可用）").font(.system(size: 11))
+                        } else {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("未检测到 ffmpeg — 烧录字幕不可用").font(.system(size: 11, weight: .semibold)).foregroundColor(.orange)
+                                HStack(spacing: 6) {
+                                    Text("brew install ffmpeg").font(.system(size: 10, design: .monospaced))
+                                        .padding(4).background(Color.primary.opacity(0.06)).cornerRadius(4)
+                                    Button("复制") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString("brew install ffmpeg", forType: .string) }
+                                        .controlSize(.mini)
+                                }
+                                Text("未安装时仅生成字幕文件(.srt)，成片烧录将被拦截").font(.system(size: 9)).foregroundColor(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }.padding(10).background(Color.primary.opacity(0.04)).cornerRadius(8)
+                    sideDetail
+                }.padding(12)
+            }
         }
         .frame(width: 540, height: 620)
     }
