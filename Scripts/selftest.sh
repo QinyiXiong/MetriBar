@@ -116,8 +116,10 @@ if "settings.translateBaseURL" in swift_main and "fallback" not in "".lower():
 py_main = open("Vendor/pipeline/transcribe.py", encoding="utf-8").read()
 if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
     fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
-if 'TRANSLATE_CONCURRENCY = 8' not in py_main:
-    fails.append("翻译并发应为8（匹配版本实测真并发）")
+if 'METRIBAR_TRANSLATE_CONCURRENCY' not in py_main:
+    fails.append("py并发应读env由App动态分摊")
+if 'METRIBAR_TRANSLATE_CONCURRENCY' not in swift_main:
+    fails.append("Swift未注入动态并发额度")
 if '"--decode-concurrency", "8"' not in swift_main:
     fails.append("server 应带 --decode-concurrency 8")
 # 版本匹配守卫：core 必须与 lm 主版本一致（0.32core+0.31lm 会并发/串行全卡死）
