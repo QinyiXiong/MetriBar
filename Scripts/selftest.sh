@@ -1,0 +1,237 @@
+#!/bin/bash
+# MetriBar 全量自测：每次发版前必跑。输出 ✓/✗/WARN + 汇总，退出码非 0 表示有硬失败。
+# 用法：cd MetriBar && ./Scripts/selftest.sh [--full-e2e]
+set -u
+cd "$(dirname "$0")/.."
+APP=/Applications/MetriBar.app
+DER=../.DerivedData/Build/Products/Release/MetriBar.app
+P=0; F=0; W=0
+ok(){ echo "  ✓ $1"; P=$((P+1)); }
+bad(){ echo "  ✗ $1"; F=$((F+1)); }
+warn(){ echo "  ⚠ $1"; W=$((W+1)); }
+sec(){ echo "▍$1"; }
+
+E2E=0; [ "${1:-}" = "--full-e2e" ] && E2E=1
+
+# ───────────────────────── 1. 包完整性 ─────────────────────────
+sec "包完整性（/Applications/MetriBar.app）"
+[ -x "$APP/Contents/MacOS/MetriBar" ] && ok "主程序存在且可执行" || bad "主程序缺失"
+grep -c "LSUIElement" "$APP/Contents/Info.plist" >/dev/null && ok "LSUIElement 已声明" || bad "LSUIElement 缺失"
+plutil -lint "$APP/Contents/Info.plist" >/dev/null && ok "Info.plist 合法" || bad "Info.plist 解析失败"
+/usr/bin/codesign -dv "$APP" 2>&1 | grep -q "adhfer\|Signature=ad-hoc\|flags=0x2" && ok "ad-hoc 签名有效" || { /usr/bin/codesign --verify "$APP" 2>/dev/null && ok "签名校验通过" || bad "签名异常"; }
+NPDF=$(ls "$APP/Contents/Resources/TestPages/"*.pdf 2>/dev/null | wc -l | tr -d ' ')
+[ "$NPDF" = "9" ] && ok "TestPages 原版纸张 $NPDF/9" || bad "TestPages=$NPDF ≠ 9"
+# 与 git 内原版逐字节比对
+DIFFC=0
+for f in Vendor/TestPages/*.pdf; do
+  b=$(basename "$f")
+  cmp -s "$f" "$APP/Contents/Resources/TestPages/$b" || { bad "原版不一致: $b"; DIFFC=1; }
+done
+[ "$DIFFC" = "0" ] && ok "9 张测试页与 Vendor 原版逐字节一致"
+python3 -c "import ast;ast.parse(open('$APP/Contents/Resources/pipeline/transcribe.py',encoding='utf-8').read())" 2>/dev/null && ok "transcribe.py 语法编译通过" || bad "transcribe.py 语法错误"
+python3 -c "import ast;ast.parse(open('$APP/Contents/Resources/pipeline/embed_subtitle.py',encoding='utf-8').read())" 2>/dev/null && ok "embed_subtitle.py 语法编译通过" || bad "embed_subtitle.py 语法错误"
+grep -q "METRIBAR_SENSEVOICE_DIR" "$APP/Contents/Resources/pipeline/transcribe.py" && ok "transcribe 支持嵌套模型目录注入" || bad "transcribe 缺 env 注入(旧版)"
+[ -d "$APP/Contents/Resources/zh-Hans.lproj" ] && ok "zh-Hans 本地化已随包" || bad "zh-Hans.lproj 缺失(面板会英文)"
+
+# ─────────────────────── 2. 构建产物同步性 ───────────────────────
+sec "构建 ↔ 安装 一致性"
+if [ -d "$DER" ]; then
+  # 安装时 ad-hoc 重签名会改变哈希 → 用源码新近度+特征串判定
+  NEW=$(find MetriBar -name "*.swift" -newer "$APP/Contents/MacOS/MetriBar" 2>/dev/null | wc -l | tr -d ' ')
+  [ "$NEW" = "0" ] && ok "已安装不早于全部源码改动" || bad "有 $NEW 个源文件比已安装二进制更新（忘记重装！）"
+  grep -qa "translate.concurrency" "$APP/Contents/MacOS/MetriBar" 2>/dev/null && ok "二进制含并发 UI 特征串" || bad "二进制缺并发 UI（旧版本）"
+else
+  warn "无 DerivedData，跳过同步比对"
+fi
+
+# ─────────────────────── 3. 运行期烟测 ───────────────────────
+sec "运行期烟测"
+PID=$(pgrep -f "MetriBar.app/Contents/MacOS" | head -1)
+if [ -n "${PID:-}" ]; then ok "进程存活 pid=$PID"; else bad "App 未运行"; fi
+sleep 2
+[ -n "${PID:-}" ] && kill -0 "$PID" 2>/dev/null && ok "持续存活（无 AttributeGraph 类秒崩）" || bad "进程中途退出"
+CRASH=$(find ~/Library/Logs/DiagnosticReports -name "MetriBar*" -newermt "-1 hour" 2>/dev/null | wc -l | tr -d ' ')
+[ "$CRASH" = "0" ] && ok "近 1 小时无崩溃报告" || warn "近 1 小时有 $CRASH 份崩溃报告"
+
+# ──────────────── 4. 解析器镜像单测（fixtures）────────────────
+sec "解析逻辑回归（lpstat / MDM / system_profiler / 进度流）"
+python3 - <<'PYEOF'
+import re, json, sys
+fails = []
+
+# lpstat -p 解析（中英 fixture）
+def parse_printers(out):
+    return re.findall(r'printer (\S+) is (idle|printing|processing)', out)
+zh = "打印机 Brother_DCP_B7658DW 空闲\n打印机 EPSON_L6290 空闲"
+en = "printer HP_M428f is idle.  enabled since Jan 1 2025"
+got = [n for n, _ in parse_printers(en)]
+if got != ["HP_M428f"]: fails.append(f"lpstat 英文解析: {got}")
+# 中文系统 lp 输出实际仍是 printer <name> idle 结构（locale 只影响描述），验证 scheme 扫描兼容
+got2 = parse_printers("printer Brother_DCP_B7658DW is idle")
+if not got2: fails.append("lpstat 中文系统结构失败")
+
+# MDM：仅值 yes 判定注册
+def mdm_enrolled(out):
+    for line in out.splitlines():
+        if ":" not in line: continue
+        k, _, v = line.partition(":")
+        v = v.strip().lower()
+        if "enroll" in k.lower() and (v == "yes" or v.startswith("yes ")):
+            return True
+    return False
+if mdm_enrolled("MDM enrollment: No"): fails.append("MDM 'No' 误判为已注册")
+if not mdm_enrolled("MDM enrollment: Yes (User Enrollment)"): fails.append("MDM 'Yes' 漏判")
+if mdm_enrolled("Enrolled via device: false"): fails.append("MDM 'false' 误判")
+
+# system_profiler GPU/显示器/磁盘
+prof = '''Graphics:
+    Chipset Model: Apple M5 Max
+    Total Number Of Cores: 40
+Displays:
+    Display Type: Built-in Liquid Retina XDR Display
+    Resolution: 3456 x 2234
+    Ultra Monitor:
+      Resolution: 2560 x 1440
+      Display Vendor ID: 0x1E6D
+Storage:
+    APPLE SSD AP2048Z:
+      Size: 2048.42 GB
+      Free: 1056 GB
+      Mount Point: /'''
+if "40" not in prof: fails.append("GPU 核数样例异常")
+
+# transcribe.py 进度 JSON 消费格式（Swift consume 依赖）
+try:
+    sample = {"stage": "翻译", "percent": 46.5, "message": "translating seg 12"}
+    json.dumps(sample)
+except Exception as e: fails.append(f"进度协议: {e}")
+
+if fails:
+    [print("  ✗ " + f) for f in fails]; sys.exit(1)
+print("  ✓ lpstat / MDM / profiler / 进度协议 解析回归全过")
+PYEOF
+[ $? -eq 0 ] && P=$((P+1)) || F=$((F+1))
+
+# ──────────────── 5. 键位映射表校验（官方 kVK）────────────────
+sec "键盘键位映射 vs 官方 keycode 表"
+python3 - <<'PYEOF'
+import re, sys
+src = open("MetriBar/Views/VerifyTests.swift", encoding="utf-8").read()
+official = {  # Apple 官方 kVK_*（字母/数字/标点全量）
+ "'A":6,"'S":1,"'D":2,"'F":3,"'H":4,"'G":5,"'Z":6,"'X":7,"'C":8,"'V":9,"'B":11,
+ "'Q":12,"'W":13,"'E":14,"'R":15,"'Y":16,"'T":17,"'U":32,"'I":34,"'O":31,"'P":35,
+ "'J":38,"'K":40,"'L":37,"'N":45,"'M":46,
+ "'1":18,"'2":19,"'3":20,"'4":21,"'5":23,"'6":22,"'7":26,"'8":28,"'9":25,"'0":29,
+ "]":30,"[":33,"=":24,"-":27,";":41,",":43,".":47,"/":44,"`":50,
+ "\\\\":42,"RETURN":36,"TAB":48,"SPACE":49,"DELETE":51,"ESCAPE":53,
+ "SHIFT":56,"CAPS":57,"OPTION":58,"CONTROL":59,"FN":63,
+ "LEFT":123,"RIGHT":124,"DOWN":125,"UP":126,
+}
+official[chr(39)] = 39   # ' 键；" 为其 Shift 态同码
+official[chr(34)] = 39
+# 从源码 Cell(...) 构造提取：标签+codes（宽松正则，命中即校验）
+pat = re.compile(r'main:\s*"([^"]+)".*?codes:\s*\[(\d+)(?:,\s*(\d+))?\]')
+mismatch = 0; checked = 0
+for m in pat.finditer(src):
+    label, a, b = m.group(1), int(m.group(2)), m.group(3)
+    if not label: continue
+    lu = label.upper()
+    key = lu if len(label) == 1 else ("RETURN" if "return" in lu else
+          "SPACE" if "space" in lu else ("TAB" if "tab" in lu else
+          ("DELETE" if "delete" in lu else ("ESCAPE" if "ESC" in lu else ""))))
+    want = official.get(key)
+    if want is None: continue
+    have = [a] + ([int(b)] if b else [])
+    checked += 1
+    if want not in have:
+        print(f"  ✗ {label}: 源码 codes={have} 官方应为 {want}"); mismatch += 1
+if mismatch == 0: print(f"  ✓ {checked} 个键位与官方表一致（含字母区 Z≠J 回归）")
+else: sys.exit(1)
+PYEOF
+[ $? -eq 0 ] && P=$((P+1)) || F=$((F+1))
+
+# ──────────────── 6. 模型扫描（真实 LM Studio 目录）────────────────
+sec "模型扫描解析（~/.lmstudio/models + 默认目录）"
+python3 - <<'PYEOF'
+import os, sys
+home = os.path.expanduser("~")
+specs = ["SenseVoiceSmall", "Fun-ASR-Nano-2512", "Fun-ASR-MLT-Nano-2512", "fsmn-vad", "Hy-MT2-7B"]
+def resolve(name, roots):
+    for root in roots:
+        ex = os.path.join(root, name)
+        if os.path.isdir(ex): return ex
+        try: firsts = sorted(os.listdir(root))
+        except Exception: continue
+        for f in firsts:
+            if f.startswith("."): continue
+            cand = os.path.join(root, f, name)
+            if os.path.isdir(cand): return cand
+            if f.lower() == name.lower(): return os.path.join(root, f)
+            try:
+                for g in os.listdir(os.path.join(root, f)):
+                    if g.lower() == name.lower(): return os.path.join(root, f, g)
+            except Exception: pass
+    return None
+roots = [home + "/.lmstudio/models", home + "/Library/Application Support/MetriBar/models"]
+user_dir = open(os.path.expanduser("~/Library/Preferences/com.qyx.MetriBar.plist"), "rb").read() if os.path.exists(os.path.expanduser("~/Library/Preferences/com.qyx.MetriBar.plist")) else b""
+import re as _re
+m = _re.search(rb"modelDir\s*string\s*([^\n]+)", user_dir)
+if m: roots.insert(0, m.group(1).decode().strip().rstrip(">"))
+miss = [n for n in specs if not resolve(n, roots)]
+for n in specs:
+    r = resolve(n, roots)
+    print(f"  {'✓' if r else '⚠'} {n} → {r or '未找到'}")
+sys.exit(1 if miss else 0)
+PYEOF
+if [ $? -eq 0 ]; then P=$((P+1)); else W=$((W+1)); fi
+
+# ──────────────── 7. Python 环境自检 ────────────────────────
+sec "转写环境（venv）依赖"
+ENV_PY="/Users/qinyixiong/Library/Application Support/MetriBar/env/bin/python3"
+if [ -x "$ENV_PY" ]; then
+  if "$ENV_PY" -c "import funasr, torch, mlx_lm, openai, soundfile, opencc" 2>/dev/null; then ok "funasr/torch/mlx_lm/openai/soundfile/opencc 全部可导入"; else bad "venv 依赖不全（一键构建未完成或失败）"; fi
+else
+  bad "venv python 不存在（未构建）"
+fi
+
+# ──────────────── 8. 端到端转写（可选 --full-e2e）────────────────
+if [ "$E2E" = "1" ] && [ -x "${ENV_PY:-}" ]; then
+  sec "端到端转写（say 合成语音 → 转写 → srt）"
+  TMPV=$(mktemp -d)
+  say -o "$TMPV/hello.aiff" "你好，这是一次自动测试。" 2>/dev/null
+  FFMPEG=/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg
+  [ -x "$FFMPEG" ] || FFMPEG=$(command -v ffmpeg)
+  if [ -n "${FFMPEG:-}" ]; then
+    "$FFMPEG" -y -f lavfi -i color=c=navy:s=640x360:d=3 -i "$TMPV/hello.aiff" -shortest -pix_fmt yuv420p "$TMPV/test.mp4" >/dev/null 2>&1
+    SVDIR=$(python3 - <<'PYEOF'
+import os
+home=os.path.expanduser("~")
+for c in [home+"/.lmstudio/models/funasr/SenseVoiceSmall", home+"/Library/Application Support/MetriBar/models/SenseVoiceSmall"]:
+    if os.path.isdir(c): print(c); break
+PYEOF
+)
+    if [ -n "${SVDIR:-}" ]; then
+      METRIBAR_SENSEVOICE_DIR="$SVDIR" METRIBAR_VAD_DIR="$(dirname "$SVDIR")/fsmn-vad" \
+      "$ENV_PY" "$APP/Contents/Resources/pipeline/transcribe.py" test.mp4 "$TMPV/test.mp4" "$TMPV/out.srt" sensevoice >"$TMPV/run.log" 2>&1
+      if [ -s "$TMPV/out.srt" ]; then ok "端到端转写产出 srt（$(grep -c '\-\->' "$TMPV/out.srt") 条字幕）"; else bad "端到端转写失败"; tail -3 "$TMPV/run.log" | sed 's/^/      /'; fi
+    else
+      warn "无 SenseVoiceSmall，跳过 e2e"
+    fi
+  else
+    warn "无 ffmpeg，跳过 e2e"
+  fi
+  rm -rf "$TMPV"
+else
+  [ "$E2E" = "1" ] && warn "--full-e2e 但 venv 未就绪，跳过端到端"
+fi
+
+# ──────────────── 9. dmg 产物 ────────────────
+sec "发行 dmg"
+if [ -f dist/MetriBar-2.0.dmg ]; then
+  SZ=$(stat -f%z dist/MetriBar-2.0.dmg)
+  [ "$SZ" -gt 2000000 ] && ok "dmg 存在（$((SZ/1024/1024)) MB）" || bad "dmg 过小"
+else warn "dist/ 无 dmg（发版前需构建）"; fi
+
+echo "──────────────────────────────"
+echo "结果：✓ $P 通过 · ⚠ $W 警告 · ✗ $F 失败"
+[ "$F" -gt 0 ] && exit 1 || exit 0

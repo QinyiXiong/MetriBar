@@ -131,8 +131,13 @@ final class TranslateModel: ObservableObject {
     @Published var serverRunning = false
     @Published var log: [String] = []
 
-    private var process: Process?
+    var workers: [UUID: Process] = [:]
+        @Published var concurrencyLimit: Int = {
+        let v = UserDefaults.standard.integer(forKey: "translate.concurrency")
+        return (1...8).contains(v) ? v : 5
+    }()
     private var serverProcess: Process?
+    private var serverStarting = false
     /// 翻译服务随机端口（不固定、不在界面展示）。
     private(set) var runtimePort: UInt16 = 0
 
@@ -344,6 +349,9 @@ final class TranslateModel: ObservableObject {
     /// 转写开始前自动确保翻译服务在线；模型/环境缺失则跳过并提示（不阻塞转写本身）。
     private func ensureServer(_ settings: TranslateSettings) {
         if serverRunning, serverProcess?.isRunning == true { return }
+        if serverStarting { while serverStarting && !serverRunning && (serverProcess?.isRunning ?? false == false) { Thread.sleep(forTimeInterval: 1) }; return }
+        serverStarting = true
+        defer { serverStarting = false }
         let mtDir = modelDir(for: ModelCatalog.mt, settings)
         guard FileManager.default.fileExists(atPath: mtDir) else {
             appendLog("⚠ 未找到 Hy-MT2 翻译模型 → 本次仅转写不翻译（可在右侧下载）"); return
@@ -399,10 +407,15 @@ final class TranslateModel: ObservableObject {
     }
 
     func runNext() {
-        guard process == nil, let idx = tasks.firstIndex(where: { $0.status == "排队中" }) else { return }
-        stopRequested = false
-        let task = tasks[idx]
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.execute(task) }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            while self.workers.count < self.concurrencyLimit,
+                  let idx = self.tasks.firstIndex(where: { $0.status == "排队中" }) {
+                self.tasks[idx].status = "准备中"
+                let task = self.tasks[idx]
+                DispatchQueue.global(qos: .userInitiated).async { [weak self] in self?.execute(task) }
+            }
+        }
     }
 
     private func patch(_ id: UUID, _ body: @escaping (inout TranslateTask) -> Void) {
@@ -437,9 +450,10 @@ final class TranslateModel: ObservableObject {
 
         guard settings.envPythonReady else {
             patch(task.id) { $0.status = "失败"; $0.message = "请先在右侧「一键构建环境」" }
-            process = nil; finish(); return
+            finish(); return
         }
         let p = Process()
+        workers[task.id] = p
         p.executableURL = URL(fileURLWithPath: settings.effectivePython)
         p.arguments = [settings.effectivePipeline + "/transcribe.py",
                        (task.videoPath as NSString).lastPathComponent, task.videoPath, outSrt, task.modelKey]
@@ -452,14 +466,14 @@ final class TranslateModel: ObservableObject {
                 DispatchQueue.main.async { self?.consume(line: String(line), taskId: task.id) }
             }
         }
-        process = p
         do { try p.run() } catch {
+            workers[task.id] = nil
             patch(task.id) { $0.status = "失败"; $0.message = "无法启动 Python：\(error.localizedDescription)" }
-            process = nil; finish(); return
+            finish(); return
         }
         p.waitUntilExit()
         pipe.fileHandleForReading.readabilityHandler = nil
-        process = nil
+        workers[task.id] = nil
 
         if stopRequested { patch(task.id) { $0.status = "已停止"; $0.message = "子进程已终止 · 模型已卸载" } }
         else if p.terminationStatus != 0 { patch(task.id) { $0.status = "失败"; $0.message = "退出码 \(p.terminationStatus)" } }
@@ -492,17 +506,39 @@ final class TranslateModel: ObservableObject {
         return rc == 0
     }
 
-    func stopCurrent() { stopRequested = true; process?.terminate(); stopServer() }
-    func remove(_ id: UUID) { if let i = tasks.firstIndex(where: { $0.id == id }), tasks[i].status != "转写中" { tasks.remove(at: i) } }
+    static func friendlyStage(_ t: TranslateTask) -> String {
+        switch t.status {
+        case "排队中":  return "排队等待中…"
+        case "准备中":  return "准备中（启动翻译引擎）…"
+        case "转写中":
+            let m = t.message
+            if m.contains("翻译") { return "正在翻译成目标语言…" }
+            if m.contains("字幕") || m.contains("烧录") { return "正在把字幕烧进视频…" }
+            if m.contains("对齐") || m.contains("时间轴") { return "正在校对时间轴…" }
+            if !m.isEmpty { return "正在识别语音…（\(m)）" }
+            return "正在识别语音…"
+        case "完成":    return "✓ 完成，字幕已生成"
+        case "失败":    return "✗ 失败：\(t.message)"
+        case "已停止":  return "已停止（模型已卸载）"
+        default:        return t.message.isEmpty ? t.status : t.message
+        }
+    }
+
+    func stopAll() {
+        stopRequested = true
+        workers.values.forEach { $0.terminate() }
+        stopServer()
+    }
+    func remove(_ id: UUID) { if let i = tasks.firstIndex(where: { $0.id == id }), workers[id] == nil, tasks[i].status != "转写中" { tasks.remove(at: i) } }
     func retry(_ id: UUID) {
-        if let i = tasks.firstIndex(where: { $0.id == id }), tasks[i].status != "转写中" {
+        if let i = tasks.firstIndex(where: { $0.id == id }), workers[id] == nil {
             tasks[i].status = "排队中"; tasks[i].percent = 0; runNext()
         }
     }
     private func finish() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            let active = self.tasks.contains { $0.status == "转写中" || $0.status == "排队中" || $0.status == "准备中" }
+            let active = !self.workers.isEmpty || self.tasks.contains { $0.status == "排队中" }
             if !active { self.stopServer() }   // 队列跑完 → 自动停止服务、卸载翻译模型
             self.runNext()
         }
@@ -533,6 +569,15 @@ struct TranslateTab: View {
                 Picker("模型", selection: $model.selectedModelKey) {
                     ForEach(ModelCatalog.asr) { Text($0.dirName).tag($0.key) }
                 }.frame(width: 220).labelsHidden()
+                Stepper(value: $model.concurrencyLimit, in: 1...8) {
+                    Text("同时处理 \(model.concurrencyLimit)").font(.system(size: 11))
+                }.fixedSize()
+                    .onChange(of: model.concurrencyLimit) { v in
+                        UserDefaults.standard.set(v, forKey: "translate.concurrency"); model.runNext()
+                    }
+                if !model.workers.isEmpty {
+                    Button("全部停止") { model.stopAll() }.controlSize(.small).tint(.red)
+                }
                 Spacer()
                 HStack(spacing: 5) {
                     Circle().fill(model.serverRunning ? Color.green : Color.secondary.opacity(0.4))
@@ -552,8 +597,7 @@ struct TranslateTab: View {
                 .padding(14)
             }
             .dropDestination(for: URL.self) { urls, _ in model.enqueue(urls); return true }
-            Divider()
-            logPanel
+
         }
     }
 
@@ -561,7 +605,7 @@ struct TranslateTab: View {
         VStack(spacing: 8) {
             Image(systemName: "film.stack").font(.system(size: 34)).foregroundColor(.secondary)
             Text("拖入视频，或点「添加视频」").font(.system(size: 13, weight: .medium))
-            Text("转写 → 翻译 → 双语字幕（可选烧录）。\n运行时与脚本已内置；模型随任务进程加载、结束即卸载。")
+            Text("转写 → 翻译 → 双语字幕（可选烧录）。\n多路并行处理；模型用完自动卸载。")
                 .font(.system(size: 11)).foregroundColor(.secondary).multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 40)
@@ -577,8 +621,9 @@ struct TranslateTab: View {
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
-            if task.percent > 0 { ProgressView(value: max(task.percent, 2)) }
-            if !task.message.isEmpty { Text(task.message).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1) }
+            ProgressView(value: max(task.percent, task.status == "排队中" ? 0 : 2))
+                .tint(task.status == "失败" ? .red : .accentColor)
+            Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             HStack(spacing: 10) {
                 Button("打开输出") { reveal(task.videoPath) }.controlSize(.mini)
                 if task.status == "失败" || task.status == "已停止" { Button("重试") { model.retry(task.id) }.controlSize(.mini) }
@@ -707,26 +752,4 @@ struct TranslateTab: View {
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
     }
 
-    private var logPanel: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("日志").font(.system(size: 10, weight: .semibold)).foregroundColor(.secondary)
-                Spacer()
-                Button("清空") { model.log.removeAll() }.controlSize(.mini)
-            }.padding(.horizontal, 12).padding(.top, 8)
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array(model.log.enumerated()), id: \.offset) { i, line in
-                            Text(line).font(.system(size: 9, design: .monospaced))
-                                .foregroundColor(line.hasPrefix("✗") ? .red : line.hasPrefix("✓") ? .green : .secondary)
-                                .id(i).frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.padding(8)
-                }
-                .frame(height: 90)
-                .onChange(of: model.log.count) { _ in proxy.scrollTo(model.log.count - 1, anchor: .bottom) }
-            }
-        }
-    }
 }
