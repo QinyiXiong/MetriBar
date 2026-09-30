@@ -714,6 +714,7 @@ struct TranslateTab: View {
     }
     @State private var showEnvSheet = false
     @State private var showNukeConfirm = false
+    @State private var pendingNuke = false
     @State private var dirMsg: String = ""
     @State private var dirOK = false
 
@@ -822,7 +823,13 @@ struct TranslateTab: View {
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
-            ProgressView(value: (task.status == "完成" ? 100 : task.percent) / 100.0)
+            HStack(spacing: 8) {
+                ProgressView(value: (task.status == "完成" ? 100 : task.percent) / 100.0)
+                    .progressViewStyle(.linear)
+                Text(task.status == "完成" ? "100%" : "\(Int(task.percent))%")
+                    .font(.system(size: 10, weight: .medium, design: .rounded).monospacedDigit())
+                    .foregroundColor(.secondary).frame(width: 38, alignment: .trailing)
+            }
                 .tint(barColor(task))
             Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             if task.status == "转写中" && !task.message.isEmpty {
@@ -937,7 +944,13 @@ struct TranslateTab: View {
                     HStack(spacing: 6) {
                         Button(model.envOK ? "全量重建" : "一键构建环境") { model.buildEnv(settings, full: true) }.controlSize(.small).disabled(model.envBusy)
                         if model.envOK || model.envBusy {
-                            Button("删除运行时与依赖", role: .destructive) { showNukeConfirm = true }.controlSize(.small)
+                            if pendingNuke {
+                                Button("确认删除？") { pendingNuke = false; model.nukeRuntime(settings) }
+                                    .controlSize(.small).tint(.red)
+                                Button("再想想") { pendingNuke = false }.controlSize(.small)
+                            } else {
+                                Button("删除运行时与依赖", role: .destructive) { pendingNuke = true }.controlSize(.small)
+                            }
                         }
                     }
                         .help("基于 App 内置 Python 创建独立环境，经清华镜像安装 funasr/torch/mlx-lm（不含模型）")
@@ -997,7 +1010,13 @@ struct TranslateTab: View {
                     Button("ModelScope 下载") { model.download(dl.spec, settings) }.controlSize(.mini)
                 }
             }
-            if dl.status.hasPrefix("下载中") { ProgressView(value: min(dl.percent, 100) / 100.0).tint(.accentColor) }
+            if dl.status.hasPrefix("下载中") {
+                    HStack(spacing: 8) {
+                        ProgressView(value: min(dl.percent, 100) / 100.0).tint(.accentColor)
+                        Text("\(Int(dl.percent))%").font(.system(size: 10, design: .rounded).monospacedDigit())
+                            .foregroundColor(.secondary).frame(width: 36, alignment: .trailing)
+                    }
+                }
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.04)))
