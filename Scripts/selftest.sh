@@ -187,6 +187,26 @@ import os
 if "--no-cache-dir" not in sh or "Library/Caches/pip" not in sh:
     bad += 1; print("  ✗ pip缓存路径错误(macOS应清~/Library/Caches/pip)")
 else: print("  ✓ pip缓存走macOS正确路径+no-cache双保险")
+# 尾部读取UTF-8回归（"暂无日志"事故1:1复现验证，含故意劈砍汉字对抗用例）
+_tail = r.encode() if (r := open("/tmp/_cn_tail_test","w")) is None else b""
+_buf=[]
+import random
+random.seed(42)
+while sum(len(b) for b in _buf) < 70000:
+    _buf.append("正在识别语音…翻译第%d句（烧录字幕）\n" % len(_buf))
+_raw = "".join(_buf).encode()
+_cut = _raw[-65536:]
+_nl = _cut.find(b"\n")
+if _nl >= 0: _cut = _cut[_nl+1:]
+try:
+    _t = _cut.decode("utf-8")
+    assert len(_t.splitlines()) > 300
+    print("  ✓ 日志尾部UTF-8截断解码(%d行完整)" % len(_t.splitlines()))
+except UnicodeDecodeError as _e:
+    bad += 1; print("  ✗ UTF-8截断解码失败:", _e)
+if "firstIndex(of: 0x0A)" not in swift_main:
+    bad += 1; print("  ✗ Swift尾部读取缺UTF-8换行对齐(暂无日志事故)")
+else: print("  ✓ Swift尾部读取换行对齐在位")
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")
