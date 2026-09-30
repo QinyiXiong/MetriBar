@@ -116,8 +116,8 @@ if "settings.translateBaseURL" in swift_main and "fallback" not in "".lower():
 py_main = open("Vendor/pipeline/transcribe.py", encoding="utf-8").read()
 if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
     fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
-if "TRANSLATE_CONCURRENCY = 100" in py_main:
-    fails.append("翻译并发仍是100（会打爆本地 mlx server）")
+if "TRANSLATE_CONCURRENCY = 1" not in py_main:
+    fails.append("翻译未强制串行（mlx server 并发实测挂死）")
 if 'guard autoRunning else { return }' not in swift_main:
     fails.append("队列闸门缺失（拖入即跑的失控事故）")
 
