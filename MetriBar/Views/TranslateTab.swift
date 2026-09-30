@@ -187,6 +187,15 @@ final class TranslateModel: ObservableObject {
         }
     }
 
+    /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
+    static func reapOrphanServers() {
+        let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        p.arguments = ["-f", me + ".*-m mlx_lm.server"]
+        try? p.run()
+    }
+
     func refreshAvailability(_ settings: TranslateSettings) {
         let roots = [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
         DispatchQueue.main.async { [weak self] in
@@ -592,7 +601,7 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
 
         }
-        .onAppear { dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear { TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
     }
 
     private var queueColumn: some View {
