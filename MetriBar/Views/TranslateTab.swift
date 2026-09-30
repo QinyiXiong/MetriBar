@@ -750,7 +750,7 @@ struct TranslateTab: View {
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
-            ProgressView(value: task.status == "完成" ? 100 : task.percent)
+            ProgressView(value: (task.status == "完成" ? 100 : task.percent) / 100.0)
                 .tint(barColor(task))
             Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             HStack(spacing: 10) {
