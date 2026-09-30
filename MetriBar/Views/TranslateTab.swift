@@ -233,7 +233,7 @@ final class TranslateModel: ObservableObject {
             try? fm.createDirectory(atPath: ToolPaths.supportDir, withIntermediateDirectories: true)
 
             if !fm.fileExists(atPath: ToolPaths.runtimePython) {
-                DispatchQueue.main.async { self?.envStage = "下载 Python 运行时…（npmmirror 国内镜像）" }
+                DispatchQueue.main.async { self?.envStage = "下载 Python 运行时…（npmmirror 国内镜像）" }; self?.appendLog("→ 下载独立 CPython 运行时（19MB，npmmirror 镜像）")
                 let tar = ToolPaths.supportDir + "/runtime.tar.gz"
                 let url = "https://registry.npmmirror.com/-/binary/python-build-standalone/20250918/cpython-3.11.13%2B20250918-aarch64-apple-darwin-install_only.tar.gz"
                 let (rc, out) = Shell.run("/usr/bin/curl", ["-fL", "--retry", "3", "-o", tar, url])
@@ -241,7 +241,7 @@ final class TranslateModel: ObservableObject {
                     DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时下载失败（检查网络）：\(out.prefix(100))" }
                     return
                 }
-                DispatchQueue.main.async { self?.envStage = "解压运行时…" }
+                DispatchQueue.main.async { self?.envStage = "解压运行时…" }; self?.appendLog("→ 解压运行时…")
                 try? fm.removeItem(atPath: ToolPaths.runtimeDir)
                 let (rcU, _) = Shell.run("/usr/bin/tar", ["-xzf", tar, "-C", ToolPaths.runtimeDir.replacingOccurrences(of: "/runtime", with: "")])
                 guard rcU == 0, fm.fileExists(atPath: ToolPaths.runtimePython) else {
@@ -252,7 +252,7 @@ final class TranslateModel: ObservableObject {
                 self?.appendLog("✓ Python 运行时就绪（3.11 · Apple Silicon）")
             }
 
-            DispatchQueue.main.async { self?.envStage = "创建独立虚拟环境…" }
+            DispatchQueue.main.async { self?.envStage = "创建独立虚拟环境…" }; self?.appendLog("→ 创建虚拟环境 \(ToolPaths.envDir)")
             if !fm.fileExists(atPath: ToolPaths.envPython) {
                 let (rc, out) = Shell.run(ToolPaths.runtimePython, ["-m", "venv", ToolPaths.envDir])
                 guard rc == 0 else {
