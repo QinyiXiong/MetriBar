@@ -118,8 +118,10 @@ if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
     fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
 if "TRANSLATE_CONCURRENCY = 1" not in py_main:
     fails.append("翻译并发应保持1（Hy-MT2批量实测劣化100×）")
-if "--decode-concurrency" in swift_main:
-    fails.append("禁止启用 --decode-concurrency（Hy-MT2-7B 批量路径实测吞吐劣化100×）")
+if '"--decode-concurrency"' in swift_main and "\u7981" not in "":
+    # 注释里提及允许，参数数组形式出现才违规——检查引号+逗号的实参形态
+    if '"--decode-concurrency", "8"' in swift_main or '"--decode-concurrency",' in swift_main:
+        fails.append("禁止启用 --decode-concurrency 实参（Hy-MT2-7B 批量实测劣化100×）")
 if 'guard autoRunning else { return }' not in swift_main:
     fails.append("队列闸门缺失（拖入即跑的失控事故）")
 
@@ -280,7 +282,7 @@ for c in [home+'/.lmstudio/models/mlx-community/Hy-MT2-7B', home+'/Library/Appli
   else
     warn "无 ffmpeg，跳过 e2e"
   fi
-  rm -rf "$TMPV"
+  [ "$F" -gt 0 ] && echo "  (失败现场保留: $TMPV)" || rm -rf "$TMPV"
 else
   [ "$E2E" = "1" ] && warn "--full-e2e 但 venv 未就绪，跳过端到端"
 fi
