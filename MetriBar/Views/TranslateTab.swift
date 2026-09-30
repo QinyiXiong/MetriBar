@@ -383,7 +383,8 @@ final class TranslateModel: ObservableObject {
         runtimePort = port
         let p = Process()
         p.executableURL = URL(fileURLWithPath: ToolPaths.envPython)
-        p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", String(port)]
+        p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", String(port),
+                       "--decode-concurrency", "8"]
         // 不加 --decode-concurrency：实测 Hy-MT2-7B 批量并发吞吐劣化 ~100×（串行1.9s/条 vs 并发4条794s）
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
@@ -397,6 +398,7 @@ final class TranslateModel: ObservableObject {
         }
         do { try p.run() } catch { appendLog("✗ 翻译服务启动失败：\(error.localizedDescription)"); return }
         serverProcess = p
+        TranslateModel.serverPID = p.processIdentifier
         appendLog("→ 翻译服务启动中（加载 Hy-MT2-7B，约 10–40 秒）…")
         // 轮询健康检查：/v1/models 返回 200 即就绪
         let base = "http://127.0.0.1:\(port)/v1/models"
@@ -413,6 +415,7 @@ final class TranslateModel: ObservableObject {
 
     func stopServer() {
         serverProcess?.terminate(); serverProcess = nil; serverRunning = false
+        TranslateModel.serverPID = 0
         Diag.notice(Diag.lifecycle, "翻译服务停止（模型已从内存卸载）")
         appendLog("■ 翻译服务已停止，模型已从内存卸载")
     }
@@ -424,6 +427,20 @@ final class TranslateModel: ObservableObject {
             tasks.append(TranslateTask(videoPath: url.path, modelKey: selectedModelKey))
         }
         if !tasks.isEmpty { runNext() }
+    }
+
+    // ── 强退连锁：收到 SIGTERM/退出通知时，必须带走翻译服务进程（15GB 内存不滞留）──
+    static var serverPID: pid_t = 0
+    private func installTerminationChain() {
+        signal(SIGTERM) { _ in
+            if TranslateModel.serverPID > 0 { kill(TranslateModel.serverPID, SIGTERM) }
+            usleep(250_000)
+            _exit(0)
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification,
+                                             object: nil, queue: .main) { _ in
+            if TranslateModel.serverPID > 0 { kill(TranslateModel.serverPID, SIGTERM) }
+        }
     }
 
     @Published var autoRunning = false
@@ -451,6 +468,8 @@ final class TranslateModel: ObservableObject {
         }
     }
     func stopTicker() { progressTimer?.invalidate(); progressTimer = nil }
+
+    init() { installTerminationChain() }
 
     func startQueue() {
         // 点开始：先确保翻译服务就绪（只等这一次），再放行队列

@@ -56,7 +56,7 @@ CRASH=$(find ~/Library/Logs/DiagnosticReports -name "MetriBar*" -newermt "-1 hou
 # ──────────────── 4. 解析器镜像单测（fixtures）────────────────
 sec "解析逻辑回归（lpstat / MDM / system_profiler / 进度流）"
 python3 - <<'PYEOF'
-import re, json, sys
+import re, json, sys, subprocess
 fails = []
 
 # lpstat -p 解析（中英 fixture）
@@ -116,12 +116,16 @@ if "settings.translateBaseURL" in swift_main and "fallback" not in "".lower():
 py_main = open("Vendor/pipeline/transcribe.py", encoding="utf-8").read()
 if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
     fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
-if "TRANSLATE_CONCURRENCY = 1" not in py_main:
-    fails.append("翻译并发应保持1（Hy-MT2批量实测劣化100×）")
-if '"--decode-concurrency"' in swift_main and "\u7981" not in "":
-    # 注释里提及允许，参数数组形式出现才违规——检查引号+逗号的实参形态
-    if '"--decode-concurrency", "8"' in swift_main or '"--decode-concurrency",' in swift_main:
-        fails.append("禁止启用 --decode-concurrency 实参（Hy-MT2-7B 批量实测劣化100×）")
+if 'TRANSLATE_CONCURRENCY = 8' not in py_main:
+    fails.append("翻译并发应为8（匹配版本实测真并发）")
+if '"--decode-concurrency", "8"' not in swift_main:
+    fails.append("server 应带 --decode-concurrency 8")
+# 版本匹配守卫：core 必须与 lm 主版本一致（0.32core+0.31lm 会并发/串行全卡死）
+vchk = subprocess.run(["/Users/qinyixiong/Library/Application Support/MetriBar/env/bin/python3",
+    "-c", "import mlx_lm,mlx.core;print(mlx_lm.__version__.split('.')[0]==mlx.core.__version__.split('.')[0])"],
+    capture_output=True, text=True)
+if "True" not in vchk.stdout:
+    fails.append("mlx-lm 与 mlx-core 主版本错配（并发必卡死，需 pip 对齐）")
 if 'guard autoRunning else { return }' not in swift_main:
     fails.append("队列闸门缺失（拖入即跑的失控事故）")
 
