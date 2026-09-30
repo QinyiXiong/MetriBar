@@ -700,7 +700,7 @@ struct TranslateTab: View {
                 Toggle(isOn: $settings.burnIn) { Text("烧录字幕进视频").font(.system(size: 11)) }
                     .toggleStyle(.checkbox)
                     .onChange(of: settings.burnIn) { v in settings.persist("translate.burnIn", v ? "1" : "0") }
-                Button { showLogWin = true } label: { Image(systemName: "text.alignleft") }
+                Button("日志", action: { showLogWin = true })
                     .buttonStyle(.borderless).help("查看详细日志")
                     .popover(isPresented: $showLogWin, arrowEdge: .bottom) {
                         LogTextView(file: TranslateModel.logFile).frame(width: 640, height: 380)
