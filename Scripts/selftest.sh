@@ -117,7 +117,9 @@ py_main = open("Vendor/pipeline/transcribe.py", encoding="utf-8").read()
 if "translate_srt(srt_path, sys.argv[1], log)" in py_main:
     fails.append("translate_srt 未接进度/停止回调（翻译阶段失明事故）")
 if "TRANSLATE_CONCURRENCY = 1" not in py_main:
-    fails.append("翻译未强制串行（mlx server 并发实测挂死）")
+    fails.append("翻译并发应保持1（Hy-MT2批量实测劣化100×）")
+if "--decode-concurrency" in swift_main:
+    fails.append("禁止启用 --decode-concurrency（Hy-MT2-7B 批量路径实测吞吐劣化100×）")
 if 'guard autoRunning else { return }' not in swift_main:
     fails.append("队列闸门缺失（拖入即跑的失控事故）")
 

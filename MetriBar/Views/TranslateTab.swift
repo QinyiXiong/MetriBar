@@ -384,6 +384,7 @@ final class TranslateModel: ObservableObject {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: ToolPaths.envPython)
         p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", String(port)]
+        // 不加 --decode-concurrency：实测 Hy-MT2-7B 批量并发吞吐劣化 ~100×（串行1.9s/条 vs 并发4条794s）
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
         p.environment = env

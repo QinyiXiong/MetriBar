@@ -106,7 +106,7 @@ _FUNASR_MODEL_INSTANCES = {}
 _FUNASR_WARMED_MODELS = set()
 _FUNASR_MODEL_LOCK = None
 
-TRANSLATE_CONCURRENCY = 1  # mlx_lm.server 并发会挂死(实测3路卡死)，强制串行
+TRANSLATE_CONCURRENCY = 1  # mlx 连续批处理对 Hy-MT2 实测劣化100×(794s/4条 vs 串行7.6s)，保持串行
 _API_CONFIG = {"base_url": os.environ.get("METRIBAR_TRANSLATE_BASE_URL", "http://127.0.0.1:18888/v1"),
               "api_key": os.environ.get("METRIBAR_TRANSLATE_API_KEY", "pehwqyx6")}
 TRANSLATE_MODEL = os.environ.get("METRIBAR_TRANSLATE_MODEL", "hy-mt2-7b")
