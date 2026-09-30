@@ -133,14 +133,19 @@ final class TranslateModel: ObservableObject {
     @Published var envBusy = false
     @Published var serverRunning = false
     @Published var ffmpegOK = false
+    @Published var envProgress: Double = 0
     static func detectFFmpeg() -> String? {
-        for pth in ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/usr/bin/ffmpeg"] where FileManager.default.isExecutableFile(atPath: pth) { return pth }
+        // 登录shell解析（含用户自定义PATH，覆盖 ffmpeg-full / conda / macports）
         let probe = Process()
-        probe.executableURL = URL(fileURLWithPath: "/usr/bin/which"); probe.arguments = ["ffmpeg"]
-        let pipe = Pipe(); probe.standardOutput = pipe
+        probe.executableURL = URL(fileURLWithPath: "/bin/bash")
+        probe.arguments = ["-lc", "command -v ffmpeg"]
+        let pipe = Pipe(); probe.standardOutput = pipe; probe.standardError = FileHandle.nullDevice
         try? probe.run(); probe.waitUntilExit()
         let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return out.isEmpty ? nil : out
+        if !out.isEmpty, FileManager.default.isExecutableFile(atPath: out) { return out }
+        for pth in ["/opt/homebrew/bin/ffmpeg", "/opt/homebrew/opt/ffmpeg/bin/ffmpeg",
+                    "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg", "/usr/local/bin/ffmpeg"] where FileManager.default.isExecutableFile(atPath: pth) { return pth }
+        return nil
     }
     @Published var log: [String] = []
 
@@ -254,17 +259,9 @@ final class TranslateModel: ObservableObject {
                         self.downloads[i].status = "✓ 已就绪"
                         self.appendLog("扫描命中 \(spec.dirName) → \(dir)")
                     } else {
-                        // 旧版完整目录补凭证：含模型权重文件且无残留下载分片(.part)即认定完整，免重下
-                        let fm2 = FileManager.default
-                        let hasWeights = (try? fm2.contentsOfDirectory(atPath: dir))?.contains { $0.hasSuffix(".pt") || $0.hasSuffix(".safetensors") || $0.hasSuffix(".bin") } ?? false
-                        let hasPart = (try? fm2.contentsOfDirectory(atPath: dir))?.contains { $0.hasSuffix(".part") } ?? false
-                        if hasWeights && !hasPart {
-                            let mark: [String: Any] = ["files": -1, "bytes": -1, "at": "legacy"]
-                            if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: TranslateModel.completionMarkPath(dir))) }
-                            self.downloads[i].status = "✓ 已就绪"
-                        } else {
-                            self.downloads[i].status = "⚠ 不完整（曾被中断）"
-                        }
+                        // 无凭证 → 联网对官方清单逐文件大小校验，全对才补凭证置就绪
+                        self.downloads[i].status = "校验中…"
+                        self.verifyAndMark(spec: spec, dir: dir, idx: i)
                     }
                 } else {
                     self.downloads[i].status = "未下载"
@@ -352,7 +349,10 @@ final class TranslateModel: ObservableObject {
                 }
                 DispatchQueue.main.async { self?.envStage = "解压运行时…" }; self?.appendLog("→ 解压运行时…")
                 try? fm.removeItem(atPath: ToolPaths.runtimeDir)
-                let (rcU, _) = Shell.run("/usr/bin/tar", ["-xzf", tar, "-C", ToolPaths.runtimeDir.replacingOccurrences(of: "/runtime", with: "")])
+                let (rcU, _) = Shell.run("/usr/bin/tar", ["-xzf", tar, "-C", ToolPaths.supportDir])
+                // tar包内是 python/，统一重命名为 runtime/（路径错配曾导致venv静默创建失败）
+                let pyDir = ToolPaths.supportDir + "/python"
+                if fm.fileExists(atPath: pyDir) { try? fm.moveItem(atPath: pyDir, toPath: ToolPaths.runtimeDir) }
                 guard rcU == 0, fm.fileExists(atPath: ToolPaths.runtimePython) else {
                     DispatchQueue.main.async { self?.envBusy = false; self?.envStage = "✗ 运行时解压失败" }
                     return
@@ -373,8 +373,8 @@ final class TranslateModel: ObservableObject {
             let pkgs = ["funasr==1.4.1", "torch", "torchaudio", "mlx-lm", "openai",
                         "opencc-python-reimplemented", "soundfile", "python-multipart", "librosa"]
             var ok = true
-            for pkg in pkgs {
-                DispatchQueue.main.async { self?.envStage = "安装 \(pkg)…（torch 较大，共约 2GB，视网络 3–15 分钟）" }
+            for (n, pkg) in pkgs.enumerated() {
+                DispatchQueue.main.async { self?.envStage = "安装依赖 \(n+1)/\(pkgs.count)：\(pkg)（torch 约2GB，共3–15分钟）"; self?.envProgress = Double(n)/Double(pkgs.count) }
                 let (rc, out) = Shell.run(ToolPaths.envPython, ["-m", "pip", "install", "--no-input", "-q",
                          "--index-url", "https://pypi.tuna.tsinghua.edu.cn/simple", pkg])
                 self?.appendLog(rc == 0 ? "✓ \(pkg)" : "✗ \(pkg)：\(out.suffix(160))")
@@ -514,6 +514,45 @@ final class TranslateModel: ObservableObject {
             if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: Self.completionMarkPath(destRoot))) }
             updateDL(spec) { $0.status = "✓ 已就绪"; $0.percent = 100; $0.bytesDone = bytesDone }
             appendLog("✓ \(spec.label) 下载完成（\(bytesDone/1048576) MB）")
+        }
+    }
+
+    /// 联网校验目录与官方清单：全部文件存在且大小一致才补凭证置就绪
+    private func verifyAndMark(spec: ModelSpec, dir: String, idx: Int) {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let (rc, out) = Shell.run("/usr/bin/curl", ["-fsSL", "-m", "20",
+                "https://modelscope.cn/api/v1/models/\(spec.msRepo)/repo/files?Revision=master&Recursive=true"])
+            var ok = false
+            if rc == 0, let data = out.data(using: .utf8),
+               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let d = obj["Data"] as? [String: Any], let files = d["Files"] as? [[String: Any]] {
+                var items: [(String, Int64)] = []
+                func walk(_ arr: [[String: Any]]) {
+                    for f in arr {
+                        if let p = f["Path"] as? String, !p.isEmpty, !p.hasPrefix(".") { items.append((p, (f["Size"] as? NSNumber)?.int64Value ?? -1)) }
+                        if let kids = f["Files"] as? [[String: Any]] { walk(kids) }
+                    }
+                }
+                walk(files)
+                ok = !items.isEmpty && items.allSatisfy { (p, sz) in
+                    let dest = dir + "/" + p
+                    let exist = FileManager.default.fileExists(atPath: dest)
+                    if !exist { return false }
+                    if sz <= 0 { return true }
+                    let local = (try? FileManager.default.attributesOfItem(atPath: dest)[.size] as? Int64) ?? -1
+                    return local == sz
+                }
+            }
+            DispatchQueue.main.async {
+                guard let self, idx < self.downloads.count else { return }
+                if ok {
+                    let mark: [String: Any] = ["files": 1, "bytes": 1, "at": "verified"]
+                    if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: Self.completionMarkPath(dir))) }
+                    self.downloads[idx].status = "✓ 已就绪"
+                } else {
+                    self.downloads[idx].status = "⚠ 不完整（曾被中断）"
+                }
+            }
         }
     }
 
@@ -1081,6 +1120,7 @@ struct TranslateTab: View {
                 Text(model.envBusy ? (model.envStage.isEmpty ? "正在构建环境…" : model.envStage)
                                    : (model.envOK ? "转写环境已就绪" : "点右侧按钮一键构建（首次约 3–15 分钟）"))
                     .font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
+                if model.envBusy { ProgressView(value: model.envProgress).progressViewStyle(.linear).frame(maxWidth: 260) }
                 Spacer()
                 if !model.envBusy {
                     HStack(spacing: 6) {

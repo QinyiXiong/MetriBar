@@ -106,6 +106,25 @@ import io as _io
 swift = _io.open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
 if 'env["METRIBAR_TRANSLATE_MODEL"] = mtDirForEnv' not in swift: fails.append("翻译 model id 未注入绝对路径(旧版会400)")
 
+# ── 下载/环境功能守护（本轮事故教训常驻化）──
+if '"-lc", "command -v ffmpeg"' not in swift_main:
+    fails.append("ffmpeg检测未走登录shell(ffmpeg-full等安装会误报未装)")
+_ff = subprocess.run(["/bin/bash","-lc","command -v ffmpeg"],capture_output=True,text=True).stdout.strip()
+if _ff: ok(f"ffmpeg 实际可检出: {_ff}")
+else: warn("本机bash -lc查不到ffmpeg（若已装请检查PATH）")
+if "dlPaused" not in swift_main or "哨兵" not in swift_main:
+    fails.append("暂停哨兵缺失(暂停停不住事故)")
+if "只前进不回退" not in swift_main:
+    fails.append("进度账本clamp缺失(进度回滑事故)")
+if "verifyAndMark" not in swift_main:
+    fails.append("联网完整性校验缺失(半成品误报就绪事故)")
+if swift_main.count('pkgs = [') == 1:
+    import re as _re
+    _p=_re.search(r'pkgs = \[([^\]]+)\]', swift_main)
+    if _p and all(k in _p.group(1) for k in ["funasr","torch","mlx-lm","openai","soundfile","opencc"]):
+        ok("构建依赖清单完整(funasr/torch/mlx-lm等9包)")
+    else: bad("构建依赖清单缺项")
+
 # transcribe.py 进度 JSON 消费格式（Swift consume 依赖）# ── 结构性守卫（冷启动/并发类事故回归）──
 swift_main = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
 if "settings.translateBaseURL" in swift_main and "fallback" not in "".lower():
