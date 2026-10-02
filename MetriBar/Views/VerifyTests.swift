@@ -54,6 +54,9 @@ final class TestHUD {
 
     func hide() { panel?.orderOut(nil) }
 
+    /// 测试用：浮层当前是否可见
+    var isVisibleForTest: Bool { panel?.isVisible ?? false }
+
     private func build(high: Bool) {
         highLevel = high
         let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 84),
@@ -116,8 +119,16 @@ final class DeadPixelController {
     private var window: NSWindow?
     private var monitor: Any?
     private var clickMonitor: Any?
+    private var hudTitleLabel: NSTextField?
+    private var hudHintLabel: NSTextField?
 
     var isShowing: Bool { window != nil }
+
+    /// 测试用：前进一张（等价于空格/→/单击）
+    func advanceForTest() { next() }
+
+    /// 测试用：当前全屏检测窗（NSApp.windows 会残留已关闭窗口，必须精确取）
+    var windowForTest: NSWindow? { window }
 
     func show() {
         guard window == nil else { return }
@@ -126,12 +137,31 @@ final class DeadPixelController {
         let w = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         w.level = .screenSaver
         w.isOpaque = true
-        w.backgroundColor = colors[index].0
         w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // 提示做进内容视图：浮层窗口在切换纯色/点击后可能被压到后面，内嵌才能保证每张都有提示
+        let box = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = colors[index].0.cgColor
+        let pill = NSView(frame: NSRect(x: (screen.frame.width - 620) / 2, y: 90, width: 620, height: 84))
+        pill.wantsLayer = true
+        pill.layer?.backgroundColor = NSColor(calibratedWhite: 0.07, alpha: 0.92).cgColor
+        pill.layer?.cornerRadius = 18
+        pill.layer?.borderWidth = 1
+        pill.layer?.borderColor = NSColor(calibratedWhite: 1, alpha: 0.16).cgColor
+        let t = NSTextField(labelWithString: hudTitle)
+        t.font = .systemFont(ofSize: 17, weight: .semibold); t.textColor = .white; t.alignment = .center
+        t.frame = NSRect(x: 16, y: 46, width: 588, height: 24)
+        let sub = NSTextField(labelWithString: hudHint)
+        sub.font = .systemFont(ofSize: 12.5); sub.textColor = NSColor(calibratedWhite: 0.72, alpha: 1)
+        sub.alignment = .center
+        sub.frame = NSRect(x: 16, y: 14, width: 588, height: 20)
+        pill.addSubview(t); pill.addSubview(sub)
+        box.addSubview(pill)
+        w.contentView = box
+        hudTitleLabel = t; hudHintLabel = sub
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         window = w
-        TestHUD.shared.show(hudTitle, hudHint, high: true)
 
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
@@ -157,8 +187,9 @@ final class DeadPixelController {
     private func prev() { index = (index - 1 + colors.count) % colors.count; apply() }
 
     private func apply() {
-        window?.backgroundColor = colors[index].0
-        TestHUD.shared.update(hudTitle, hudHint)
+        window?.contentView?.layer?.backgroundColor = colors[index].0.cgColor
+        hudTitleLabel?.stringValue = hudTitle
+        hudHintLabel?.stringValue = hudHint
     }
 
     func close() {
@@ -166,7 +197,7 @@ final class DeadPixelController {
         if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         window?.orderOut(nil)
         window = nil
-        TestHUD.shared.hide()
+        hudTitleLabel = nil; hudHintLabel = nil
     }
 }
 
@@ -246,9 +277,10 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
         recorder = try? AVAudioRecorder(url: url, settings: settings)
         recorder?.delegate = self
         guard recorder?.prepareToRecord() == true else { notify("录音器不可用"); return }
-        recorder?.record(forDuration: Self.recordSeconds)
+        recorder?.record()          // 不设时长：由定时器统一停止，避免"到点自停后 isRecording=false 导致回放被跳过"
         deadline = Date().addingTimeInterval(Self.recordSeconds)
         notify("开始录音：请对着麦克风说一句话")
+        armWatchdog()
         TestHUD.shared.show("🎙 正在录音… \(Int(Self.recordSeconds)) 秒后自动回放",
                             "请正常说话，录音结束会自动播放给你听")
         tick = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
@@ -268,9 +300,9 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
 
     private func stopAndPlayback() {
         workTimer?.invalidate(); tick?.invalidate(); tick = nil
-        guard let rec = recorder, rec.isRecording else { return }
-        rec.stop()
-        usleep(120_000)
+        guard let rec = recorder else { return }
+        if rec.isRecording { rec.stop() }
+        usleep(150_000)
         if let p = try? AVAudioPlayer(contentsOf: rec.url) {
             player = p; p.play()
             notify("录音结束，正在回放…")
@@ -287,6 +319,17 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
         }
     }
 
+    /// 兜底：任何异常路径都不允许提示浮层永久停留
+    private func armWatchdog() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.recordSeconds + 15) {
+            if self.recorder?.isRecording == true {
+                self.stopAndPlayback()
+            } else {
+                TestHUD.shared.hide()
+            }
+        }
+    }
+
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if flag, recorder.isRecording == false {}
     }
@@ -294,6 +337,24 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
     private func notify(_ text: String) {
         Diag.notice(Diag.lifecycle, "验机·麦克风：\(text)")
         NSSound.beep()
+    }
+
+    // MARK: 测试用访问器（UI 测试台用；不影响正常流程）
+
+    var isRecordingForTest: Bool { recorder?.isRecording ?? false }
+
+    /// 最近一次录音文件大小（字节）：为 0 说明没真正录到声音
+    var lastRecordingBytesForTest: Int64 {
+        guard let url = recorder?.url,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attrs[.size] as? Int64 else { return 0 }
+        return size
+    }
+
+    func stopForTest() {
+        workTimer?.invalidate(); tick?.invalidate()
+        if recorder?.isRecording == true { recorder?.stop() }
+        TestHUD.shared.hide()
     }
 }
 

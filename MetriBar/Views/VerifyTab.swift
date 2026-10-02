@@ -552,6 +552,21 @@ enum VerifyCatalog {
 
 struct InlineTestID: Identifiable { let id: String }
 
+/// 统一的按钮规格：卡片与弹窗内所有按钮同宽同高（原来的 small/mini 混用导致大小不一）
+private struct CardButton: ViewModifier {
+    var minWidth: CGFloat = 68
+    func body(content: Content) -> some View {
+        content
+            .controlSize(.regular)
+            .frame(minWidth: minWidth, minHeight: 24)
+    }
+}
+
+private extension View {
+    func cardButton() -> some View { modifier(CardButton()) }
+    func dialogButton() -> some View { modifier(CardButton(minWidth: 78)) }
+}
+
 struct VerifyTab: View {
     @StateObject private var model = VerifyModel()
     @State private var inlineSheet: InlineTestID?   // "keyboard" / "trackpad"
@@ -581,7 +596,7 @@ struct VerifyTab: View {
                     Text("· 不通过 \(model.failCount)").font(.system(size: 11, weight: .semibold)).foregroundColor(.red)
                 }
                 Spacer()
-                Button("重置") { model.reset() }.controlSize(.small)
+                Button("重置") { model.reset() }.dialogButton()
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
             Divider()
@@ -622,23 +637,25 @@ struct VerifyTab: View {
                         if item.id == "keyboard" || item.id == "trackpad" { inlineSheet = InlineTestID(id: item.id) }
                         else { VerifyTests.launch(item.id) }
                     }
-                    .controlSize(.small)
+                    .cardButton()
                 }
                 if !item.steps.isEmpty {
-                    Button("步骤") { detailSheet = item }.controlSize(.small)
+                    Button("步骤") { detailSheet = item }.cardButton()
                 }
                 if let link = item.link, let url = URL(string: link) {
                     Button("打开") { NSWorkspace.shared.open(url) }
-                        .controlSize(.small)
+                        .cardButton()
                         .help(item.linkTitle ?? link)
                 }
                 Spacer()
                 Button("通过") { model.set(item.id, .pass) }
-                    .buttonStyle(.bordered).controlSize(.regular)
+                    .buttonStyle(.bordered)
                     .tint(model.state(item.id) == .pass ? .green : .secondary)
+                    .cardButton()
                 Button("不通过") { model.set(item.id, .fail) }
-                    .buttonStyle(.bordered).controlSize(.regular)
+                    .buttonStyle(.bordered)
                     .tint(model.state(item.id) == .fail ? .red : .secondary)
+                    .cardButton()
             }
         }
         .padding(10)
@@ -705,14 +722,16 @@ struct VerifyTab: View {
                 }
                 .padding(.trailing, 6)
             }
-            HStack {
+            HStack(spacing: 10) {
                 if let link = item.link, let url = URL(string: link) {
-                    Button(item.linkTitle ?? "打开链接") { NSWorkspace.shared.open(url) }.controlSize(.small)
+                    Button(item.linkTitle ?? "打开链接") { NSWorkspace.shared.open(url) }.dialogButton()
                 }
                 Spacer()
-                Button("通过") { model.set(item.id, .pass); detailSheet = nil }.controlSize(.small).tint(.green)
-                Button("不通过") { model.set(item.id, .fail); detailSheet = nil }.controlSize(.small).tint(.red)
-                Button("关闭") { detailSheet = nil }.keyboardShortcut(.cancelAction)
+                Button("通过") { model.set(item.id, .pass); detailSheet = nil }
+                    .buttonStyle(.bordered).tint(.green).dialogButton()
+                Button("不通过") { model.set(item.id, .fail); detailSheet = nil }
+                    .buttonStyle(.bordered).tint(.red).dialogButton()
+                Button("关闭") { detailSheet = nil }.keyboardShortcut(.cancelAction).dialogButton()
             }
         }
         .padding(22).frame(width: 660, height: 540)
@@ -731,9 +750,9 @@ struct VerifyTab: View {
             }
             .frame(width: id == "keyboard" ? 880 : 560, height: id == "keyboard" ? 290 : 220)
             HStack(spacing: 10) {
-                if id == "keyboard" { Button("重置") { keyboardResetToken += 1 }.controlSize(.small) }
+                if id == "keyboard" { Button("重置") { keyboardResetToken += 1 }.dialogButton() }
                 Spacer()
-                Button("完成") { inlineSheet = nil }.keyboardShortcut(.cancelAction)
+                Button("完成") { inlineSheet = nil }.keyboardShortcut(.cancelAction).dialogButton()
             }
             .frame(width: id == "keyboard" ? 880 : 560)
         }

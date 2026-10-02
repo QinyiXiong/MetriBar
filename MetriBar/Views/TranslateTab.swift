@@ -256,16 +256,21 @@ final class TranslateModel: ObservableObject {
     private var lastScan = Date.distantPast
     private var verifying: Set<String> = []
 
-    func refreshAvailability(_ settings: TranslateSettings, force: Bool = false) {
+    func refreshAvailability(_ settings: TranslateSettings, force: Bool = false,
+                             onlyRoot: String? = nil, then completion: ((Int, Int) -> Void)? = nil) {
         if !force, Date().timeIntervalSince(lastScan) < 20 { return }   // 20秒内不重复全量扫描
         lastScan = Date()
-        let roots = [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
+        // onlyRoot：用户刚选定目录时只扫它，回报"这个目录里到底有没有模型"，不受默认目录干扰
+        let roots = onlyRoot.map { [$0] }
+            ?? [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            var hits = 0
             for i in self.downloads.indices {
                 let spec = self.downloads[i].spec
                 guard self.downloads[i].status != "下载中" else { continue }
                 if let dir = TranslateModel.resolveModelDir(spec: spec, roots: roots) {
+                    hits += 1
                     if FileManager.default.fileExists(atPath: TranslateModel.completionMarkPath(dir)) {
                         self.downloads[i].status = "✓ 已就绪"
                         self.appendLog("扫描命中 \(spec.dirName) → \(dir)")
@@ -281,6 +286,7 @@ final class TranslateModel: ObservableObject {
                     self.downloads[i].status = "未下载"
                 }
             }
+            completion?(hits, self.downloads.count)
         }
     }
 
@@ -1050,28 +1056,39 @@ struct TranslateTab: View {
         switch s { case "完成": return .green; case "失败": return .red; case "转写中": return .accentColor; default: return .secondary }
     }
 
-    private func applyDir() {
-        var path = dirDraft.trimmingCharacters(in: .whitespaces)
-        if path.hasPrefix("~") { path = NSHomeDirectory() + path.dropFirst() }
-        let fm = FileManager.default
-        var isDir: ObjCBool = false
-        guard fm.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
-            dirOK = false; dirMsg = "路径无效（需已存在的文件夹）"; return
-        }
-        settings.modelDir = path; settings.persist("modelDir", path)
-        model.refreshAvailability(settings)
-        dirOK = true; dirMsg = "✓ 已应用"
-    }
+    private func applyDir() { adoptModelDir(dirDraft) }
 
     private func pickModelDir() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.prompt = "选择"
+        panel.prompt = "选择并扫描"
         panel.message = "选择模型文件夹（内含 SenseVoiceSmall 等子目录）· ⌘⇧. 可显示隐藏文件夹"
-        if panel.runModal() == .OK, let url = panel.url {
-            settings.modelDir = url.path; settings.persist("modelDir", url.path)
-            dirDraft = url.path   // 同步回显到「模型目录」输入框
-            model.refreshAvailability(settings)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        adoptModelDir(url.path)
+    }
+
+    /// 选定/输入目录后：落盘 + 只扫该目录 + 回报命中结果（无需再点「应用」）
+    private func adoptModelDir(_ raw: String) {
+        var path = raw.trimmingCharacters(in: .whitespaces)
+        if path.hasPrefix("~") { path = NSHomeDirectory() + path.dropFirst() }
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            dirOK = false; dirMsg = "路径无效（需已存在的文件夹）"; return
+        }
+        settings.modelDir = path; settings.persist("modelDir", path)
+        dirDraft = path
+        dirOK = true; dirMsg = "正在扫描该目录…"
+        model.refreshAvailability(settings, force: true, onlyRoot: path) { hits, total in
+            let names = ModelCatalog.all.prefix(total).enumerated().compactMap { idx, spec in
+                FileManager.default.fileExists(atPath: path + "/" + spec.dirName) ? spec.dirName : nil
+            }
+            if hits == 0 {
+                self.dirOK = false
+                self.dirMsg = "该目录下未发现任何模型（共查 \(total) 个）"
+            } else {
+                self.dirOK = hits == total
+                self.dirMsg = "✓ 已扫描：命中 \(hits)/\(total) 个模型" + (names.isEmpty ? "" : "（\(names.joined(separator: "、"))）")
+            }
         }
     }
 
@@ -1172,13 +1189,13 @@ struct TranslateTab: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Image(systemName: "folder").foregroundColor(.secondary)
-                    TextField("模型目录（可直接粘贴路径）", text: $dirDraft)
+                    TextField("模型目录（粘贴后回车即扫描）", text: $dirDraft)
+                        .onSubmit { applyDir() }
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 10, design: .monospaced))
                 }
                 HStack(spacing: 8) {
-                    Button("应用") { applyDir() }.controlSize(.mini).disabled(dirDraft.trimmingCharacters(in: .whitespaces).isEmpty)
-                    Button("浏览…") { pickModelDir() }.controlSize(.mini)
+                    Button("浏览并扫描…") { pickModelDir() }.controlSize(.small)
                         .help("Finder 面板中可按 ⌘⇧. 显示隐藏文件夹")
                     Spacer()
                     if !dirMsg.isEmpty { Text(dirMsg).font(.system(size: 9)).foregroundColor(dirOK ? .green : .orange) }

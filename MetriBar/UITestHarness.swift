@@ -73,6 +73,9 @@ enum UITestHarness {
         trace("→ uiVerifyKeyboardPanel"); uiVerifyKeyboardPanel()
         trace("→ uiVerifyTrackpadPanel"); uiVerifyTrackpadPanel()
         trace("→ uiVerifyDeadPixelWindow"); uiVerifyDeadPixelWindow()
+        trace("→ verifyDeadPixelHint"); verifyDeadPixelHint()
+        trace("→ verifyDirRescan"); verifyDirRescan()
+        trace("→ verifyMicRoundTrip"); verifyMicRoundTrip()
         trace("→ uiTranslateQueueStates"); uiTranslateQueueStates()
         trace("→ uiTranslateEnvStates"); uiTranslateEnvStates()
         trace("→ uiTranslateDownloadStates"); uiTranslateDownloadStates()
@@ -233,6 +236,96 @@ enum UITestHarness {
         let tab = TranslateTab()
         let img = captureWindow(AnyView(tab.envSheet), name: "12-env-sheet", size: NSSize(width: 560, height: 640))
         record("ui.translate-env-sheet", img?.nonBlank ?? false, ["截图非空白": img?.nonBlank ?? false])
+    }
+
+    /// 坏点检测：**每一张纯色图**都必须带提示（提示内嵌在全屏窗内，逐张校验文案）
+    private static func verifyDeadPixelHint() {
+        let c = DeadPixelController.shared
+        c.show()
+        pump(0.4)
+        func hintText() -> String {
+            guard let cv = c.windowForTest?.contentView else { return "" }
+            var out: [String] = []
+            func walk(_ v: NSView) {
+                if let tf = v as? NSTextField { out.append(tf.stringValue) }
+                v.subviews.forEach(walk)
+            }
+            walk(cv)
+            return out.joined(separator: " | ")
+        }
+        let first = hintText()
+        for _ in 0..<4 { c.advanceForTest(); pump(0.15) }   // 走完 5 张
+        let fifth = hintText()
+        let hasCounter1 = first.contains("第 1/5 张")
+        let hasCounter5 = fifth.contains("第 5/5 张")
+        let hasKeys = first.contains("Esc") && first.contains("空格")
+        c.close()
+        record("verify.deadpixel-hint", hasCounter1 && hasCounter5 && hasKeys, [
+            "第1张提示": first, "第5张提示": fifth,
+            "逐张计数正确": hasCounter1 && hasCounter5, "键位提示完整": hasKeys,
+        ])
+    }
+
+    /// 目录选择后立即扫描：临时目录放入一个假模型，断言"只扫该目录"能命中并计数
+    private static func verifyDirRescan() {
+        let fm = FileManager.default
+        let root = NSTemporaryDirectory() + "metribar-dirscan"
+        try? fm.removeItem(atPath: root)
+        let spec = ModelCatalog.all[0]
+        try? fm.createDirectory(atPath: root + "/" + spec.dirName, withIntermediateDirectories: true)
+        let m = TranslateModel.shared
+        let backupDir = TranslateSettings.shared.effectiveModelDir
+        var hits = -1, total = -1
+        TranslateSettings.shared.modelDir = root
+        m.refreshAvailability(TranslateSettings.shared, force: true, onlyRoot: root) { h, tot in
+            hits = h; total = tot
+        }
+        for _ in 0..<20 { if hits >= 0 { break }; pump(0.25) }
+        // 空目录应报 0 命中
+        let emptyRoot = NSTemporaryDirectory() + "metribar-dirscan-empty"
+        try? fm.createDirectory(atPath: emptyRoot, withIntermediateDirectories: true)
+        var emptyHits = -1
+        m.refreshAvailability(TranslateSettings.shared, force: true, onlyRoot: emptyRoot) { h, _ in emptyHits = h }
+        for _ in 0..<20 { if emptyHits >= 0 { break }; pump(0.25) }
+        TranslateSettings.shared.modelDir = backupDir
+        m.refreshAvailability(TranslateSettings.shared, force: true)
+        try? fm.removeItem(atPath: root); try? fm.removeItem(atPath: emptyRoot)
+        let ok = hits == 1 && total == ModelCatalog.all.count && emptyHits == 0
+        record("verify.dir-rescan", ok, [
+            "结构": "被选中目录 1 个模型 → 命中 \(hits)/\(total)", "空目录命中": emptyHits,
+            "结论": ok ? "选目录即扫描且计数准确" : "扫描计数不符预期",
+        ])
+    }
+
+    /// 麦克风真录真放（仅当系统已授权；未授权则只报告状态，不弹窗）
+    private static func verifyMicRoundTrip() {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        guard status == .authorized else {
+            record("verify.mic-roundtrip", true, [
+                "note": "麦克风未授权（当前状态未决定/拒绝），跳过真实录制",
+                "授权状态": status == .notDetermined ? "未决定" : status == .denied ? "已拒绝" : "受限",
+            ])
+            return
+        }
+        let c = MicTestController.shared
+        c.toggle()                      // 开始录音
+        pump(1.0)
+        let recording = c.isRecordingForTest
+        // 5 秒录制 + 回放：等到录音结束
+        for _ in 0..<40 { if !c.isRecordingForTest { break }; pump(0.5) }
+        let stopped = !c.isRecordingForTest
+        let bytes = c.lastRecordingBytesForTest
+        // 回放阶段结束（最多等 12 秒），并确认提示浮层最终消失
+        var hudGone = false
+        for _ in 0..<30 {
+            if !TestHUD.shared.isVisibleForTest { hudGone = true; break }
+            pump(0.5)
+        }
+        c.stopForTest()
+        record("verify.mic-roundtrip", recording && stopped && bytes > 1000, [
+            "进入录音态": recording, "到点自动停止": stopped,
+            "录音文件字节": bytes, "提示浮层最终消失": hudGone,
+        ])
     }
 
     /// 步骤弹窗：大字版分步说明（对照站点各检测页）

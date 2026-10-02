@@ -225,6 +225,25 @@ try:
     else: print("  ✓ 验机 %d 条目全部带分步说明" % _noSteps)
 except OSError as _e:
     bad += 1; print("  ✗ 读取 VerifyTab.swift 失败", _e)
+# 验机交互回归守卫（麦克风"提示永驻且不回放"事故）
+try:
+    _t = open("MetriBar/Views/VerifyTests.swift", encoding="utf-8").read()
+    if "guard let rec = recorder, rec.isRecording else { return }" in _t:
+        bad += 1; print("  ✗ 麦克风停止逻辑用了 isRecording 前置判断（到点自停后会导致不回放+提示永驻）")
+    elif "if rec.isRecording { rec.stop() }" in _t and "recorder?.record()" in _t:
+        print("  ✓ 麦克风停止/回放逻辑正确（不设时长+安全停止）")
+    else:
+        bad += 1; print("  ✗ 麦克风停止逻辑缺失")
+    if "armWatchdog" in _t:
+        print("  ✓ 麦克风提示浮层有兜底回收")
+    else:
+        bad += 1; print("  ✗ 麦克风提示浮层无兜底（可能永久停留）")
+    if "windowForTest" in _t and "hudTitleLabel?.stringValue = hudTitle" in _t:
+        print("  ✓ 坏点提示内嵌全屏窗且逐张更新")
+    else:
+        bad += 1; print("  ✗ 坏点提示未内嵌/未逐张更新")
+except OSError as _e:
+    bad += 1; print("  ✗ 读取 VerifyTests.swift 失败", _e)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")
