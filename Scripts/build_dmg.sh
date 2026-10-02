@@ -93,5 +93,11 @@ fi
 spctl -a -vv -t open --context context:primary-signature "$DMG" 2>/dev/null || \
   echo "ℹ️  spctl 未通过（ad-hoc 签名属正常现象）"
 
+# ---------------------------------------------------------------- 6. 收尾
+# 打包用的 staging 与 xcarchive 里各含一份 MetriBar.app；留在仓库里会被 Spotlight 索引，
+# 导致用户搜到多个同名应用（也白占磁盘）。dmg 生成后即清理。
+rm -rf "$STAGING" "$BUILD"
+echo "▸ 已清理打包临时产物（build/staging、build/MetriBar.xcarchive）"
+
 echo "✓ 完成：$DMG"
 du -h "$DMG" | awk '{print "  大小："$1}'
