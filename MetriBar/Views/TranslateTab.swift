@@ -149,6 +149,27 @@ final class TranslateModel: ObservableObject {
         logQueue.async { try? "".write(toFile: logFile, atomically: true, encoding: .utf8) }
     }
 
+    /// 解析构建脚本输出行 → 0...1 进度；返回 nil 表示该行不携带进度信息。
+    /// 行样例（带 App 前缀与脚本时间戳，务必用正则从尾部匹配，不要按 "依赖 " 切割）：
+    ///   [构建] [16:12:09] 依赖 2/9 torch
+    ///   [构建] [16:12:34] STEP5 验证导入
+    static func parseBuildProgress(_ line: String) -> Double? {
+        // 依赖 N/M：脚本推进的主力信号，占 35%~95%
+        if let r = line.range(of: #"依赖\s+(\d+)/(\d+)"#, options: .regularExpression) {
+            let nums = String(line[r]).split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+            if nums.count >= 2, nums[1] > 0 {
+                let frac = min(max(Double(nums[0]) / Double(nums[1]), 0), 1)
+                return 0.35 + 0.60 * frac
+            }
+        }
+        if line.contains("STEP1") || line.contains("STEP2") { return 0.10 }   // 下载/解压运行时
+        if line.contains("STEP3") { return 0.28 }                            // 创建 venv
+        if line.contains("STEP4") { return 0.35 }                            // 开始装依赖
+        if line.contains("STEP5") { return 0.96 }                            // 验证导入
+        if line.contains("环境构建完成") { return 1.0 }
+        return nil
+    }
+
     static func detectFFmpeg() -> String? {
         if let c = cachedFFmpeg { return c }   // 缓存命中直接返回，省一次登录shell（慢机器可达数秒）
         // 登录shell解析（含用户自定义PATH，覆盖 ffmpeg-full / conda / macports）
@@ -385,8 +406,11 @@ final class TranslateModel: ObservableObject {
                         let stepTxt = l.range(of: "] ").map { String(l[$0.upperBound...]) } ?? l
                         DispatchQueue.main.async { self?.envStage = stepTxt }
                     }
-                    if l.contains("依赖 "), let num = Int(l.replacingOccurrences(of: "依赖 ", with: "").split(separator: "/").first.map(String.init) ?? "") {
-                        DispatchQueue.main.async { self?.envProgress = Double(num)/9.0 }
+                    if let p = TranslateModel.parseBuildProgress(l) {
+                        DispatchQueue.main.async {
+                            // 只前进不回退：脚本输出可能分块乱序到达
+                            if p > (self?.envProgress ?? 0) { self?.envProgress = p }
+                        }
                     }
                 }
             }

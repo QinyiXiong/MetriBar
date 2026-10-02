@@ -259,6 +259,31 @@ try:
     else: print("  ✓ 验机卡片版式安全（按钮需求 %dpt ≤ 列宽 %dpt）" % (_need, _grid))
 except Exception as _e2:
     bad += 1; print("  ✗ 版式不变量检查失败", _e2)
+# 进度条解析回归守卫（"一直不动/一下到顶"事故：按 "依赖 " 切割字符串永远解析失败）
+try:
+    _tr = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
+    if "parseBuildProgress" not in _tr:
+        bad += 1; print("  ✗ 构建进度解析函数缺失")
+    elif 'replacingOccurrences(of: "依赖 "' in _tr:
+        bad += 1; print("  ✗ 仍用字符串切割解析依赖进度（带时间戳前缀会永远失败）")
+    else:
+        print("  ✓ 构建进度用正则解析（依赖 N/M 落在 0.35~0.95，STEP 分阶段）")
+    # 规则：取值名里含 percent/pct 的必须除以 100 或带 total；其余（如 envProgress）按 0...1 域白名单
+    _allow = ("envProgress",)
+    _bad_pv = []
+    for _l in _tr.split("\n"):
+        if "ProgressView(value:" not in _l:
+            continue
+        _norm = ("/100.0" in _l) or ("/ 100.0" in _l) or ("total:" in _l) or any(a in _l for a in _allow)
+        _risky = ("percent" in _l.lower() or "pct" in _l.lower() or "进度" in _l)
+        if not _norm and _risky:
+            _bad_pv.append(_l.strip())
+    if _bad_pv:
+        bad += 1; print("  ✗ 百分比未归一即喂给 ProgressView:", _bad_pv[:2])
+    else:
+        print("  ✓ 进度条取值域检查通过（百分比已归一/或为 0...1 域）")
+except OSError as _e3:
+    bad += 1; print("  ✗ 读取 TranslateTab.swift 失败", _e3)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")

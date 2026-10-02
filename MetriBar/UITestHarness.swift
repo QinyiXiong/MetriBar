@@ -76,6 +76,7 @@ enum UITestHarness {
         trace("→ verifyDeadPixelHint"); verifyDeadPixelHint()
         trace("→ verifyDirRescan"); verifyDirRescan()
         trace("→ verifyMicRoundTrip"); verifyMicRoundTrip()
+        trace("→ verifyBuildProgressParse"); verifyBuildProgressParse()
         trace("→ uiTranslateQueueStates"); uiTranslateQueueStates()
         trace("→ uiTranslateEnvStates"); uiTranslateEnvStates()
         trace("→ uiTranslateDownloadStates"); uiTranslateDownloadStates()
@@ -202,13 +203,14 @@ enum UITestHarness {
         let m = TranslateModel.shared
         let backup = (m.envOK, m.envBusy, m.envStage, m.ffmpegOK, m.envProgress)
         // ① 构建中
-        m.envOK = false; m.envBusy = true; m.envStage = "安装依赖 2/9：torch（torch 约2GB，共3–15分钟）"; m.envProgress = 2.0/9.0
+        m.envOK = false; m.envBusy = true; m.envStage = "依赖 5/9 openai"
+        m.envProgress = TranslateModel.parseBuildProgress("[构建] [16:12:24] 依赖 5/9 openai") ?? 0.68
         pump(0.3)
-        let a = captureWindow(AnyView(TranslateTab()), name: "09-translate-env-building", size: NSSize(width: 960, height: 620))
+        let a = captureWindow(AnyView(TranslateTab().envSheet), name: "09-translate-env-building", size: NSSize(width: 560, height: 640))
         // ② 就绪
         m.envBusy = false; m.envOK = true; m.envStage = ""
         pump(0.3)
-        let b = captureWindow(AnyView(TranslateTab()), name: "10-translate-env-ready", size: NSSize(width: 960, height: 620))
+        let b = captureWindow(AnyView(TranslateTab().envSheet), name: "10-translate-env-ready", size: NSSize(width: 560, height: 640))
         record("ui.translate-env-states", (a?.nonBlank ?? false) && (b?.nonBlank ?? false), [
             "构建中截图": a?.nonBlank ?? false, "就绪截图": b?.nonBlank ?? false,
         ])
@@ -236,6 +238,38 @@ enum UITestHarness {
         let tab = TranslateTab()
         let img = captureWindow(AnyView(tab.envSheet), name: "12-env-sheet", size: NSSize(width: 560, height: 640))
         record("ui.translate-env-sheet", img?.nonBlank ?? false, ["截图非空白": img?.nonBlank ?? false])
+    }
+
+    /// 环境构建进度解析：用**脚本真实输出行**（带 App 前缀与时间戳）断言解析可用且单调递增。
+    /// 这条用例专门盯住"进度条一直不动、装完直接跳到 100%"的旧 bug。
+    private static func verifyBuildProgressParse() {
+        let lines = [
+            "[构建] [16:11:31] STEP1 下载Python运行时(19MB npmmirror)",
+            "[构建] [16:11:33] STEP1-2完成 ✓",
+            "[构建] [16:11:33] STEP3 创建venv",
+            "[构建] [16:11:35] STEP4 安装依赖(9包 清华镜像 无缓存直连)",
+            "[构建] [16:11:35] 依赖 1/9 funasr==1.4.1",
+            "[构建] [16:12:09] 依赖 2/9 torch",
+            "[构建] [16:12:21] 依赖 3/9 torchaudio",
+            "[构建] [16:12:22] 依赖 4/9 mlx-lm",
+            "[构建] [16:12:24] 依赖 5/9 openai",
+            "[构建] [16:12:30] 依赖 6/9 opencc-python-reimplemented",
+            "[构建] [16:12:32] 依赖 7/9 soundfile",
+            "[构建] [16:12:32] 依赖 8/9 python-multipart",
+            "[构建] [16:12:33] 依赖 9/9 librosa",
+            "[构建] [16:12:34] STEP5 验证导入",
+            "[构建] [16:12:54] ✓ 环境构建完成",
+        ]
+        let vals = lines.compactMap { TranslateModel.parseBuildProgress($0) }
+        let depVals = lines.filter { $0.contains("依赖 ") }.compactMap { TranslateModel.parseBuildProgress($0) }
+        let monotonic = zip(vals, vals.dropFirst()).allSatisfy { $0 <= $1 + 1e-9 }
+        let first = vals.first ?? 1, last = vals.last ?? 0
+        let ok = depVals.count == 9 && monotonic && abs(last - 1.0) < 1e-9 && first < 0.35
+        record("verify.build-progress-parse", ok, [
+            "解析出的进度点": vals.count, "依赖行解析成功数": "\(depVals.count)/9",
+            "单调不回退": monotonic, "首值": String(format: "%.2f", first), "末值": String(format: "%.2f", last),
+            "依赖 5/9 对应进度": String(format: "%.2f", TranslateModel.parseBuildProgress("[构建] [16:12:24] 依赖 5/9 openai") ?? 0),
+        ])
     }
 
     /// 坏点检测：**每一张纯色图**都必须带提示（提示内嵌在全屏窗内，逐张校验文案）
