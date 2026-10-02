@@ -30,6 +30,9 @@ enum UITestHarness {
     }
 
     private static var cases: [[String: Any]] = []
+    /// 用例开始前用户原有的验机清单（用例结束原样还原，绝不污染真实数据）
+    private static var originalChecklist: Data? = nil
+    private static let checklistKey = "verify.checklist.v1"
     private static var passCount = 0, failCount = 0
     private static var shots: [String] = []
 
@@ -38,6 +41,7 @@ enum UITestHarness {
     static func run() {
         try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
         trace("HARNESS START out=\(outDir)")
+        originalChecklist = UserDefaults.standard.data(forKey: checklistKey)
         NSApp.setActivationPolicy(.regular)   // 允许渲染真实控件
         pump(0.6)
         trace("激活策略已切换")
@@ -451,6 +455,9 @@ enum UITestHarness {
     }
 
     private static func finish() {
+        // 还原用户真实清单状态：原本没有就删掉键，原本有就写回原值
+        if let d = originalChecklist { UserDefaults.standard.set(d, forKey: checklistKey) }
+        else { UserDefaults.standard.removeObject(forKey: checklistKey) }
         let summary: [String: Any] = [
             "generatedAt": ISO8601DateFormatter().string(from: Date()),
             "total": cases.count, "passed": passCount, "failed": failCount,
