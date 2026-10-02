@@ -540,7 +540,6 @@
   "怎么查看 MacBook 的维修记录？": "How do I check a MacBook's service history?",
   "macOS 26 及以上进入 系统设置 › 通用 › 关于本机 › 部件与维修，会列出检测到的维修并把部件标为正品 Apple 部件、二手 Apple 部件、未知或未验证。这个入口只在检测到维修时才显示，没有入口一般说明没有维修记录。": "On macOS 26 and later, open System Settings › General › About › Parts & Service, which lists detected repairs and labels parts as Genuine Apple Part, Used Apple Part, or Unknown or Unverified. This section appears only when a repair is detected, so if it is missing there is usually no service history.",
   "这个验机工具要收费或安装软件吗？": "Does this inspection tool cost money or require installing software?",
-  "不需要，也不用装任何第三方工具。所有检测（坏点、摄像头、麦克风、扬声器、键盘、触控板、刷新率）都由 MetriBar 在本机完成，不上传任何数据；硬件信息仅通过本机只读命令读取。": "No. 验机参考站点 is a pure web tool, and every test (dead pixels, camera, microphone, speakers, keyboard, trackpad, and refresh rate) runs in the browser with no data uploads and no software to install; the Inspection module in MetriBar on this Mac also runs entirely locally and only reads system information.",
   "怎么进入 Apple 诊断模式？": "How do I enter Apple Diagnostics mode?",
   "先关机并拔掉除电源外的所有外设。Apple 芯片机型按住电源键直到出现启动选项，再按 Command + D；Intel 机型开机后立即按住 D。参考代码 ADP000 表示未发现问题，其他代码即对应硬件故障。": "First shut down and unplug every peripheral except the power adapter. On Apple silicon, hold the power button until startup options appear, then press Command + D; on Intel models, hold D immediately after powering on. The reference code ADP000 means no issues were found, while any other code points to a hardware fault.",
   "重置": "Reset",
@@ -623,5 +622,6 @@
   "光栅 %@": "Tiler %@",
   "%@ 刷新": "%@ refresh",
   "风扇 %ld": "Fan %ld",
-  "语言 / Language": "Language"
+  "语言 / Language": "Language",
+  "不需要，也不用装任何第三方工具。所有检测（坏点、摄像头、麦克风、扬声器、键盘、触控板、刷新率）都由 MetriBar 在本机完成，不上传任何数据；硬件信息仅通过本机只读命令读取。": "No, and you do not need to install any third-party tool: every test (dead pixels, camera, microphone, speakers, keyboard, trackpad and refresh rate) is run locally by MetriBar and uploads nothing; hardware details are read with local read-only commands only."
 }
