@@ -80,6 +80,8 @@ enum UITestHarness {
         trace("→ uiVerifyDetailSheet"); uiVerifyDetailSheet()
         trace("→ uiVerifyHUD"); uiVerifyHUD()
         trace("→ uiTCCStatus"); uiTCCStatus()
+        trace("→ harnessMainQueueProbe"); harnessMainQueueProbe()
+        trace("→ uiVerifyHardwareSnapshot"); uiVerifyHardwareSnapshot()
         trace("→ verifyCatalogFidelity"); verifyCatalogFidelity()
         trace("→ perfMeasurements"); perfMeasurements()
 
@@ -271,6 +273,48 @@ enum UITestHarness {
             case .restricted: return "受限"; case .notDetermined: return "未决定(首次点击时会弹窗)"; @unknown default: return "未知" }
         }
         record("ui.tcc-status", true, ["麦克风": name(mic), "摄像头": name(cam)])
+    }
+
+    /// 自检：确认"后台线程 → 主队列"的回调在本测试台的嵌套 RunLoop 下确实会被执行。
+    /// 这决定了所有依赖异步结果的断言是否可信。
+    private static func harnessMainQueueProbe() {
+        var flag = false
+        var nested = false
+        DispatchQueue.global().async {
+            DispatchQueue.main.async { flag = true }
+        }
+        DispatchQueue.global().async {
+            DispatchQueue.main.async { nested = true }
+        }
+        let t0 = Date()
+        while !flag && Date().timeIntervalSince(t0) < 3 {
+            pump(0.1)
+        }
+        record("harness.main-queue-probe", flag && nested, [
+            "主队列回调可达": flag, "耗时(ms)": String(format: "%.0f", Date().timeIntervalSince(t0) * 1000),
+            "说明": "嵌套 RunLoop 下主队列可执行时，异步断言才可信",
+        ])
+    }
+
+    /// 硬件快照（含电池详表）：真机采集并断言电池字段齐全（对应"电池信息右侧直读"需求）
+    private static func uiVerifyHardwareSnapshot() {
+        let m = VerifyModel()
+        m.collectHardware()
+        for _ in 0..<60 {
+            if !m.collecting && !m.hardware.isEmpty { break }
+            pump(0.5)
+        }
+        let rows = m.hardware
+        let batteryKeys = rows.map(\.0).filter { $0.contains("电池") }
+        let values = rows.filter { $0.0.contains("电池") }.map { "\($0.0)=\($0.1)" }
+        let img = captureWindow(AnyView(VerifyTab()), name: "15-verify-hardware", size: NSSize(width: 1180, height: 760))
+        let ok = batteryKeys.count >= 5 && (img?.nonBlank ?? false)
+        record("verify.hardware-snapshot", ok, [
+            "字段总数": rows.count,
+            "电池字段数": batteryKeys.count,
+            "电池字段": values.joined(separator: " ｜ "),
+            "截图非空白": img?.nonBlank ?? false,
+        ])
     }
 
     /// 清单保真度：对照既定规格（板块 / 必查 / FAQ 数量与步骤完整性）逐项断言

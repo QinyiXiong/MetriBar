@@ -133,11 +133,16 @@ final class VerifyModel: ObservableObject {
 
             let (rcIO, ioOut) = Shell.run("/usr/sbin/ioreg", ["-rn", "AppleSmartBattery"])
             if rcIO == 0 {
+                // ioreg 顶层是 ""Key" = 123"，而嵌套字典（BatteryData）里是 ""Key"=123"（等号无空格）
                 func ioNum(_ key: String) -> Int? {
-                    guard let r = ioOut.range(of: "\"\(key)\" = ") else { return nil }
-                    let tail = ioOut[r.upperBound...]
-                    let token = tail.prefix { $0.isNumber || $0 == "-" }
-                    return Int(token)
+                    var from = ioOut.startIndex
+                    while let r = ioOut.range(of: "\"\(key)\"", range: from..<ioOut.endIndex) {
+                        let token = ioOut[r.upperBound...].drop { $0 == " " || $0 == "=" }
+                            .prefix { $0.isNumber || $0 == "-" }
+                        if let v = Int(token) { return v }
+                        from = r.upperBound
+                    }
+                    return nil
                 }
                 func ioStr(_ key: String) -> String? {
                     guard let r = ioOut.range(of: "\"\(key)\" = \"") else { return nil }
@@ -147,10 +152,13 @@ final class VerifyModel: ObservableObject {
                     return v.isEmpty ? nil : v
                 }
                 let design = ioNum("DesignCapacity")
-                let full = ioNum("NominalChargeCapacity") ?? ioNum("AppleRawMaxCapacity")
+                let full = ioNum("FullChargeCapacity") ?? ioNum("NominalChargeCapacity") ?? ioNum("AppleRawMaxCapacity")
                 if let d = design, let f = full, d > 0 {
                     let ratio = Double(f) / Double(d) * 100
                     rows.append(("电池容量", String(format: "满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）", f, d, ratio)))
+                }
+                if let remain = ioNum("RemainingCapacity") {
+                    rows.append(("电池剩余容量", "\(remain) mAh"))
                 }
                 var power: [String] = []
                 if let v = ioNum("Voltage") { power.append(String(format: "%.2f V", Double(v) / 1000)) }

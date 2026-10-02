@@ -21,7 +21,9 @@ struct MetriBarApp: App {
         // UI 测试台：`--uitest <输出目录>` 启动后自驱动渲染全部界面并断言，完成后退出。
         // （Agent/终端无「屏幕录制」「辅助功能」权限，这是唯一能"自己操作界面"的通道）
         if UITestHarness.requested {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { UITestHarness.run() }
+            // 必须用 RunLoop 定时器而非 main.async：harness 内部要嵌套 RunLoop 等待异步结果，
+            // 而 libdispatch 主队列不可重入——若入口本身是主队列 block，嵌套期间主队列回调永远不执行。
+            Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { _ in UITestHarness.run() }
             _settings = StateObject(wrappedValue: AppSettings())
             _store = StateObject(wrappedValue: MetricsStore(interval: 2))
             return
