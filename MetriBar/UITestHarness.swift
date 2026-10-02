@@ -99,7 +99,7 @@ enum UITestHarness {
     }
 
     private static func uiVerifyTab() {
-        let img = captureWindow(AnyView(VerifyTab()), name: "02-verify-tab", size: NSSize(width: 960, height: 620))
+        let img = captureWindow(AnyView(VerifyTab()), name: "02-verify-tab", size: NSSize(width: 1070, height: 740))
         record("ui.verify-tab", img != nil, ["非空白": img?.nonBlank ?? false, "尺寸": img?.sizeText ?? "-"])
     }
 

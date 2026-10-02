@@ -244,6 +244,21 @@ try:
         bad += 1; print("  ✗ 坏点提示未内嵌/未逐张更新")
 except OSError as _e:
     bad += 1; print("  ✗ 读取 VerifyTests.swift 失败", _e)
+# 验机版式不变量：卡片按钮总需求宽度必须 ≤ 网格最小列宽（否则卡片撑破网格被裁切）
+try:
+    import re as _re3
+    _v2 = open("MetriBar/Views/VerifyTab.swift", encoding="utf-8").read()
+    _grid = int(_re3.search(r"adaptive\(minimum: (\d+)", _v2).group(1))
+    _btns = [int(m) for m in _re3.findall(r"cardButton\(minWidth: (\d+)\)", _v2)]
+    _plain = _v2.count(".cardButton()")
+    _btns += [52] * _plain
+    _n = 4                                        # 单张卡片最多同时出现 4 个按钮（开始/步骤/打开/通过/不通过里取 4）
+    _need = sum(sorted(_btns, reverse=True)[:_n]) + 6 * (_n - 1) + 20
+    if _need > _grid:
+        bad += 1; print("  ✗ 卡片按钮需求 %dpt > 网格最小列宽 %dpt（会撑破裁切）" % (_need, _grid))
+    else: print("  ✓ 验机卡片版式安全（按钮需求 %dpt ≤ 列宽 %dpt）" % (_need, _grid))
+except Exception as _e2:
+    bad += 1; print("  ✗ 版式不变量检查失败", _e2)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")

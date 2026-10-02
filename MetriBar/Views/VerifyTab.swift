@@ -109,7 +109,9 @@ final class VerifyModel: ObservableObject {
             rows.append(("内存", str(hwItem["physical_memory"]) ?? "—"))
             rows.append(("序列号", str(hwItem["serial_number"]) ?? "读取失败"))
             if let lock = str(hwItem["activation_lock_status"]) {
-                rows.append(("激活锁", lock.contains("enabled") ? "⚠️ 仍开启——交易前必须让卖家当面关闭" : "✓ 已解除"))
+                rows.append(("激活锁", lock.contains("enabled")
+                             ? "已开启（本机自用正常；若为收购机，须卖家当面关闭后才能付款）"
+                             : "✓ 已解除（可安全过户）"))
             }
             rows.append(("系统", "macOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)." +
                         "\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion) (build \(ProcessInfo.processInfo.operatingSystemVersion.patchVersion))"))
@@ -554,7 +556,7 @@ struct InlineTestID: Identifiable { let id: String }
 
 /// 统一的按钮规格：卡片与弹窗内所有按钮同宽同高（原来的 small/mini 混用导致大小不一）
 private struct CardButton: ViewModifier {
-    var minWidth: CGFloat = 68
+    var minWidth: CGFloat = 52
     func body(content: Content) -> some View {
         content
             .controlSize(.regular)
@@ -563,8 +565,8 @@ private struct CardButton: ViewModifier {
 }
 
 private extension View {
-    func cardButton() -> some View { modifier(CardButton()) }
-    func dialogButton() -> some View { modifier(CardButton(minWidth: 78)) }
+    func cardButton(minWidth: CGFloat = 52) -> some View { modifier(CardButton(minWidth: minWidth)) }
+    func dialogButton() -> some View { modifier(CardButton(minWidth: 80)) }
 }
 
 struct VerifyTab: View {
@@ -573,12 +575,12 @@ struct VerifyTab: View {
     @State private var detailSheet: VerifyItem?
     @State private var keyboardResetToken = 0
 
-    private let cols = [GridItem(.adaptive(minimum: 210, maximum: 260), spacing: 14)]
+    private let cols = [GridItem(.adaptive(minimum: 276, maximum: 360), spacing: 12)]
 
     var body: some View {
         HSplitView {
-            checklistColumn.frame(minWidth: 470, idealWidth: 560, minHeight: 480)
-            hardwareColumn.frame(minWidth: 320, idealWidth: 380, minHeight: 480)
+            checklistColumn.frame(minWidth: 470, idealWidth: 640, maxWidth: .infinity, minHeight: 480)
+            hardwareColumn.frame(minWidth: 300, idealWidth: 340, maxWidth: 400, minHeight: 480)
         }
         .onAppear { if model.hardware.isEmpty { model.collectHardware() } }
         .sheet(item: $inlineSheet) { s in inlineSheetContent(s.id) }
@@ -631,7 +633,7 @@ struct VerifyTab: View {
             }
             Text(item.guide).font(.system(size: 10)).foregroundColor(.secondary)
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if item.interactive {
                     Button("开始") {
                         if item.id == "keyboard" || item.id == "trackpad" { inlineSheet = InlineTestID(id: item.id) }
@@ -651,11 +653,11 @@ struct VerifyTab: View {
                 Button("通过") { model.set(item.id, .pass) }
                     .buttonStyle(.bordered)
                     .tint(model.state(item.id) == .pass ? .green : .secondary)
-                    .cardButton()
+                    .cardButton(minWidth: 60)
                 Button("不通过") { model.set(item.id, .fail) }
                     .buttonStyle(.bordered)
                     .tint(model.state(item.id) == .fail ? .red : .secondary)
-                    .cardButton()
+                    .cardButton(minWidth: 66)
             }
         }
         .padding(10)
@@ -775,7 +777,7 @@ struct VerifyTab: View {
                             Text(row.1).font(.system(size: 11, weight: .semibold)).textSelection(.enabled)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(9)
+                        .padding(.horizontal, 9).padding(.vertical, 7)
                         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.045)))
                     }
                     if model.collecting {
