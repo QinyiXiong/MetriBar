@@ -25,7 +25,7 @@
   - [4.1 采集层与菜单栏](#41-采集层与菜单栏监控核心) · [4.2 打印机测试](#42-打印机测试模块) · [4.3 MacBook 验机](#43-macbook-验机模块) · [4.4 视频翻译](#44-视频翻译模块) · [4.5 应用内 UI 测试台](#45-应用内-ui-测试台)
 - [5. 部署与运行](#5-部署与运行)
 - [6. 功能使用指南](#6-功能使用指南)
-- [7. 运维与扩展](#7-运维与扩展)
+- [7. 运维与扩展](#7-运维与扩展)（含 [7.8 语言支持](#78-语言支持)）
 - [8. 许可证与作者信息](#8-许可证与作者信息)
 - [9. 功能界面](#9-功能界面)
 - [附录 A · 更新记录](#附录-a--更新记录) · [附录 B · 参考文档](#附录-b--参考文档)
@@ -93,6 +93,7 @@ MetriBar 是一个**常驻 macOS 菜单栏的系统监视器**，并在 v2.0 起
 | 发布页 | <https://github.com/QinyiXiong/MetriBar/releases/tag/v2.0> |
 | 发布产物 | `MetriBar-2.0.dmg`（3,566,978 B，SHA-256 `470a425c…dc4241`）、`MetriBar-2.0-Test-Report.docx`（测试报告） |
 | 许可 | MIT（见 [第 8 节](#8-许可证与作者信息)） |
+| 界面语言 | **仅简体中文**（详见 [7.8 语言支持](#78-语言支持)） |
 
 ---
 
@@ -737,6 +738,18 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 | `Shell.run` 启动失败与进程退出码 `-1` 不可区分 | 返回 `(Int32, String)`，启动失败时退出码为 `-1` 并附中文错误串；调用方按 `rc == 0` 判定，影响可忽略但语义不严谨 |
 | `Scripts/make_icon.swift` 未纳入自测 | 图标生成脚本的入口参数与产物名未在文档与自测中固定 |
 | 一键构建运行时仅 aarch64 | 下载的是 `aarch64-apple-darwin` 构建，Intel 机器需自行替换运行时（监视功能不受影响） |
+
+### 7.8 语言支持
+
+| 维度 | 现状 |
+| --- | --- |
+| 文档 | **中英双语、分文件存放**：[`README.md`](README.md)（简体中文，默认）与 [`README.en.md`](README.en.md)（English），互在顶部提供切换链接 |
+| 应用界面 | **目前仅简体中文**：所有面向用户的文案都是硬编码中文字面量；Swift 源码中**没有任何** `NSLocalizedString` / `String(localized:)` / `LocalizedStringKey` 的使用 |
+| 本地化资源 | 仅一个文件 `MetriBar/zh-Hans.lproj/InfoPlist.strings`，内容只有一条：`"CFBundleDisplayName" = "MetriBar 菜单栏";` |
+| 工程设置 | `knownRegions = (en, Base, zh-Hans)`；`Info.plist` 的 `CFBundleAllowMixedLocalizations = true`。这两项**只允许混合本地化解析**，不会翻译界面 |
+| 要做成双语界面需要 | 把 `Views/` 与 `Support/` 中数百条字面量迁入 String Catalog（`Localizable.xcstrings`，`en` + `zh-Hans` 两列），再加一个语言覆盖开关；可先做工具箱三个 Tab 与设置窗的试点 |
+
+> 也就是说：**README 支持中英（两个文件分开），软件界面当前只支持中文**。二者不是一回事，这里明确写清，避免误判。
 
 ---
 
