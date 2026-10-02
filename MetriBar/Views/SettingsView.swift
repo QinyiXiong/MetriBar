@@ -32,10 +32,22 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("语言 / Language") {
+                Picker("界面语言", selection: Binding(get: { settings.appLanguage },
+                                                  set: { settings.appLanguage = $0 })) {
+                    ForEach(AppLanguage.allCases) { lang in Text(lang.label).tag(lang) }
+                }
+                Text("切换后需重启 App 生效。中英文档分文件：README.md / README.en.md。")
+                    .font(.system(size: 11)).foregroundColor(.secondary)
+                if settings.appLanguage != .system {
+                    Button("立即重启 MetriBar") { AppSettings.relaunch() }
+                }
+            }
+
             Section("采集") {
                 Picker("刷新间隔", selection: refreshIntervalBinding) {
                     ForEach(AppSettings.allowedIntervals, id: \.self) { seconds in
-                        Text(seconds < 1.5 ? "1 秒（推荐）" : String(format: "%.0f 秒", seconds))
+                        Text(seconds < 1.5 ? L10n.t("1 秒（推荐）") : L10n.t("%.0f 秒", seconds))
                             .tag(seconds)
                     }
                 }
@@ -111,12 +123,12 @@ struct SettingsView: View {
             Section("单位") {
                 Picker("网速", selection: $speedUnitRaw) {
                     ForEach(SpeedUnit.allCases) { unit in
-                        Text(unit.label).tag(unit.rawValue)
+                        Text(L10n.t(unit.label)).tag(unit.rawValue)
                     }
                 }
                 Picker("温度", selection: $temperatureUnitRaw) {
                     ForEach(TemperatureUnit.allCases) { unit in
-                        Text(unit.label).tag(unit.rawValue)
+                        Text(L10n.t(unit.label)).tag(unit.rawValue)
                     }
                 }
             }

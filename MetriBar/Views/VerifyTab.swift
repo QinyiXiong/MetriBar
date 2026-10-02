@@ -95,7 +95,7 @@ final class VerifyModel: ObservableObject {
             if let np = str(hwItem["number_processors"]) {
                 let nums = np.split(separator: " ").last.map { $0.split(separator: ":").compactMap { Int($0) } } ?? []
                 if nums.count >= 3 {
-                    cpuText = "\(chipName) · \(nums[0]) 核 CPU（\(nums[1]) 性能 + \(nums[2]) 能效）"
+                    cpuText = L10n.t("%@ · %ld 核 CPU（%ld 性能 + %ld 能效）", chipName, nums[0], nums[1], nums[2])
                 }
             }
             let dp0 = prof("SPDisplaysDataType")
@@ -104,14 +104,14 @@ final class VerifyModel: ObservableObject {
                 let gpus: [[String: Any]] = (node as? [[String: Any]]) ?? ((node as? [String: Any])?["_items"] as? [[String: Any]] ?? [])
                 for g in gpus where str(g["sppci_device_type"]) == "spdisplays_gpu" { gpuCores = Int(str(g["sppci_cores"]) ?? "") ?? 0 }
             }
-            if gpuCores > 0 { cpuText += " · GPU \(gpuCores) 核" }
+            if gpuCores > 0 { cpuText += L10n.t(" · GPU %ld 核", gpuCores) }
             rows.append(("处理器", cpuText))
             rows.append(("内存", str(hwItem["physical_memory"]) ?? "—"))
             rows.append(("序列号", str(hwItem["serial_number"]) ?? "读取失败"))
             if let lock = str(hwItem["activation_lock_status"]) {
                 rows.append(("激活锁", lock.contains("enabled")
-                             ? "已开启（本机自用正常；若为收购机，须卖家当面关闭后才能付款）"
-                             : "✓ 已解除（可安全过户）"))
+                             ? L10n.t("已开启（本机自用正常；若为收购机，须卖家当面关闭后才能付款）")
+                             : L10n.t("✓ 已解除（可安全过户）")))
             }
             rows.append(("系统", "macOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)." +
                         "\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion) (build \(ProcessInfo.processInfo.operatingSystemVersion.patchVersion))"))
@@ -125,13 +125,13 @@ final class VerifyModel: ObservableObject {
             let soc = (deep(sp, ["state_of_charge"]) as? NSNumber)?.intValue
             if cycle != nil || health != nil || maxCap != nil {
                 var parts: [String] = []
-                if let h = health, !h.isEmpty { parts.append("系统评估 \(h)") }
-                if let mc = maxCap, !mc.isEmpty { parts.append("最大容量 \(mc)") }
+                if let h = health, !h.isEmpty { parts.append(L10n.t("系统评估 %@", h)) }
+                if let mc = maxCap, !mc.isEmpty { parts.append(L10n.t("最大容量 %@", mc)) }
                 rows.append(("电池健康", parts.isEmpty ? "—" : parts.joined(separator: " · ")))
             } else {
                 rows.append(("电池健康", "未检测到内置电池（台式机/无电池机型）"))
             }
-            if let c = cycle { rows.append(("电池循环次数", "\(c) 次（机型标称寿命通常 1000 次）")) }
+            if let c = cycle { rows.append(("电池循环次数", L10n.t("%ld 次（机型标称寿命通常 1000 次）", c))) }
 
             let (rcIO, ioOut) = Shell.run("/usr/sbin/ioreg", ["-rn", "AppleSmartBattery"])
             if rcIO == 0 {
@@ -157,7 +157,7 @@ final class VerifyModel: ObservableObject {
                 let full = ioNum("FullChargeCapacity") ?? ioNum("NominalChargeCapacity") ?? ioNum("AppleRawMaxCapacity")
                 if let d = design, let f = full, d > 0 {
                     let ratio = Double(f) / Double(d) * 100
-                    rows.append(("电池容量", String(format: "满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）", f, d, ratio)))
+                    rows.append(("电池容量", String(format: L10n.t("满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）"), f, d, ratio)))
                 }
                 if let remain = ioNum("RemainingCapacity") {
                     rows.append(("电池剩余容量", "\(remain) mAh"))
@@ -174,8 +174,9 @@ final class VerifyModel: ObservableObject {
                 let charging = ioNum("IsCharging") == 1
                 let full2 = ioNum("FullyCharged") == 1
                 let ext = ioStr("ExternalConnected").map { $0.lowercased() == "yes" } ?? false
-                rows.append(("电池充电状态", (ext ? "接电源" : "电池供电")
-                             + (full2 ? " · 已充满" : charging ? " · 正在充电" : " · 未充电")))
+                rows.append(("电池充电状态", (ext ? L10n.t("接电源") : L10n.t("电池供电"))
+                             + (full2 ? L10n.t(" · 已充满")
+                                      : charging ? L10n.t(" · 正在充电") : L10n.t(" · 未充电"))))
             }
 
             let (_, battPct) = Shell.run("/bin/bash", ["-lc", "/usr/bin/pmset -g batt"])
@@ -183,12 +184,12 @@ final class VerifyModel: ObservableObject {
                 .first(where: { $0.hasSuffix("%") && $0.dropLast().allSatisfy(\.isNumber) })
             if let pct = pctToken {
                 let ac = battPct.localizedCaseInsensitiveContains("AC Power") || battPct.contains("交流")
-                rows.append(("电池当前电量", String(pct) + (ac ? " · 接电源" : " · 电池供电")
-                             + (soc != nil ? "（系统读数 \(soc!)%）" : "")))
+                rows.append(("电池当前电量", String(pct) + (ac ? L10n.t(" · 接电源") : L10n.t(" · 电池供电"))
+                             + (soc != nil ? L10n.t("（系统读数 %ld%%）", soc!) : "")))
             }
             let (_, pmsetFull) = Shell.run("/usr/bin/pmset", ["-g", "custom"])
             let lowPower = pmsetFull.contains("lowpowermode         1")
-            rows.append(("电源模式", lowPower ? "低电量模式已开启" : "标准模式"))
+            rows.append(("电源模式", lowPower ? L10n.t("低电量模式已开启") : L10n.t("标准模式")))
 
             let dp = prof("SPDisplaysDataType")
             if let node = dp?["SPDisplaysDataType"] {
@@ -200,7 +201,7 @@ final class VerifyModel: ObservableObject {
                         let name = str(drv["_name"]) ?? "未知显示器"
                         let ext = drv["_spdisplays_display-vendor-id"] != nil
                         let res = str(drv["spdisplays_resolution"]) ?? str(drv["_spdisplays_pixels"]) ?? ""
-                        monLines.append((ext ? "外接 " : "内建 ") + name + (res.isEmpty ? "" : " · \(res)"))
+                        monLines.append((ext ? L10n.t("外接 ") : L10n.t("内建 ")) + name + (res.isEmpty ? "" : " · \(res)"))
                     }
                 }
                 for m in monLines { rows.append(("显示器", m)) }
@@ -219,7 +220,7 @@ final class VerifyModel: ObservableObject {
                     if str(it["mount_point"]) == "/" || str(it["mount_point"])?.hasSuffix("/Data") == true {
                         if let sz = it["size_in_bytes"].flatMap({ Int64("\($0)") }),
                            let free = it["free_space_in_bytes"].flatMap({ Int64("\($0)") }) {
-                            rows.append(("磁盘空间", String(format: "可用 %.0f GB / 总 %.0f GB（%.0f%% 已用）",
+                            rows.append(("磁盘空间", String(format: L10n.t("可用 %.0f GB / 总 %.0f GB（%.0f%% 已用）"),
                                                             Double(free) / 1e9, Double(sz) / 1e9,
                                                             Double(sz - free) / Double(max(sz, 1)) * 100)))
                         }
@@ -228,7 +229,7 @@ final class VerifyModel: ObservableObject {
             }
             if !ssdName.isEmpty { rows.append(("内置硬盘", ssdName)) }
             if let smart = str(deep(st, ["smart_status"])) {
-                rows.append(("磁盘 SMART", smart.localizedCaseInsensitiveContains("verified") ? "Verified ✓（正常）" : smart))
+                rows.append(("磁盘 SMART", smart.localizedCaseInsensitiveContains("verified") ? L10n.t("Verified ✓（正常）") : smart))
             }
 
             let (rc, profOut) = Shell.run("/usr/bin/profiles", ["status", "-type", "enrollment"])
@@ -242,7 +243,7 @@ final class VerifyModel: ObservableObject {
                     let val = String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces).lowercased()
                     if val.hasPrefix("yes") || val == "是" { enrolled = true }
                 }
-                rows.append(("MDM 监管", enrolled ? "⚠️ 已注册企业设备！" : "✓ 未注册（干净）"))
+                rows.append(("MDM 监管", enrolled ? L10n.t("⚠️ 已注册企业设备！") : L10n.t("✓ 未注册（干净）")))
             } else {
                 rows.append(("MDM 监管", "权限不足（终端：sudo profiles status -type enrollment）"))
             }
@@ -592,10 +593,10 @@ struct VerifyTab: View {
             HStack(spacing: 10) {
                 ProgressView(value: Double(model.requiredDone), total: Double(max(model.requiredTotal, 1)))
                     .frame(maxWidth: 200)
-                Text("必查 \(model.requiredDone)/\(model.requiredTotal)")
+                Text(L10n.t("必查 %ld/%ld", model.requiredDone, model.requiredTotal))
                     .font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary)
                 if model.failCount > 0 {
-                    Text("· 不通过 \(model.failCount)").font(.system(size: 11, weight: .semibold)).foregroundColor(.red)
+                    Text(L10n.t("· 不通过 %ld", model.failCount)).font(.system(size: 11, weight: .semibold)).foregroundColor(.red)
                 }
                 Spacer()
                 Button("重置") { model.reset() }.dialogButton()
@@ -606,7 +607,7 @@ struct VerifyTab: View {
                 LazyVStack(alignment: .leading, spacing: 18) {
                     ForEach(VerifyCatalog.sections) { section in
                         VStack(alignment: .leading, spacing: 8) {
-                            Label(section.title, systemImage: section.icon).font(.system(size: 13, weight: .bold))
+                            Label(L10n.t(section.title), systemImage: section.icon).font(.system(size: 13, weight: .bold))
                             LazyVGrid(columns: cols, spacing: 12) {
                                 ForEach(section.items) { card($0) }
                             }
@@ -623,7 +624,7 @@ struct VerifyTab: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Circle().fill(dotColor(item.id)).frame(width: 7, height: 7)
-                Text(item.title).font(.system(size: 13, weight: .semibold)).lineLimit(2)
+                Text(L10n.t(item.title)).font(.system(size: 13, weight: .semibold)).lineLimit(2)
                 Spacer()
             }
             HStack(spacing: 5) {
@@ -631,7 +632,7 @@ struct VerifyTab: View {
                 if item.interactive { badge("交互", Color.accentColor.opacity(0.12), .accentColor) }
                 Spacer()
             }
-            Text(item.guide).font(.system(size: 10)).foregroundColor(.secondary)
+            Text(L10n.t(item.guide)).font(.system(size: 10)).foregroundColor(.secondary)
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 6) {
                 if item.interactive {
@@ -672,11 +673,11 @@ struct VerifyTab: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(VerifyCatalog.faqs) { f in
                     DisclosureGroup {
-                        Text(f.a).font(.system(size: 10)).foregroundColor(.secondary)
+                        Text(L10n.t(f.a)).font(.system(size: 10)).foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.top, 4).padding(.leading, 2)
                     } label: {
-                        Text(f.q).font(.system(size: 11, weight: .medium))
+                        Text(L10n.t(f.q)).font(.system(size: 11, weight: .medium))
                     }
                     .padding(9)
                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.035)))
@@ -686,7 +687,7 @@ struct VerifyTab: View {
     }
 
     private func badge(_ text: String, _ bg: Color, _ fg: Color) -> some View {
-        Text(text).font(.system(size: 9, weight: .medium))
+        Text(L10n.t(text)).font(.system(size: 9, weight: .medium))
             .padding(.horizontal, 5).padding(.vertical, 1.5)
             .background(Capsule().fill(bg)).foregroundColor(fg)
     }
@@ -699,12 +700,12 @@ struct VerifyTab: View {
     func detailSheetContent(_ item: VerifyItem) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text(item.title).font(.system(size: 18, weight: .bold))
+                Text(L10n.t(item.title)).font(.system(size: 18, weight: .bold))
                 if item.required { badge("必查", Color.red.opacity(0.12), .red) }
                 Spacer()
-                Text("操作步骤 \(item.steps.count) 步").font(.system(size: 11)).foregroundColor(.secondary)
+                Text(L10n.t("操作步骤 %ld 步", item.steps.count)).font(.system(size: 11)).foregroundColor(.secondary)
             }
-            Text(item.guide).font(.system(size: 13)).foregroundColor(.secondary)
+            Text(L10n.t(item.guide)).font(.system(size: 13)).foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
             ScrollView {
@@ -715,7 +716,7 @@ struct VerifyTab: View {
                                 .font(.system(size: 12, weight: .bold)).foregroundColor(.white)
                                 .frame(width: 22, height: 22)
                                 .background(Circle().fill(Color.accentColor))
-                            Text(step).font(.system(size: 13.5))
+                            Text(L10n.t(step)).font(.system(size: 13.5))
                                 .lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
@@ -726,7 +727,7 @@ struct VerifyTab: View {
             }
             HStack(spacing: 10) {
                 if let link = item.link, let url = URL(string: link) {
-                    Button(item.linkTitle ?? "打开链接") { NSWorkspace.shared.open(url) }.dialogButton()
+                    Button(L10n.t(item.linkTitle ?? "打开链接")) { NSWorkspace.shared.open(url) }.dialogButton()
                 }
                 Spacer()
                 Button("通过") { model.set(item.id, .pass); detailSheet = nil }
@@ -742,10 +743,10 @@ struct VerifyTab: View {
     @ViewBuilder
     private func inlineSheetContent(_ id: String) -> some View {
         VStack(spacing: 12) {
-            Text(id == "keyboard" ? "键盘全键测试" : "触控板全域画布")
+            Text(L10n.t(id == "keyboard" ? "键盘全键测试" : "触控板全域画布"))
                 .font(.system(size: 15, weight: .bold))
-            Text(id == "keyboard" ? "点击测试区取得焦点，按下每个键——应实时点亮并计数。Esc 退出。" :
-                                        "用单指连续画圈、直线覆盖四角与边缘：应跟手无断线。")
+            Text(L10n.t(id == "keyboard" ? "点击测试区取得焦点，按下每个键——应实时点亮并计数。Esc 退出。"
+                                              : "用单指连续画圈、直线覆盖四角与边缘：应跟手无断线。"))
                 .font(.system(size: 11)).foregroundColor(.secondary)
             Group {
                 if id == "keyboard" { KeyboardTestView(resetToken: keyboardResetToken).frame(maxWidth: .infinity, minHeight: 280, maxHeight: 320) } else { TrackpadCanvasView() }
@@ -764,7 +765,7 @@ struct VerifyTab: View {
     private var hardwareColumn: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("本机硬件快照", systemImage: "cpu").font(.system(size: 13, weight: .bold))
+                Label(L10n.t("本机硬件快照"), systemImage: "cpu").font(.system(size: 13, weight: .bold))
                 Spacer()
                 Button { model.collectHardware() } label: { Image(systemName: "arrow.clockwise") }.disabled(model.collecting)
             }
@@ -773,8 +774,8 @@ struct VerifyTab: View {
                 VStack(spacing: 8) {
                     ForEach(Array(model.hardware.enumerated()), id: \.offset) { _, row in
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(row.0).font(.system(size: 10, weight: .medium)).foregroundColor(.secondary)
-                            Text(row.1).font(.system(size: 11, weight: .semibold)).textSelection(.enabled)
+                            Text(L10n.t(row.0)).font(.system(size: 10, weight: .medium)).foregroundColor(.secondary)
+                            Text(L10n.t(row.1)).font(.system(size: 11, weight: .semibold)).textSelection(.enabled)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 9).padding(.vertical, 7)

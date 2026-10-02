@@ -18,6 +18,8 @@ struct MetriBarApp: App {
     @StateObject private var store: MetricsStore
 
     init() {
+        // 语言必须先于任何 UI 构建对齐 AppleLanguages，否则首帧会用旧语言渲染。
+        AppSettings.applyStoredLanguageOnLaunch()
         // UI 测试台：`--uitest <输出目录>` 启动后自驱动渲染全部界面并断言，完成后退出。
         // （Agent/终端无「屏幕录制」「辅助功能」权限，这是唯一能"自己操作界面"的通道）
         if UITestHarness.requested {

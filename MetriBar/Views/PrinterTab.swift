@@ -105,7 +105,9 @@ final class PrinterModel: ObservableObject {
                 if self.selectedPrinter == nil || !list.contains(self.selectedPrinter ?? "") {
                     self.selectedPrinter = def ?? list.first
                 }
-                self.statusText = list.isEmpty ? "未检测到打印机" : "检测到 \(list.count) 台 · 默认 \(def ?? "系统")"
+                self.statusText = list.isEmpty
+                    ? L10n.t("未检测到打印机")
+                    : L10n.t("检测到 %ld 台 · 默认 %@", list.count, def ?? L10n.t("系统默认"))
                 Diag.notice(Diag.lifecycle, "工具箱·打印机：\(list) 默认=\(def ?? "-")")
             }
         }
@@ -113,16 +115,17 @@ final class PrinterModel: ObservableObject {
 
     func print(_ pattern: TestPattern) {
         if busy { return }
-        guard let url = pattern.url else { toast = "模板缺失：\(pattern.id).pdf"; return }
+        guard let url = pattern.url else { toast = L10n.t("模板缺失：%@.pdf", pattern.id); return }
         busy = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var args = ["-t", "MetriBar · \(pattern.title)"]
+            var args = ["-t", "MetriBar · \(L10n.t(pattern.title))"]
             if let p = self?.selectedPrinter, !p.isEmpty { args += ["-d", p] }
             args.append(url.path)
             let (rc, out) = Shell.run("/usr/bin/lp", args)
             DispatchQueue.main.async {
                 self?.busy = false
-                self?.toast = rc == 0 ? "已发送到打印队列 ✓" : "打印失败：\(out.trimmingCharacters(in: .whitespaces))"
+                self?.toast = rc == 0 ? L10n.t("已发送到打印队列 ✓")
+                                      : L10n.t("打印失败：%@", out.trimmingCharacters(in: .whitespaces))
             }
             Diag.notice(Diag.lifecycle, "工具箱·打印 \(pattern.id) rc=\(rc)")
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { self?.toast = nil }
@@ -135,7 +138,7 @@ final class PrinterModel: ObservableObject {
             guard let url = p.url else { return nil }
             return (p, url)
         }
-        guard !items.isEmpty else { toast = "模板缺失"; return }
+        guard !items.isEmpty else { toast = L10n.t("模板缺失"); return }
         busy = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var failed: [String] = []
@@ -149,8 +152,9 @@ final class PrinterModel: ObservableObject {
             }
             DispatchQueue.main.async {
                 self?.busy = false
-                self?.toast = failed.isEmpty ? "全部 \(items.count) 张已发送到打印队列 ✓"
-                                             : "已发送，\(failed.count) 张失败：\(failed.joined(separator: "、"))"
+                self?.toast = failed.isEmpty ? L10n.t("全部 %ld 张已发送到打印队列 ✓", items.count)
+                                             : L10n.t("已发送，%ld 张失败：%@", failed.count,
+                                                      failed.joined(separator: L10n.t("、")))
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { self?.toast = nil }
         }
@@ -205,15 +209,15 @@ struct PrinterTab: View {
                     .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
             }
             HStack(spacing: 6) {
-                Text(p.title).font(.system(size: 13, weight: .semibold))
-                Text(p.colorLabel)
+                Text(L10n.t(p.title)).font(.system(size: 13, weight: .semibold))
+                Text(L10n.t(p.colorLabel))
                     .font(.system(size: 9, weight: .medium))
                     .padding(.horizontal, 5).padding(.vertical, 1.5)
                     .background(Capsule().fill(p.colorLabel == "彩色" ? Color.pink.opacity(0.15) : Color.secondary.opacity(0.12)))
                     .foregroundColor(p.colorLabel == "彩色" ? .pink : .secondary)
                 Spacer()
             }
-            Text(p.blurb).font(.system(size: 11)).foregroundColor(.secondary).lineLimit(2)
+            Text(L10n.t(p.blurb)).font(.system(size: 11)).foregroundColor(.secondary).lineLimit(2)
             HStack {
                 Button("打印") { model.print(p) }
                     .disabled(model.busy || (model.selectedPrinter == nil && model.printers.isEmpty))
@@ -230,8 +234,8 @@ struct PrinterTab: View {
 
     private func previewSheet(_ p: TestPattern) -> some View {
         VStack(spacing: 12) {
-            Text(p.title).font(.system(size: 16, weight: .bold))
-            Text(p.blurb).font(.system(size: 12)).foregroundColor(.secondary)
+            Text(L10n.t(p.title)).font(.system(size: 16, weight: .bold))
+            Text(L10n.t(p.blurb)).font(.system(size: 12)).foregroundColor(.secondary)
             if let img = p.previewImage(width: 430) {
                 Image(nsImage: img).resizable().aspectRatio(contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 8))

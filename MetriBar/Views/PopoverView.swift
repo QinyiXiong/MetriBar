@@ -53,7 +53,7 @@ struct PopoverView: View {
 
             Spacer()
 
-            Text(store.isNetworkReady ? "实时" : "建立基线…")
+            Text(L10n.t(store.isNetworkReady ? "实时" : "建立基线…"))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.secondary)
         }
@@ -96,7 +96,8 @@ struct PopoverView: View {
         let rest = snapshot.network.activeInterfaces
             .filter { $0.id != primary && !$0.isIdle }
             .count
-        return rest > 0 ? "活动网卡：\(primary)（另有 \(rest) 块在传输）" : "活动网卡：\(primary)"
+        return rest > 0 ? L10n.t("活动网卡：%@（另有 %ld 块在传输）", primary, rest)
+                        : L10n.t("活动网卡：%@", primary)
     }
 
     // MARK: - 心率（BLE 手表）

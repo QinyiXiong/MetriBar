@@ -744,12 +744,15 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 | 维度 | 现状 |
 | --- | --- |
 | 文档 | **中英双语、分文件存放**：[`README.md`](README.md)（简体中文，默认）与 [`README.en.md`](README.en.md)（English），互在顶部提供切换链接 |
-| 应用界面 | **目前仅简体中文**：所有面向用户的文案都是硬编码中文字面量；Swift 源码中**没有任何** `NSLocalizedString` / `String(localized:)` / `LocalizedStringKey` 的使用 |
-| 本地化资源 | 仅一个文件 `MetriBar/zh-Hans.lproj/InfoPlist.strings`，内容只有一条：`"CFBundleDisplayName" = "MetriBar 菜单栏";` |
-| 工程设置 | `knownRegions = (en, Base, zh-Hans)`；`Info.plist` 的 `CFBundleAllowMixedLocalizations = true`。这两项**只允许混合本地化解析**，不会翻译界面 |
-| 要做成双语界面需要 | 把 `Views/` 与 `Support/` 中数百条字面量迁入 String Catalog（`Localizable.xcstrings`，`en` + `zh-Hans` 两列），再加一个语言覆盖开关；可先做工具箱三个 Tab 与设置窗的试点 |
+| 应用界面 | **已支持简体中文 / English**：设置 › 「语言 / Language」可选 **跟随系统 / 简体中文 / English**，切换后点「立即重启 MetriBar」生效 |
+| 实现方式 | **中文原文即 key**：SwiftUI 的 `Text("中文")` 本就走 `LocalizedStringKey`，只要 `MetriBar/Localizable.xcstrings` 有该条目即自动本地化；非 SwiftUI 场景（AppKit 标题、`NSTextField`、模型层状态串）用 `L10n.t("中文")` 显式查表 |
+| 语言切换机制 | 写入 `AppleLanguages` 后重启生效——SwiftUI 与 `Bundle` 查表都读这个键，因此不会出现"一半英文一半中文"的中间态 |
+| 词条规模 | 553 条（英文覆盖 100%），另有 63 条**刻意不翻译**的串：日志/诊断输出、逻辑比较与协议 token（如 `依赖 `、`：`、`交流`）、文件名后缀 |
+| 维护方式 | 源码字面量自动提取 → `Scripts/i18n_en.json` 存英文译文 → `python3 Scripts/gen_localizable.py` 生成 catalog；`--check` 模式供自测使用（词条与源码不同步即发版报红） |
+| 判定边界 | **内部状态不做本地化**：`task.status == "完成"` 这类比较继续用中文常量，只在**显示边界**翻译，因此业务逻辑与自测断言不受语言影响 |
+| 配置 | `knownRegions = (en, Base, zh-Hans)`；`STRING_CATALOG_GENERATE_SYMBOLS = NO`（中文作 key 时自动生成的 Swift 符号会互相冲突） |
 
-> 也就是说：**README 支持中英（两个文件分开），软件界面当前只支持中文**。二者不是一回事，这里明确写清，避免误判。
+> 一句话：**README 中英分文件；软件界面中英双语可切换**。
 
 ---
 
@@ -795,6 +798,11 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 ![环境配置面板](docs/预览/env-sheet.png)
 ![构建进度（依赖 5/9）](docs/预览/env-build-progress.png)
 
+**English UI**（同一份构建，设置 › 语言 切 English 后重启）
+
+![English environment panel](docs/预览/env-sheet-en.png)
+![English printer test](docs/预览/toolbox-printer-en.png)
+
 **App 图标**
 
 ![App 图标](docs/预览/app-icon.png)
@@ -805,7 +813,7 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 
 | 版本 | 主要内容 |
 | --- | --- |
-| **v2.0** | 工具箱：打印机测试（CUPS + 9 张自绘 A4 测试图）、MacBook 验机（32 条目/15 必查/8 FAQ + 六项交互检测 + 硬件快照）、视频翻译（FunASR 子进程桥接，模型不常驻、跑完即卸）；模型管理（ModelScope 直连 + 暂停/续传/停止 + 完整性凭证）；环境自举（独立运行时 + venv + 9 包）；应用内 UI 测试台 `--uitest`；切 Tab 卡顿根治（主线程同步子进程全部后台化 + 视图常驻 + 扫描节流）；日志「阅完即删」与尾部读取修复；构建进度正则解析与阶段加权；电池信息右侧直读（去第三方工具） |
+| **v2.0** | 工具箱：打印机测试（CUPS + 9 张自绘 A4 测试图）、MacBook 验机（32 条目/15 必查/8 FAQ + 六项交互检测 + 硬件快照）、视频翻译（FunASR 子进程桥接，模型不常驻、跑完即卸）、**中英双语界面**（可切换 + 553 条词条 100% 覆盖 + 词条同步自测）；模型管理（ModelScope 直连 + 暂停/续传/停止 + 完整性凭证）；环境自举（独立运行时 + venv + 9 包）；应用内 UI 测试台 `--uitest`；切 Tab 卡顿根治（主线程同步子进程全部后台化 + 视图常驻 + 扫描节流）；日志「阅完即删」与尾部读取修复；构建进度正则解析与阶段加权；电池信息右侧直读（去第三方工具） |
 | **v1.6** | 菜单栏 ♥ 仅在手表已连接时显示，断开/搜索中自动隐藏整段 |
 | **v1.5** | 心率改为有限扫描（每轮 30 s 后自动停止省电，点开面板重扫）；修复设置窗口一闪而过；移除多余蓝牙外设权限声明；补隐私章节；仓库不再跟踪 `xcuserdata` |
 | **v1.4** | 点击状态栏打开面板即强制重扫心率（已连接不打扰） |

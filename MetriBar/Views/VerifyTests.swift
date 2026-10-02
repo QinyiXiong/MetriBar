@@ -40,15 +40,15 @@ final class TestHUD {
     /// high=true 时置于全屏检测窗之上
     func show(_ title: String, _ subtitle: String = "", high: Bool = false) {
         if panel == nil || high != highLevel { build(high: high) }
-        titleLabel?.stringValue = title
-        subLabel?.stringValue = subtitle
+        titleLabel?.stringValue = L10n.t(title)
+        subLabel?.stringValue = L10n.t(subtitle)
         layout()
         panel?.orderFrontRegardless()
     }
 
     func update(_ title: String, _ subtitle: String = "") {
-        titleLabel?.stringValue = title
-        subLabel?.stringValue = subtitle
+        titleLabel?.stringValue = L10n.t(title)
+        subLabel?.stringValue = L10n.t(subtitle)
         layout()
     }
 
@@ -103,7 +103,7 @@ enum Guide {
     /// 一次性提示（4 秒后自动消失）：权限、设备缺失等前置说明
     static func hud(_ title: String, _ subtitle: String = "") {
         Diag.notice(Diag.lifecycle, "验机提示：\(title) \(subtitle)")
-        TestHUD.shared.show(title, subtitle)
+        TestHUD.shared.show(L10n.t(title), L10n.t(subtitle))
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { TestHUD.shared.hide() }
     }
 }
@@ -180,8 +180,12 @@ final class DeadPixelController {
         }
     }
 
-    private var hudTitle: String { "坏点检测 · 第 \(index + 1)/\(colors.count) 张：\(colors[index].1)色" }
-    private var hudHint: String { "空格 / → / 单击 = 下一张　← = 上一张　Esc = 退出（共 \(colors.count) 张纯色图）" }
+    private var hudTitle: String {
+        L10n.t("坏点检测 · 第 %ld/%ld 张：%@色", index + 1, colors.count, L10n.t(colors[index].1))
+    }
+    private var hudHint: String {
+        L10n.t("空格 / → / 单击 = 下一张　← = 上一张　Esc = 退出（共 %ld 张纯色图）", colors.count)
+    }
 
     private func next() { index = (index + 1) % colors.count; apply() }
     private func prev() { index = (index - 1 + colors.count) % colors.count; apply() }
@@ -281,16 +285,16 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
         deadline = Date().addingTimeInterval(Self.recordSeconds)
         notify("开始录音：请对着麦克风说一句话")
         armWatchdog()
-        TestHUD.shared.show("🎙 正在录音… \(Int(Self.recordSeconds)) 秒后自动回放",
-                            "请正常说话，录音结束会自动播放给你听")
+        TestHUD.shared.show(L10n.t("🎙 正在录音… %ld 秒后自动回放", Int(Self.recordSeconds)),
+                            L10n.t("请正常说话，录音结束会自动播放给你听"))
         tick = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let rec = self.recorder, rec.isRecording else { return }
                 let left = max(0, self.deadline.timeIntervalSinceNow)
                 let level = max(0, min(1, Double(rec.currentTime) / Self.recordSeconds))
                 let bars = String(repeating: "▮", count: Int(level * 20))
-                TestHUD.shared.update("🎙 正在录音… 剩余 \(String(format: "%.1f", left)) 秒",
-                                      "电平进度 \(bars)")
+                TestHUD.shared.update(L10n.t("🎙 正在录音… 剩余 %.1f 秒", left),
+                                      L10n.t("电平进度 %@", bars))
             }
         }
         workTimer = Timer.scheduledTimer(withTimeInterval: Self.recordSeconds + 0.25, repeats: false) { [weak self] _ in
@@ -307,8 +311,8 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
             player = p; p.play()
             notify("录音结束，正在回放…")
             let dur = p.duration
-            TestHUD.shared.show("🔊 正在回放录音（\(String(format: "%.1f", dur)) 秒）",
-                                "能清楚听到自己的声音 = 麦克风正常；无声/断续 = 异常")
+            TestHUD.shared.show(L10n.t("🔊 正在回放录音（%.1f 秒）", dur),
+                                L10n.t("能清楚听到自己的声音 = 麦克风正常；无声/断续 = 异常"))
             DispatchQueue.main.asyncAfter(deadline: .now() + dur + 0.4) {
                 TestHUD.shared.show("✓ 麦克风检测完成", "可再点一次「开始」复测", high: false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { TestHUD.shared.hide() }
@@ -407,7 +411,7 @@ final class CameraPreviewController {
 
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
                          styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        w.title = "摄像头预览 · \(device.localizedName)"
+        w.title = L10n.t("摄像头预览 · %@", device.localizedName)
         w.isReleasedWhenClosed = false
         let root = CameraPanelView(session: session, device: device)
         w.contentView = NSHostingView(rootView: root)
@@ -443,7 +447,7 @@ private struct CameraPanelView: View {
                 .frame(minWidth: 480, minHeight: 360)
             Divider()
             HStack {
-                Text("设备：\(device.localizedName)").font(.system(size: 10)).foregroundColor(.secondary)
+                Text(L10n.t("设备：%@", device.localizedName)).font(.system(size: 10)).foregroundColor(.secondary)
                 Spacer()
                 Text("关闭窗口即停止摄像头（不占用时不耗电）").font(.system(size: 10)).foregroundColor(.secondary)
             }
@@ -748,8 +752,10 @@ final class KeyboardLayoutView: NSView {
         }
 
         let remain = cells.count - tested.count
-        let text = tested.isEmpty ? "点击本区域取得焦点，然后逐个按下每个键（F 键无反应请按 fn+F）"
-            : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
+        let text = tested.isEmpty
+            ? L10n.t("点击本区域取得焦点，然后逐个按下每个键（F 键无反应请按 fn+F）")
+            : (remain == 0 ? L10n.t("✓ 全部 %ld 键已点亮 · Esc 退出", cells.count)
+                           : L10n.t("已测 %ld/%ld · 剩余 %ld", tested.count, cells.count, remain))
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
             .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor]

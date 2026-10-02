@@ -744,10 +744,16 @@ Issues found by the repository-wide source audit and **already fixed**:
 | Aspect | Status |
 | --- | --- |
 | Documentation | **Bilingual, in two separate files**: [`README.md`](README.md) (Simplified Chinese, the default) and this `README.en.md` (English). Each links to the other at the top |
-| App UI | **Chinese only.** Every user-facing string is a hard-coded Chinese literal; there is no `Localizable.strings`/`String(localized:)`/`NSLocalizedString` usage anywhere in the Swift sources |
-| Localized resources | Exactly one file, `MetriBar/zh-Hans.lproj/InfoPlist.strings`, containing a single entry: `"CFBundleDisplayName" = "MetriBar 菜单栏";` |
-| Build settings | `knownRegions = (en, Base, zh-Hans)` and `CFBundleAllowMixedLocalizations = true` in `Info.plist`. These only permit mixed-localization resolution; they do **not** translate the UI |
-| What it would take | Moving the ~hundreds of literals across `Views/` and `Support/` into a String Catalog (`Localizable.xcstrings`) with `en` + `zh-Hans` columns, then adding an in-app language override. A scoped first step would be the toolbox tabs and the settings window |
+| App UI | **Simplified Chinese + English**: Settings › “语言 / Language” offers **Follow system / 简体中文 / English**, applied by clicking “Restart MetriBar now” |
+| How it works | **The Chinese source string is the key**: SwiftUI's `Text("中文")` already resolves through `LocalizedStringKey`, so an entry in `MetriBar/Localizable.xcstrings` localizes it with no code change; non-SwiftUI contexts (AppKit titles, `NSTextField`, model-layer status strings) call `L10n.t("中文")` explicitly |
+| Switching mechanism | The choice is written to `AppleLanguages` and applied on restart — both SwiftUI and `Bundle` lookups read that key, so you never get a half-translated UI |
+| Scale | 553 entries at 100 % English coverage, plus 63 strings that are **intentionally not translated**: log/diagnostic output, comparison and protocol tokens (`依赖 `, `：`, `交流`), and file-name suffixes |
+| Maintenance | Literals are extracted from source → English lives in `Scripts/i18n_en.json` → `python3 Scripts/gen_localizable.py` writes the catalog; `--check` runs in the self-test and fails the release when the catalog drifts from the source |
+| Boundary rule | **Internal state is never localized**: comparisons such as `task.status == "完成"` keep the Chinese constant and translation happens only at the display boundary, so business logic and self-test assertions are language-independent |
+| Configuration | `knownRegions = (en, Base, zh-Hans)`; `STRING_CATALOG_GENERATE_SYMBOLS = NO` (auto-generated Swift symbols collide when Chinese strings are the keys) |
+
+> In one line: **the docs ship as two files; the app UI is bilingual and switchable.**
+
 
 ---
 
@@ -792,6 +798,11 @@ Issues found by the repository-wide source audit and **already fixed**:
 
 ![Environment panel](docs/预览/env-sheet.png)
 ![Build progress (dependency 5/9)](docs/预览/env-build-progress.png)
+
+**English UI** (same build, Settings › Language → English, then restart)
+
+![English environment panel](docs/预览/env-sheet-en.png)
+![English printer test](docs/预览/toolbox-printer-en.png)
 
 **App icon**
 

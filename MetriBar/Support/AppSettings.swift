@@ -27,6 +27,7 @@ final class AppSettings: ObservableObject {
         static let showHeartRateInMenuBar = "showHeartRateInMenuBar"
         static let heartDeviceNameFilter = "heartDeviceNameFilter"
         static let menuBarStyle = "menuBarStyle"
+        static let appLanguage = AppLanguage.defaultsKey
     }
 
     /// 菜单栏排版风格。
@@ -81,6 +82,46 @@ final class AppSettings: ObservableObject {
     /// 登录项开关的存储值（真实状态以 SMAppService 为准）。
     @AppStorage(Keys.launchAtLogin) private var launchAtLoginStored: Bool = false
 
+    /// 界面语言：跟随系统 / 简体中文 / English。
+    /// 切换后写入 AppleLanguages 并由用户点「立即重启」生效——SwiftUI 的 Text 与 Bundle 查表都吃这个键，
+    /// 重启后全量一致，不会出现"一半英文一半中文"的中间态。
+    @AppStorage(Keys.appLanguage) private var appLanguageRaw: String = AppLanguage.system.rawValue
+
+    var appLanguage: AppLanguage {
+        get { AppLanguage(rawValue: appLanguageRaw) ?? .system }
+        set { appLanguageRaw = newValue.rawValue; AppSettings.applyLanguage(newValue) }
+    }
+
+    /// 把语言写进 AppleLanguages（system → 删除键，交还系统决定）。
+    static func applyLanguage(_ language: AppLanguage) {
+        let d = UserDefaults.standard
+        if let code = language.appleLanguageCode {
+            d.set([code], forKey: "AppleLanguages")
+        } else {
+            d.removeObject(forKey: "AppleLanguages")
+        }
+        d.synchronize()
+    }
+
+    /// 启动时按存储值对齐 AppleLanguages（必须在任何 UI 构建之前调用）。
+    static func applyStoredLanguageOnLaunch() {
+        let raw = UserDefaults.standard.string(forKey: Keys.appLanguage) ?? AppLanguage.system.rawValue
+        applyLanguage(AppLanguage(rawValue: raw) ?? .system)
+    }
+
+    /// 语言变更后立即重启自身（先起新实例再退出旧实例，避免中间无图标）。
+    static func relaunch() {
+        let url = Bundle.main.bundleURL
+        let cfg = NSWorkspace.OpenConfiguration()
+        cfg.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: url, configuration: cfg) { _, _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                Diag.notice(Diag.lifecycle, "语言切换：重启 App")
+                NSApp.terminate(nil)
+            }
+        }
+    }
+
     // MARK: - 状态
 
     /// SMAppService 真实注册状态，展示在设置页。
@@ -95,11 +136,11 @@ final class AppSettings: ObservableObject {
 
         var hintText: String {
             switch self {
-            case .unsupported: return "当前系统不支持 SMAppService（需 macOS 13+）"
-            case .enabled: return "已注册，登录时自动启动"
-            case .requiresApproval: return "已提交，需在「系统设置 › 通用 › 登录项」中允许"
-            case .notRegistered: return "未注册"
-            case .failed(let message): return "注册失败：\(message)"
+            case .unsupported: return L10n.t("当前系统不支持 SMAppService（需 macOS 13+）")
+            case .enabled: return L10n.t("已注册，登录时自动启动")
+            case .requiresApproval: return L10n.t("已提交，需在「系统设置 › 通用 › 登录项」中允许")
+            case .notRegistered: return L10n.t("未注册")
+            case .failed(let message): return L10n.t("注册失败：%@", message)
             }
         }
     }

@@ -290,9 +290,10 @@ enum UITestHarness {
         let first = hintText()
         for _ in 0..<4 { c.advanceForTest(); pump(0.15) }   // 走完 5 张
         let fifth = hintText()
-        let hasCounter1 = first.contains("第 1/5 张")
-        let hasCounter5 = fifth.contains("第 5/5 张")
-        let hasKeys = first.contains("Esc") && first.contains("空格")
+        // 语言无关断言：只看序号计数与键位提示（中英文都必须成立）
+        let hasCounter1 = first.contains("1/5")
+        let hasCounter5 = fifth.contains("5/5")
+        let hasKeys = first.contains("Esc")
         c.close()
         record("verify.deadpixel-hint", hasCounter1 && hasCounter5 && hasKeys, [
             "第1张提示": first, "第5张提示": fifth,

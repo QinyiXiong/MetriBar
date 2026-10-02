@@ -300,6 +300,36 @@ try:
         bad += 1; print("  ✗ 烧录开关读写键不一致")
 except OSError as _e5:
     bad += 1; print("  ✗ 读取 TranslateTab.swift 失败", _e5)
+# 本地化（中/英）守卫
+try:
+    import json as _json, subprocess as _sp
+    _chk = _sp.run(["python3", "Scripts/gen_localizable.py", "--check"], capture_output=True, text=True)
+    if _chk.returncode != 0:
+        bad += 1; print("  ✗ i18n 词条表与源码不同步:", _chk.stdout.strip().splitlines()[-1:])
+    else:
+        _d = _json.load(open("Scripts/i18n_en.json", encoding="utf-8"))
+        _skip = set(_d.get("_skip", []))
+        _tr = {k: v for k, v in _d.items() if not k.startswith("_")}
+        _gen = _sp.run(["python3", "Scripts/gen_localizable.py"], capture_output=True, text=True).stdout
+        _keys = int([l for l in _gen.splitlines() if "词条表收录" in l][0].split(":")[1].split("条")[0].strip())
+        _cov = int([l for l in _gen.splitlines() if "已有英文译文" in l][0].split("（覆盖")[1].split("%")[0])
+        if _cov < 100:
+            bad += 1; print(f"  ✗ 英文覆盖 {_cov}%（应为 100%，共 {_keys} 条词条）")
+        else:
+            print(f"  ✓ 本地化词条 {_keys} 条，英文覆盖 100%（含中/英双语词条表）")
+        _en = "/Applications/MetriBar.app/Contents/Resources/en.lproj/Localizable.strings"
+        _zh = "/Applications/MetriBar.app/Contents/Resources/zh-Hans.lproj/Localizable.strings"
+        import os as _os
+        _en_ok = _os.path.exists(_en) and _os.path.getsize(_en) > 1000
+        _zh_ok = _os.path.exists(_zh) and _os.path.getsize(_zh) > 1000
+        if not (_en_ok and _zh_ok):
+            bad += 1
+            print("  ✗ 包内双语词条不完整（en=%s zh-Hans=%s）" % (_en_ok, _zh_ok))
+        else:
+            print("  ✓ 包内双语词条已编译（en %d B / zh-Hans %d B）"
+                  % (_os.path.getsize(_en), _os.path.getsize(_zh)))
+except Exception as _e6:
+    bad += 1; print("  ✗ 本地化检查异常", _e6)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")

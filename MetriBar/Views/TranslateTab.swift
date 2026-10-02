@@ -872,19 +872,21 @@ final class TranslateModel: ObservableObject {
 
     static func friendlyStage(_ t: TranslateTask) -> String {
         switch t.status {
-        case "排队中":  return "排队等待中…"
-        case "准备中":  return "准备中（启动翻译引擎）…"
+        case "排队中":  return L10n.t("排队等待中…")
+        case "准备中":  return L10n.t("准备中（启动翻译引擎）…")
         case "转写中":
             let m = t.message
             if m.contains("翻译") {
-                if let r = m.range(of: "已翻译[^)）]*", options: .regularExpression) { return "正在翻译成目标语言…（\(m[r])）" }
-                return "正在翻译成目标语言…"
+                if let r = m.range(of: "已翻译[^)）]*", options: .regularExpression) {
+                    return L10n.t("正在翻译成目标语言…（%@）", String(m[r]))
+                }
+                return L10n.t("正在翻译成目标语言…")
             }
-            if m.contains("字幕") || m.contains("烧录") { return "正在把字幕烧进视频…" }
-            if m.contains("对齐") || m.contains("时间轴") { return "正在校对时间轴…" }
-            if m.contains("Retrying") || m.contains("retry") { return "服务繁忙，正在自动重试翻译请求…" }
-            if !m.isEmpty { return "正在识别语音…（\(detailOf(m))）" }
-            return "正在识别语音…"
+            if m.contains("字幕") || m.contains("烧录") { return L10n.t("正在把字幕烧进视频…") }
+            if m.contains("对齐") || m.contains("时间轴") { return L10n.t("正在校对时间轴…") }
+            if m.contains("Retrying") || m.contains("retry") { return L10n.t("服务繁忙，正在自动重试翻译请求…") }
+            if !m.isEmpty { return L10n.t("正在识别语音…（%@）", detailOf(m)) }
+            return L10n.t("正在识别语音…")
         case "完成":    return "✓ 完成，字幕已生成"
         case "失败":    return "✗ 失败：\(t.message)"
         case "已停止":  return "已停止（模型已卸载）"
@@ -960,14 +962,14 @@ struct TranslateTab: View {
                     ForEach(ModelCatalog.asr) { Text($0.dirName).tag($0.key) }
                 }.frame(width: 220).labelsHidden()
                 Stepper(value: $model.concurrencyLimit, in: 1...8) {
-                    Text("同时处理 \(model.concurrencyLimit)").font(.system(size: 11))
+                    Text(L10n.t("同时处理 %ld", model.concurrencyLimit)).font(.system(size: 11))
                 }.fixedSize()
                     .onChange(of: model.concurrencyLimit) { v in
                         UserDefaults.standard.set(v, forKey: "translate.concurrency"); model.runNext()
                     }
                 Button { model.startQueue() } label: {
                     if model.autoRunning && !model.workers.isEmpty {
-                        HStack(spacing: 4) { ProgressView().controlSize(.small); Text("处理中 \(model.activeCount)/\(model.taskCount)") }
+                        HStack(spacing: 4) { ProgressView().controlSize(.small); Text(L10n.t("处理中 %ld/%ld", model.activeCount, model.taskCount)) }
                     } else { Label("开始处理", systemImage: "play.fill") }
                 }
                 .buttonStyle(.borderedProminent)
@@ -992,7 +994,7 @@ struct TranslateTab: View {
                     HStack(spacing: 5) {
                         Circle().fill(model.serverRunning ? Color.green : Color.secondary.opacity(0.4))
                             .frame(width: 7, height: 7)
-                        Text(model.serverRunning ? "翻译服务运行中" : "翻译服务待机")
+                        Text(L10n.t(model.serverRunning ? "翻译服务运行中" : "翻译服务待机"))
                             .font(.system(size: 10)).foregroundColor(.secondary)
                     }
                     if model.envOK {
@@ -1004,7 +1006,7 @@ struct TranslateTab: View {
                     if ready == model.downloads.count {
                         Text("模型 5/5 ✓").font(.system(size: 10)).foregroundColor(.green)
                     } else {
-                        Text("模型 \(ready)/\(model.downloads.count)").font(.system(size: 10)).foregroundColor(.orange)
+                        Text(L10n.t("模型 %ld/%ld", ready, model.downloads.count)).font(.system(size: 10)).foregroundColor(.orange)
                     }
                     Button { model.checkEnv(); showEnvSheet = true } label: { Label("环境配置", systemImage: "shippingbox") }
                         .controlSize(.small)
@@ -1048,7 +1050,7 @@ struct TranslateTab: View {
                 Image(systemName: "film").foregroundColor(.secondary)
                 Text((task.videoPath as NSString).lastPathComponent).font(.system(size: 12, weight: .semibold)).lineLimit(1)
                 Spacer()
-                Text(task.status).font(.system(size: 10, weight: .semibold))
+                Text(L10n.t(task.status)).font(.system(size: 10, weight: .semibold))
                     .padding(.horizontal, 8).padding(.vertical, 2)
                     .background(Capsule().fill(statusColor(task.status).opacity(0.14))).foregroundColor(statusColor(task.status))
             }
@@ -1060,9 +1062,9 @@ struct TranslateTab: View {
                     .foregroundColor(.secondary).frame(width: 38, alignment: .trailing)
             }
                 .tint(barColor(task))
-            Text(TranslateModel.friendlyStage(task)).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
+            Text(L10n.t(TranslateModel.friendlyStage(task))).font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
             if task.status == "转写中" && !task.message.isEmpty {
-                Text(TranslateModel.detailOf(task.message))
+                Text(L10n.t(TranslateModel.detailOf(task.message)))
                     .font(.system(size: 9)).foregroundColor(.secondary.opacity(0.75))
                     .lineLimit(1).textSelection(.enabled)
             }
@@ -1098,21 +1100,22 @@ struct TranslateTab: View {
         if path.hasPrefix("~") { path = NSHomeDirectory() + path.dropFirst() }
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
-            dirOK = false; dirMsg = "路径无效（需已存在的文件夹）"; return
+            dirOK = false; dirMsg = L10n.t("路径无效（需已存在的文件夹）"); return
         }
         settings.modelDir = path; settings.persist("modelDir", path)
         dirDraft = path
-        dirOK = true; dirMsg = "正在扫描该目录…"
+        dirOK = true; dirMsg = L10n.t("正在扫描该目录…")
         model.refreshAvailability(settings, force: true, onlyRoot: path) { hits, total in
             let names = ModelCatalog.all.prefix(total).enumerated().compactMap { idx, spec in
                 FileManager.default.fileExists(atPath: path + "/" + spec.dirName) ? spec.dirName : nil
             }
             if hits == 0 {
                 self.dirOK = false
-                self.dirMsg = "该目录下未发现任何模型（共查 \(total) 个）"
+                self.dirMsg = L10n.t("该目录下未发现任何模型（共查 %ld 个）", total)
             } else {
                 self.dirOK = hits == total
-                self.dirMsg = "✓ 已扫描：命中 \(hits)/\(total) 个模型" + (names.isEmpty ? "" : "（\(names.joined(separator: "、"))）")
+                self.dirMsg = L10n.t("✓ 已扫描：命中 %ld/%ld 个模型", hits, total)
+                    + (names.isEmpty ? "" : "（\(names.joined(separator: L10n.t("、")))）")
             }
         }
     }
@@ -1176,14 +1179,14 @@ struct TranslateTab: View {
             HStack(spacing: 8) {
                 Image(systemName: model.envOK ? "checkmark.seal.fill" : (model.envBusy ? "gearshape.2.fill" : "seal"))
                     .foregroundColor(model.envOK ? .green : model.envBusy ? .accentColor : .secondary)
-                Text(model.envBusy ? (model.envStage.isEmpty ? "正在构建环境…" : model.envStage)
-                                   : (model.envOK ? "转写环境已就绪" : "点右侧按钮一键构建（首次约 3–15 分钟）"))
+                Text(model.envBusy ? (model.envStage.isEmpty ? L10n.t("正在构建环境…") : L10n.t(model.envStage))
+                                   : L10n.t(model.envOK ? "转写环境已就绪" : "点右侧按钮一键构建（首次约 3–15 分钟）"))
                     .font(.system(size: 10)).foregroundColor(.secondary).lineLimit(2)
                 if model.envBusy { ProgressView(value: model.envProgress).progressViewStyle(.linear).frame(maxWidth: 260) }
                 Spacer()
                 if !model.envBusy {
                     HStack(spacing: 6) {
-                        Button(model.envOK ? "全量重建" : "一键构建环境") { model.buildEnv(settings, full: true) }.controlSize(.small).disabled(model.envBusy)
+                        Button(L10n.t(model.envOK ? "全量重建" : "一键构建环境")) { model.buildEnv(settings, full: true) }.controlSize(.small).disabled(model.envBusy)
                         if model.envOK || model.envBusy {
                             if pendingNuke {
                                 Button("确认删除？") { pendingNuke = false; model.nukeRuntime(settings) }
@@ -1237,7 +1240,7 @@ struct TranslateTab: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(dl.spec.label).font(.system(size: 11, weight: .medium))
+                    Text(L10n.t(dl.spec.label)).font(.system(size: 11, weight: .medium))
                     Text("\(dl.spec.msRepo) · \(dl.spec.sizeText)").font(.system(size: 9)).foregroundColor(.secondary)
                 }
                 Spacer()
@@ -1258,7 +1261,7 @@ struct TranslateTab: View {
                     } else if dl.status.hasPrefix("✓") {
                         EmptyView()
                     } else {
-                        Button(dl.status.contains("不完整") ? "重新下载" : "ModelScope 下载") { model.download(dl.spec, settings) }.controlSize(.regular)
+                        Button(L10n.t(dl.status.contains("不完整") ? "重新下载" : "ModelScope 下载")) { model.download(dl.spec, settings) }.controlSize(.regular)
                     }
                 }
             }
@@ -1293,7 +1296,7 @@ struct LogTextView: View {
             Divider()
             ScrollViewReader { proxy in
                 ScrollView {
-                    Text(text.isEmpty ? "（暂无日志）" : text)
+                    Text(text.isEmpty ? L10n.t("（暂无日志）") : text)
                         .font(.system(size: 10, design: .monospaced))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)

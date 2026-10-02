@@ -1,0 +1,6089 @@
+{
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    " · GPU %ld 核": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · GPU: %ld cores"
+          }
+        }
+      }
+    },
+    " · 已充满": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · Fully charged"
+          }
+        }
+      }
+    },
+    " · 接电源": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · Connected to power"
+          }
+        }
+      }
+    },
+    " · 未充电": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · Not charging"
+          }
+        }
+      }
+    },
+    " · 正在充电": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · Charging"
+          }
+        }
+      }
+    },
+    " · 电池供电": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · On battery"
+          }
+        }
+      }
+    },
+    "%.0f 秒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f seconds"
+          }
+        }
+      }
+    },
+    "%@ · %ld 核 CPU（%ld 性能 + %ld 能效）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %ld-core CPU (%ld performance + %ld efficiency)"
+          }
+        }
+      }
+    },
+    "%ld 次（机型标称寿命通常 1000 次）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%ld cycles (rated life is usually 1000 cycles)"
+          }
+        }
+      }
+    },
+    "1 秒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 second"
+          }
+        }
+      }
+    },
+    "1 秒（推荐）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 second (recommended)"
+          }
+        }
+      }
+    },
+    "1–2 秒最实时；间隔越长越省电。SMC 读取在后台线程执行，不影响界面流畅度。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1–2 s is the most responsive; longer intervals save more power. SMC reads run on a background thread and never affect UI smoothness."
+          }
+        }
+      }
+    },
+    "Apple 保修状态查询": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple warranty status check"
+          }
+        }
+      }
+    },
+    "CMYK+RGB 色块与饱和总检。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overall check of CMYK+RGB patches and saturation."
+          }
+        }
+      }
+    },
+    "CPU 占用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU Usage"
+          }
+        }
+      }
+    },
+    "CPU 占用率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU usage"
+          }
+        }
+      }
+    },
+    "CPU 温度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU temperature"
+          }
+        }
+      }
+    },
+    "CPU：温度不可用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU: Temperature unavailable"
+          }
+        }
+      }
+    },
+    "FSMN-VAD · 长音频断句必需": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FSMN-VAD · required for long-audio segmentation"
+          }
+        }
+      }
+    },
+    "Finder 面板中可按 ⌘⇧. 显示隐藏文件夹": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the Finder panel, press ⌘⇧. to show hidden folders"
+          }
+        }
+      }
+    },
+    "Fun-ASR MLT Nano · 多语种": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fun-ASR MLT Nano · multilingual"
+          }
+        }
+      }
+    },
+    "Fun-ASR Nano · 中文更强": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fun-ASR Nano · stronger Chinese"
+          }
+        }
+      }
+    },
+    "GPU 占用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPU Usage"
+          }
+        }
+      }
+    },
+    "GPU 占用率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPU usage"
+          }
+        }
+      }
+    },
+    "Hy-MT2-7B · 翻译大模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hy-MT2-7B · translation model"
+          }
+        }
+      }
+    },
+    "LCI 接触液体由白变红；2016 年及以后机型 LCI 在主板与键盘面板上，不拆底壳看不到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LCIs turn from white to red when they touch liquid; on 2016 and later models they sit on the logic board and keyboard panel, so you cannot see them without removing the bottom case."
+          }
+        }
+      }
+    },
+    "MDM 企业锁检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MDM enrollment check"
+          }
+        }
+      }
+    },
+    "MDM 监管": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MDM supervision"
+          }
+        }
+      }
+    },
+    "MacBook 屏幕坏点怎么检测？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I test a MacBook display for dead pixels?"
+          }
+        }
+      }
+    },
+    "MacBook 验机": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBook Inspection"
+          }
+        }
+      }
+    },
+    "MagSafe 充电检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MagSafe charging test"
+          }
+        }
+      }
+    },
+    "MetriBar 工具箱": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MetriBar Toolbox"
+          }
+        }
+      }
+    },
+    "MetriBar 设置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MetriBar Settings"
+          }
+        }
+      }
+    },
+    "MetriBar 设置…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MetriBar Settings…"
+          }
+        }
+      }
+    },
+    "ModelScope 下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download from ModelScope"
+          }
+        }
+      }
+    },
+    "ProMotion 不显示 120Hz 时排查：Safari 默认把页面渲染限制在 60 FPS——Develop 菜单 → Feature Flags，取消勾选 “Prefer Page Rendering Updates near 60fps” 后刷新页面。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If ProMotion does not show 120 Hz, troubleshoot like this: Safari caps page rendering at 60 FPS by default, so open the Develop menu → Feature Flags, clear the “Prefer Page Rendering Updates near 60fps” checkbox, and reload the page."
+          }
+        }
+      }
+    },
+    "SMC 访问": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SMC access"
+          }
+        }
+      }
+    },
+    "SSD 健康检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSD health test"
+          }
+        }
+      }
+    },
+    "SenseVoice Small · 中英快速": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SenseVoice Small · fast Chinese/English"
+          }
+        }
+      }
+    },
+    "Touch ID 检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch ID test"
+          }
+        }
+      }
+    },
+    "USB-C / 雷电端口检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USB-C / Thunderbolt port test"
+          }
+        }
+      }
+    },
+    "Verified ✓（正常）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verified ✓ (normal)"
+          }
+        }
+      }
+    },
+    "WiFi 与蓝牙检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi and Bluetooth test"
+          }
+        }
+      }
+    },
+    "ffmpeg 已安装（烧录字幕可用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ffmpeg installed (burn-in available)"
+          }
+        }
+      }
+    },
+    "macOS 26 及以上先看 系统设置 › 通用 › 关于本机 › 部件与维修，显示器出现在列表里就是换过屏（M5 及更新机型才记录显示屏）。更早机型看 True Tone 原彩和自动亮度是否可用，本应支持却没有该选项通常就是换了非原装屏，再结合边框撬痕判断。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On macOS 26 and later, first check System Settings › General › About › Parts & Service; if the display appears in the list it has been replaced (only M5 and newer models log the display). On earlier models, check whether True Tone and auto-brightness are available: if the model should support them but the option is missing, the display was probably replaced with a non-original part, which you can confirm by looking for pry marks on the bezel."
+          }
+        }
+      }
+    },
+    "macOS 26 及以上进入 系统设置 › 通用 › 关于本机 › 部件与维修，会列出检测到的维修并把部件标为正品 Apple 部件、二手 Apple 部件、未知或未验证。这个入口只在检测到维修时才显示，没有入口一般说明没有维修记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On macOS 26 and later, open System Settings › General › About › Parts & Service, which lists detected repairs and labels parts as Genuine Apple Part, Used Apple Part, or Unknown or Unverified. This section appears only when a repair is detected, so if it is missing there is usually no service history."
+          }
+        }
+      }
+    },
+    "macOS 26 及以上：系统设置 › 通用 › 关于本机 › 部件与维修，显示器出现在列表即换过屏（M5 及更新机型才记录显示屏）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On macOS 26 and later, open System Settings › General › About › Parts & Service; if the display appears in the list it has been replaced (only M5 and newer models log the display)."
+          }
+        }
+      }
+    },
+    "· 不通过 %ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %ld failed"
+          }
+        }
+      }
+    },
+    "· 检查画面是否清晰、无横纹/黑块/彩点；用手遮挡再移开看曝光响应": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Check that the image is sharp with no horizontal lines, black blocks, or colored dots; cover the lens and then move your hand away to check exposure response"
+          }
+        }
+      }
+    },
+    "‹无标题›": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‹untitled›"
+          }
+        }
+      }
+    },
+    "↑ 菜单栏实时预览（数值为示意，样式与顶部状态栏完全一致）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "↑ Live menu-bar preview (values are illustrative; the style matches the real status bar exactly)."
+          }
+        }
+      }
+    },
+    "↑上传": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload ↑"
+          }
+        }
+      }
+    },
+    "↓下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download ↓"
+          }
+        }
+      }
+    },
+    "♥心率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate ♥"
+          }
+        }
+      }
+    },
+    "⚠ 不完整（曾被中断）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠ Incomplete (was interrupted)"
+          }
+        }
+      }
+    },
+    "⚠️ 已注册企业设备！": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Enrolled as a corporate device!"
+          }
+        }
+      }
+    },
+    "✓ 全部 %ld 键已点亮 · Esc 退出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ All %ld keys lit · Esc to exit"
+          }
+        }
+      }
+    },
+    "✓ 完成，字幕已生成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Done — subtitles generated"
+          }
+        }
+      }
+    },
+    "✓ 已就绪": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Ready"
+          }
+        }
+      }
+    },
+    "✓ 已扫描：命中 %ld/%ld 个模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Scanned: found %ld/%ld models"
+          }
+        }
+      }
+    },
+    "✓ 已解除（可安全过户）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Removed (safe to transfer ownership)"
+          }
+        }
+      }
+    },
+    "✓ 未注册（干净）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Not enrolled (clean)"
+          }
+        }
+      }
+    },
+    "✓ 麦克风检测完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✓ Microphone test complete"
+          }
+        }
+      }
+    },
+    "✗ 无法启动构建脚本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ Failed to start build script"
+          }
+        }
+      }
+    },
+    "✗ 构建失败——查日志[构建]段的FAIL行（含具体步骤）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ Build failed — check the FAIL lines in the [Build] log section (they name the step)"
+          }
+        }
+      }
+    },
+    "✗ 构建脚本缺失（请重新安装App）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ Build script missing (reinstall the app)"
+          }
+        }
+      }
+    },
+    "✗ 清单获取失败": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "✗ Failed to fetch file list"
+          }
+        }
+      }
+    },
+    "、": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        }
+      }
+    },
+    "「电池充电状态」应随插拔电源实时变化：接电源显示充电/已充满，拔掉显示电池供电。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery charging status should change in real time as you plug and unplug power: connected shows charging or fully charged, unplugged shows on battery."
+          }
+        }
+      }
+    },
+    "「部件与维修」查看是否换过屏幕/电池，配件是否正品 Apple 部件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Parts & Service to see whether the display or battery was replaced and whether the parts are genuine Apple parts."
+          }
+        }
+      }
+    },
+    "一键构建环境": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build environment"
+          }
+        }
+      }
+    },
+    "一镜到底不中断：全程不要停止录制，口述观察内容可增加视频可信度。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep one continuous take: never stop recording, and narrating what you see makes the video more credible."
+          }
+        }
+      }
+    },
+    "上传": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload"
+          }
+        }
+      }
+    },
+    "上传速率 ↑": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload rate ↑"
+          }
+        }
+      }
+    },
+    "下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "下载 Geekbench": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download Geekbench"
+          }
+        }
+      }
+    },
+    "下载中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading"
+          }
+        }
+      }
+    },
+    "下载并安装 Geekbench（macOS 版）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download and install Geekbench for macOS."
+          }
+        }
+      }
+    },
+    "下载速率 ↓": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download rate ↓"
+          }
+        }
+      }
+    },
+    "不通过": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fail"
+          }
+        }
+      }
+    },
+    "不需要，也不用装任何第三方工具。所有检测（坏点、摄像头、麦克风、扬声器、键盘、触控板、刷新率）都由 MetriBar 在本机完成，不上传任何数据；硬件信息仅通过本机只读命令读取。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No, and you do not need to install any third-party tool: every test (dead pixels, camera, microphone, speakers, keyboard, trackpad and refresh rate) is run locally by MetriBar and uploads nothing; hardware details are read with local read-only commands only."
+          }
+        }
+      }
+    },
+    "与包装盒标签比对，三处一致才算通过。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare it with the label on the box; the item passes only if all three match."
+          }
+        }
+      }
+    },
+    "与同机型同配置的公开成绩对比，明显偏低说明散热或硬件异常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with published scores for the same model and configuration; a clearly lower score points to a cooling or hardware problem."
+          }
+        }
+      }
+    },
+    "与机身底部刻印比对（若底壳更换过则无刻印，需追问原因）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare it with the engraving on the bottom case (a replaced bottom case has no engraving, so ask why)."
+          }
+        }
+      }
+    },
+    "与直营店同型号样机对比，注意破音、偏色、亮度不均。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with a display unit of the same model at an Apple Store, watching for distortion, color shift, and uneven brightness."
+          }
+        }
+      }
+    },
+    "丰富（图标 + 配色）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rich (icons + colors)"
+          }
+        }
+      }
+    },
+    "主要影响 2012–2019 款机型，脱落面积大不建议购买。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This mainly affects 2012–2019 models; if a large area has come off, do not buy the Mac."
+          }
+        }
+      }
+    },
+    "买二手 MacBook 付款前必须检查哪些项目？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which checks must I complete before paying for a used MacBook?"
+          }
+        }
+      }
+    },
+    "了解 LCI：机内白色小圆点指示器，接触液体后变红；2016 年及之后机型位于键盘面板和主板，不拆底壳无法看到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Understand what an LCI is: a small white dot inside the Mac that turns red after contact with liquid; on 2016 and later models it sits on the keyboard panel and the logic board, invisible unless you remove the bottom case."
+          }
+        }
+      }
+    },
+    "交互": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interactive"
+          }
+        }
+      }
+    },
+    "亮度检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness test"
+          }
+        }
+      }
+    },
+    "亮度调到最高，从正面与侧面观察四边四角。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set brightness to maximum and check the edges and corners from the front and from the side."
+          }
+        }
+      }
+    },
+    "仅本机只读命令 · 不联网": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read-only local commands only · No network access"
+          }
+        }
+      }
+    },
+    "仔细观察屏幕四周边框有无撬压痕迹、胶痕、缝隙不均。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look closely around the bezel for pry marks, adhesive residue, or uneven gaps."
+          }
+        }
+      }
+    },
+    "企业监管机可能被远程锁定或抹除，不要购买；右侧快照已自动核验一次。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A managed Mac can be locked or erased remotely, so do not buy it; the snapshot on the right has already checked once."
+          }
+        }
+      }
+    },
+    "优先用系统自带抹掉：macOS Monterey 及以上、Apple 芯片或带 T2 芯片机型，进入 系统设置 › 通用 › 传输或还原 › 抹掉所有内容与设置。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prefer the built-in erase: on macOS Monterey and later with Apple silicon or a T2 chip, open System Settings › General › Transfer or Reset › Erase All Content and Settings."
+          }
+        }
+      }
+    },
+    "传感器库": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sensor library"
+          }
+        }
+      }
+    },
+    "低电量模式已开启": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode is on."
+          }
+        }
+      }
+    },
+    "依次播放 左→中→右 提示音，定位清晰、无破音异响。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play the left, center, and right tones in turn; each should be clearly positioned with no distortion or rattle."
+          }
+        }
+      }
+    },
+    "侧光检查 C 面（键盘面）是否平整，有无翘曲。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With light at a low angle, check that the C side (keyboard deck) is flat and not warped."
+          }
+        }
+      }
+    },
+    "保留原始未剪辑视频，作为退换货或维权凭证。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the original unedited video as evidence for a return or a dispute."
+          }
+        }
+      }
+    },
+    "停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
+    },
+    "先关机并拔掉除电源外的所有外设。Apple 芯片机型按住电源键直到出现启动选项，再按 Command + D；Intel 机型开机后立即按住 D。参考代码 ADP000 表示未发现问题，其他代码即对应硬件故障。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First shut down and unplug every peripheral except the power adapter. On Apple silicon, hold the power button until startup options appear, then press Command + D; on Intel models, hold D immediately after powering on. The reference code ADP000 means no issues were found, while any other code points to a hardware fault."
+          }
+        }
+      }
+    },
+    "先过账户与身份关：激活锁已解除、无 MDM 企业锁、序列号三处一致（系统/机身/包装）、「部件与维修」里没有未说明的维修记录、Apple 诊断跑出 ADP000。再看硬件硬伤：屏幕是否原装、有无进水痕迹、坏点、扬声器/麦克风/摄像头、电池健康。全部通过后最后抹盘重装。任一必查项不过都不要付款，其余键盘、接口、外壳等按需选做。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start with the account and identity checks: Activation Lock removed, no MDM enrollment, the serial number matching in all three places (macOS, chassis, and box), no unexplained repairs under Parts & Service, and Apple Diagnostics returning ADP000. Then look for physical damage: whether the display is original, signs of liquid damage, dead pixels, the speakers, microphone, and camera, and battery health. Once everything passes, erase the disk and reinstall last. Do not pay if any Must-check item fails; the remaining keyboard, port, and chassis checks are optional."
+          }
+        }
+      }
+    },
+    "全自动：转写开始时自动拉起翻译服务，队列跑完自动停止并卸载模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fully automatic: the translation service starts with transcription and stops, unloading the model, when the queue finishes"
+          }
+        }
+      }
+    },
+    "全部 %ld 张已发送到打印队列 ✓": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All %ld pages sent to the print queue ✓"
+          }
+        }
+      }
+    },
+    "全部下载缺失（ModelScope）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download all missing (ModelScope)"
+          }
+        }
+      }
+    },
+    "全部停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop all"
+          }
+        }
+      }
+    },
+    "全部打印": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Print all"
+          }
+        }
+      }
+    },
+    "全量重建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full rebuild"
+          }
+        }
+      }
+    },
+    "关于": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "关机拔外设后进诊断模式，参考代码 ADP000 表示未发现问题。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shut down, unplug external devices, and enter Diagnostics mode; the reference code ADP000 means no issues were found."
+          }
+        }
+      }
+    },
+    "关机：完全关闭 MacBook；运行前断开所有外部设备，仅保留键盘、鼠标、显示器、以太网与电源适配器。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shut down: power the MacBook off completely; before running the test, disconnect all external devices except the keyboard, mouse, display, Ethernet, and power adapter."
+          }
+        }
+      }
+    },
+    "关闭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "关闭屏幕，用超细纤维布轻擦屏幕表面。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the display off and wipe its surface gently with a microfiber cloth."
+          }
+        }
+      }
+    },
+    "关闭窗口即停止摄像头（不占用时不耗电）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closing this window stops the camera (it uses no power when idle)"
+          }
+        }
+      }
+    },
+    "内存": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory"
+          }
+        }
+      }
+    },
+    "内建 ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in "
+          }
+        }
+      }
+    },
+    "内置拟真键盘画布：逐个按键实时点亮并计数，不触发或串键即为故障。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The built-in realistic keyboard canvas lights up and counts every key in real time; keys that do not respond or that trigger the wrong key are faults."
+          }
+        }
+      }
+    },
+    "内置硬盘": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Internal drive"
+          }
+        }
+      }
+    },
+    "再到 Apple「检查覆盖范围」页面输入序列号，核对机型与保修状态是否匹配。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then enter the serial number on Apple's Check Coverage page and confirm that the model and warranty status match."
+          }
+        }
+      }
+    },
+    "再在全黑房间把亮度调到最高，看四角是否有明显漏光。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then, in a completely dark room with brightness at maximum, check the corners for obvious backlight bleed."
+          }
+        }
+      }
+    },
+    "再想想": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never mind"
+          }
+        }
+      }
+    },
+    "再检查 系统设置 → 显示器 → 刷新率 是否设为 ProMotion；新版 Chrome 已支持 macOS 120Hz，若仍停在 60 可换浏览器复测。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then check that System Settings → Displays → Refresh Rate is set to ProMotion; recent Chrome versions support 120 Hz on macOS, so if it is still stuck at 60, retest in another browser."
+          }
+        }
+      }
+    },
+    "再测双指滚动、三指拖动与用力点按（Force Touch）手感是否一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then test two-finger scrolling, three-finger dragging, and force clicking (Force Touch) for a consistent feel."
+          }
+        }
+      }
+    },
+    "准备中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing"
+          }
+        }
+      }
+    },
+    "准备中（启动翻译引擎）…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing (starting translation engine)…"
+          }
+        }
+      }
+    },
+    "出现未说明的换屏、换电池记录需向卖家追问，或直接放弃。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If there is an unexplained display or battery replacement, question the seller or walk away."
+          }
+        }
+      }
+    },
+    "切换后需重启 App 生效。中英文档分文件：README.md / README.en.md。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takes effect after restarting the app. Documentation ships as two files: README.md / README.en.md."
+          }
+        }
+      }
+    },
+    "删除全部": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all"
+          }
+        }
+      }
+    },
+    "删除运行时与依赖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete runtime & dependencies"
+          }
+        }
+      }
+    },
+    "到 Apple 官方页面输入序列号，验证保修状态与设备信息。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the serial number on Apple's official page to verify the warranty status and device information."
+          }
+        }
+      }
+    },
+    "刷新打印机列表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh printer list"
+          }
+        }
+      }
+    },
+    "刷新率检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh rate test"
+          }
+        }
+      }
+    },
+    "刷新间隔": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh interval"
+          }
+        }
+      }
+    },
+    "加入队列": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to Queue"
+          }
+        }
+      }
+    },
+    "华氏度 (°F)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fahrenheit (°F)"
+          }
+        }
+      }
+    },
+    "单位": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Units"
+          }
+        }
+      }
+    },
+    "单手握持机身晃动，屏幕不应自由翻转（转轴松动）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold the base with one hand and shake it gently; the lid should not swing freely, which would mean a loose hinge."
+          }
+        }
+      }
+    },
+    "原装屏幕核验": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original display check"
+          }
+        }
+      }
+    },
+    "反复 5 次观察识别率，明显迟钝可能是传感器老化。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeat five times to check the recognition rate; if it is clearly slow, the sensor may be worn."
+          }
+        }
+      }
+    },
+    "反复开合 10 次：阻尼均匀无异响，任意角度可悬停。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open and close the lid ten times: the resistance should be even with no noise, and the lid should hold at any angle."
+          }
+        }
+      }
+    },
+    "反复开合屏幕 10 次，感受阻尼是否均匀、有无异响。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open and close the lid ten times and feel whether the resistance is even and free of abnormal noise."
+          }
+        }
+      }
+    },
+    "取消": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "可再点一次「开始」复测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start again to retest."
+          }
+        }
+      }
+    },
+    "可用 %.0f GB / 总 %.0f GB（%.0f%% 已用）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f GB free / %.0f GB total (%.0f%% used)"
+          }
+        }
+      }
+    },
+    "可能是麦克风被其他 App 占用，关闭后重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another app may be using the microphone; close it and try again."
+          }
+        }
+      }
+    },
+    "右侧「本机硬件快照」已直接读出全部电池数据：健康度、循环次数、设计/满充容量、电压电流温度、序列号，无需安装任何第三方 App。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The This Mac hardware snapshot on the right already shows all battery data directly: health, cycle count, design and full charge capacity, voltage, current, temperature, and serial number, with no third-party app needed."
+          }
+        }
+      }
+    },
+    "右侧「磁盘 SMART」为系统自动核验结果，Verified 即正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk SMART on the right is the system's automatic check; Verified means it is healthy."
+          }
+        }
+      }
+    },
+    "右侧硬件快照已自动读取系统激活锁状态，可辅助核对。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The hardware snapshot on the right already reads the system Activation Lock status and can help you cross-check."
+          }
+        }
+      }
+    },
+    "同时处理 %ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Process %ld at a time"
+          }
+        }
+      }
+    },
+    "启动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startup"
+          }
+        }
+      }
+    },
+    "启动诊断 · Apple 芯片：按住电源键直到看到启动选项，然后按 Command (⌘) + D。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start diagnostics on Apple silicon: hold the power button until startup options appear, then press Command (⌘) + D."
+          }
+        }
+      }
+    },
+    "启动诊断 · Intel 芯片：开机后立即按住 D；如果无效，再尝试 Option (⌥) + D。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start diagnostics on Intel: hold D immediately after powering on; if that does not work, try Option (⌥) + D."
+          }
+        }
+      }
+    },
+    "喷头堵塞检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nozzle check"
+          }
+        }
+      }
+    },
+    "四色细线阵：断线=堵头。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Four-color hairline array: gaps mean clogged nozzles."
+          }
+        }
+      }
+    },
+    "回放应清晰、无明显底噪或断续；首次使用会请求麦克风权限。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback should be clear with no obvious background noise or dropouts; the first run asks for microphone permission."
+          }
+        }
+      }
+    },
+    "在全黑房间，显示纯黑画面（可用坏点检测的全屏黑）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In a completely dark room, display a pure black screen (the full-screen black of the dead pixel test works)."
+          }
+        }
+      }
+    },
+    "在多个位置移动，观察是否频繁掉线（天线故障征兆）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move around several locations and watch for frequent disconnects, which point to an antenna fault."
+          }
+        }
+      }
+    },
+    "在手表上打开「广播心率」（活动 · 设置里，或下拉快捷面板的心率广播）。首次会弹出「允许 MetriBar 使用蓝牙」。macOS 无 ANT+，走 BLE 标准心率服务。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on “Broadcast Heart Rate” on the watch (Activities · Settings, or the heart-rate broadcast tile in the shortcut panel). The first run asks “Allow MetriBar to use Bluetooth”. macOS has no ANT+, so MetriBar uses the standard BLE heart-rate service."
+          }
+        }
+      }
+    },
+    "在终端运行 profiles status -type enrollment，两行都显示 No 才正常。更可靠的方法是抹机后联网进入设置助理，出现「远程管理」页面就说明被企业注册监管，这类机器可能被远程锁定或抹除，不要购买。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run profiles status -type enrollment in Terminal; both lines must read No. A more reliable method is to erase the Mac and go through Setup Assistant while online: a Remote Management page means it is enrolled in corporate management, and such machines can be locked or erased remotely, so do not buy them."
+          }
+        }
+      }
+    },
+    "在菜单栏显示心率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show heart rate in the menu bar"
+          }
+        }
+      }
+    },
+    "坏点检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dead pixel test"
+          }
+        }
+      }
+    },
+    "坏点检测 · 第 %ld/%ld 张：%@色": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dead pixel test · %ld/%ld: %@"
+          }
+        }
+      }
+    },
+    "基于 App 内置 Python 创建独立环境，经清华镜像安装 funasr/torch/mlx-lm（不含模型）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creates an isolated environment from the app's bundled Python and installs funasr/torch/mlx-lm via the Tsinghua mirror (models excluded)"
+          }
+        }
+      }
+    },
+    "声音检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker test"
+          }
+        }
+      }
+    },
+    "处理中 %ld/%ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processing %ld/%ld"
+          }
+        }
+      }
+    },
+    "处理器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processor"
+          }
+        }
+      }
+    },
+    "备份数据：先用 Time Machine 或手动备份重要文件（此步会删除全部数据）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up your data: save important files with Time Machine or manually first, because this step deletes everything."
+          }
+        }
+      }
+    },
+    "复制": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "复验企业监管：重装后联网进入设置助理，出现「远程管理」页 = 企业监管机，立即退货；索要前机主 Apple 账户密码 = 激活锁仍在，立即退货。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-check MDM enrollment: after reinstalling, go through Setup Assistant while online; a Remote Management page means the Mac is enrolled in corporate management, so return it immediately, and being asked for the previous owner's Apple Account password means Activation Lock is still on, so return it immediately too."
+          }
+        }
+      }
+    },
+    "外壳检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chassis check"
+          }
+        }
+      }
+    },
+    "外接 ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "External "
+          }
+        }
+      }
+    },
+    "外部工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "External tools"
+          }
+        }
+      }
+    },
+    "多字号中英混排阶梯。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ladder of mixed CJK/Latin type sizes."
+          }
+        }
+      }
+    },
+    "失败": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed"
+          }
+        }
+      }
+    },
+    "如需交叉验证：系统设置 › 电池 › 电池健康，与右侧读数对照应一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To cross-check, open System Settings › Battery › Battery Health; the reading should match the one on the right."
+          }
+        }
+      }
+    },
+    "如需拆底壳（卖家允许时）：关机断电 → 五角星 P5 螺丝刀拧下 8–10 颗螺丝（记录位置，长短不同）→ 从转轴一侧撬起掀开 → 在主板与键盘面板找 2–3mm 小纸点，白色正常、红色进水；切勿硬撬或触碰主板。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you need to open the bottom case (with the seller's permission): shut down and unplug power → remove the 8–10 screws with a P5 pentalobe driver (note their positions, since the lengths differ) → pry the case open from the hinge side → look for 2–3 mm paper dots on the logic board and keyboard panel: white is normal and red means liquid damage; never force the case or touch the logic board."
+          }
+        }
+      }
+    },
+    "子进程已终止 · 模型已卸载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subprocess terminated · model unloaded"
+          }
+        }
+      }
+    },
+    "安全检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Security check"
+          }
+        }
+      }
+    },
+    "完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "完成 · 模型已随进程卸载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done · model unloaded with the process"
+          }
+        }
+      }
+    },
+    "实时": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        }
+      }
+    },
+    "实时预览中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live preview"
+          }
+        }
+      }
+    },
+    "对照预期：MacBook Pro 14/16 吋带 ProMotion 最高可达 120 FPS，其他 MacBook 通常显示 60 FPS；FPS 应保持稳定不剧烈波动。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with what to expect: 14-inch and 16-inch MacBook Pro models with ProMotion reach up to 120 FPS, while other MacBooks usually show 60 FPS; the FPS should stay steady rather than fluctuate sharply."
+          }
+        }
+      }
+    },
+    "对齐与套准": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alignment & registration"
+          }
+        }
+      }
+    },
+    "将删除独立 Python 运行时、转写环境(venv)及全部依赖缓存（共约数GB，不含已下载模型）。之后可重新一键构建。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This deletes the standalone Python runtime, the transcription environment (venv) and all dependency caches (several GB in total, downloaded models excluded). You can rebuild afterwards."
+          }
+        }
+      }
+    },
+    "屏幕压力测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display pressure test"
+          }
+        }
+      }
+    },
+    "屏幕检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display tests"
+          }
+        }
+      }
+    },
+    "屏幕漏光检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backlight bleed test"
+          }
+        }
+      }
+    },
+    "屏幕镀膜检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display coating check"
+          }
+        }
+      }
+    },
+    "工具箱：打印机测试 / MacBook 验机 / 视频翻译": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toolbox: Printer test / MacBook inspection / Video translation"
+          }
+        }
+      }
+    },
+    "已停止": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped"
+          }
+        }
+      }
+    },
+    "已停止 · 点开面板重扫": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped · Open the panel to rescan"
+          }
+        }
+      }
+    },
+    "已停止（模型已卸载）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped (model unloaded)"
+          }
+        }
+      }
+    },
+    "已停止（缓存已删除）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopped (cache deleted)"
+          }
+        }
+      }
+    },
+    "已关闭 App Sandbox（外部 dmg 分发）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Sandbox disabled (dmg distribution)"
+          }
+        }
+      }
+    },
+    "已删除全部运行时与依赖，可重新一键构建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime and dependencies deleted — ready to rebuild"
+          }
+        }
+      }
+    },
+    "已压缩": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compressed"
+          }
+        }
+      }
+    },
+    "已发送到打印队列 ✓": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent to the print queue ✓"
+          }
+        }
+      }
+    },
+    "已发送，%ld 张失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent, but %ld failed: %@"
+          }
+        }
+      }
+    },
+    "已开启（本机自用正常；若为收购机，须卖家当面关闭后才能付款）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled (normal if you keep this Mac yourself; if you are buying it, the seller must turn it off in person before you pay)."
+          }
+        }
+      }
+    },
+    "已提交，需在「系统设置 › 通用 › 登录项」中允许": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Submitted; allow it in System Settings › General › Login Items"
+          }
+        }
+      }
+    },
+    "已断开": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnected"
+          }
+        }
+      }
+    },
+    "已暂停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "已注册，登录时自动启动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registered, will launch at login"
+          }
+        }
+      }
+    },
+    "已测 %ld/%ld · 剩余 %ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tested %ld/%ld · %ld left"
+          }
+        }
+      }
+    },
+    "已用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used"
+          }
+        }
+      }
+    },
+    "已连接": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        }
+      }
+    },
+    "常见问题": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FAQ"
+          }
+        }
+      }
+    },
+    "序列号": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serial number"
+          }
+        }
+      }
+    },
+    "序列号无效、机型不符或显示已更换设备，都是高风险信号。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An invalid serial number, a different model, or a device shown as replaced are all high-risk signs."
+          }
+        }
+      }
+    },
+    "序列号查询（保修核验）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serial number lookup (warranty check)"
+          }
+        }
+      }
+    },
+    "序列号核对": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serial number check"
+          }
+        }
+      }
+    },
+    "建立基线…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Building baseline…"
+          }
+        }
+      }
+    },
+    "开启自动亮度，用手遮挡光感应区（屏幕上方），亮度应明显变化。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on auto-brightness and cover the ambient light sensor above the screen with your hand; brightness should change noticeably."
+          }
+        }
+      }
+    },
+    "开始": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
+    },
+    "开始处理": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
+    },
+    "开封前开始录制：在接触包装之前就开录，清晰展示密封状态与包装盒六个面。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording before opening: begin filming before you touch the packaging and clearly show the seals and all six sides of the box."
+          }
+        }
+      }
+    },
+    "当前心率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current heart rate"
+          }
+        }
+      }
+    },
+    "当前系统不支持 SMAppService（需 macOS 13+）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This macOS version does not support SMAppService (needs macOS 13+)"
+          }
+        }
+      }
+    },
+    "录入一枚新指纹并实际解锁，应一次成功。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enroll a new fingerprint and unlock with it; it should work on the first try."
+          }
+        }
+      }
+    },
+    "录制并回放，检查内置麦克风是否正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record and play back to check that the built-in microphone works."
+          }
+        }
+      }
+    },
+    "录音文件不可用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording file unavailable"
+          }
+        }
+      }
+    },
+    "彩色": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color"
+          }
+        }
+      }
+    },
+    "彩色基础页": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color basics"
+          }
+        }
+      }
+    },
+    "彩色渐变": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color gradient"
+          }
+        }
+      }
+    },
+    "彩虹横向渐变过渡测试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horizontal rainbow gradient transition."
+          }
+        }
+      }
+    },
+    "循环次数对比机型标称寿命（通常 1000 次），过高说明重度使用；健康度低于 80% 通常需更换电池。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare the cycle count with the model's rated life (usually 1000 cycles); a high count means heavy use, and health below 80% usually means the battery needs replacing."
+          }
+        }
+      }
+    },
+    "心率": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate"
+          }
+        }
+      }
+    },
+    "心率 · 手表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart Rate · Watch"
+          }
+        }
+      }
+    },
+    "心率 · 蓝牙": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate · Bluetooth"
+          }
+        }
+      }
+    },
+    "心率 ♥（蓝牙手表）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate ♥ (BLE watch)"
+          }
+        }
+      }
+    },
+    "心率显示已关闭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate display is off"
+          }
+        }
+      }
+    },
+    "必查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Must-check"
+          }
+        }
+      }
+    },
+    "必查 %ld/%ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Must-check %ld/%ld"
+          }
+        }
+      }
+    },
+    "怎么判断 MacBook 屏幕是不是原装？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I tell whether a MacBook display is original?"
+          }
+        }
+      }
+    },
+    "怎么判断 MacBook 有没有激活锁？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How can I tell whether a MacBook has Activation Lock?"
+          }
+        }
+      }
+    },
+    "怎么查看 MacBook 的维修记录？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I check a MacBook's service history?"
+          }
+        }
+      }
+    },
+    "怎么检查 MacBook 是否被企业 MDM 管理？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I check whether a MacBook is managed by corporate MDM?"
+          }
+        }
+      }
+    },
+    "怎么进入 Apple 诊断模式？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How do I enter Apple Diagnostics mode?"
+          }
+        }
+      }
+    },
+    "性能测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performance test"
+          }
+        }
+      }
+    },
+    "所有检查通过后最后再做；优先用系统自带抹掉功能，没有该选项才进恢复模式重装。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do this last, after every other check passes; use the built-in erase feature first and only reinstall from Recovery mode when that option is missing."
+          }
+        }
+      }
+    },
+    "打印": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Print"
+          }
+        }
+      }
+    },
+    "打印失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Print failed: %@"
+          }
+        }
+      }
+    },
+    "打印机": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Printer"
+          }
+        }
+      }
+    },
+    "打印机测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Printer Test"
+          }
+        }
+      }
+    },
+    "打印此页": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Print this page"
+          }
+        }
+      }
+    },
+    "打开": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "打开 Apple 保修查询": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Apple warranty check"
+          }
+        }
+      }
+    },
+    "打开 Apple「检查覆盖范围」页面（checkcoverage.apple.com）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Apple's Check Coverage page (checkcoverage.apple.com)."
+          }
+        }
+      }
+    },
+    "打开 UFO Test": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open UFO Test"
+          }
+        }
+      }
+    },
+    "打开 UFO Test（Display Refresh Rate Test）：看 Current / Average / Low / Max FPS 四项实时指标。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open UFO Test (Display Refresh Rate Test) and watch the four live readings: Current, Average, Low, and Max FPS."
+          }
+        }
+      }
+    },
+    "打开「登录项」设置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Login Items settings"
+          }
+        }
+      }
+    },
+    "打开「蓝牙」设置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Bluetooth settings"
+          }
+        }
+      }
+    },
+    "打开文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open file"
+          }
+        }
+      }
+    },
+    "打开输出": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open output"
+          }
+        }
+      }
+    },
+    "打开链接": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open link"
+          }
+        }
+      }
+    },
+    "把屏幕停在多个角度，应能稳定悬停不下坠。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop the lid at several angles; it should hold steady without sagging."
+          }
+        }
+      }
+    },
+    "抹掉数据重装系统": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase all data and reinstall macOS"
+          }
+        }
+      }
+    },
+    "拍摄开箱视频": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record an unboxing video"
+          }
+        }
+      }
+    },
+    "拖入视频，或点「添加视频」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag in videos, or click \"Add video\""
+          }
+        }
+      }
+    },
+    "拷贝数 GB 大文件，观察速度是否稳定、是否掉盘。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy a few GB of large files and watch whether the speed stays steady and the drive stays connected."
+          }
+        }
+      }
+    },
+    "按提示操作：依系统版本可能先要求选择语言，或选择要运行的检测项目。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow the on-screen prompts: depending on the macOS version, you may first choose a language or select which tests to run."
+          }
+        }
+      }
+    },
+    "排版样式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout style"
+          }
+        }
+      }
+    },
+    "排队中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queued"
+          }
+        }
+      }
+    },
+    "排队等待中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting in queue…"
+          }
+        }
+      }
+    },
+    "接上 MagSafe 磁吸头，应自动吸附并亮起充电指示灯。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attach the MagSafe connector; it should snap into place and light up the charging indicator."
+          }
+        }
+      }
+    },
+    "接充电器，确认充电指示与功率正常；需调整角度才通电 = 接口松旷。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect the charger and confirm that charging and power delivery are normal; if you must wiggle the plug to get power, the port is loose."
+          }
+        }
+      }
+    },
+    "接外接显示器或转接器，确认视频输出正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect an external display or adapter and confirm that video output works."
+          }
+        }
+      }
+    },
+    "接电源": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected to power"
+          }
+        }
+      }
+    },
+    "接电源、关闭后台程序，跑 CPU 单核/多核与 GPU 测试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect power, quit background apps, and run the CPU single-core, multi-core, and GPU tests."
+          }
+        }
+      }
+    },
+    "接触包装前就开始录像，直到开机前不要停：拍清盒子六个面、纸质拉条、盒上序列号并核对机身一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start recording before you touch the packaging and keep recording until the Mac is powered on: show all six sides of the box, the paper pull tab, and the serial number on the box, then verify it matches the machine."
+          }
+        }
+      }
+    },
+    "摄像头无法启动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The camera could not start"
+          }
+        }
+      }
+    },
+    "摄像头权限未开启": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access is off"
+          }
+        }
+      }
+    },
+    "摄像头检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera test"
+          }
+        }
+      }
+    },
+    "摄像头预览 · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera preview · %@"
+          }
+        }
+      }
+    },
+    "摄氏度 (°C)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Celsius (°C)"
+          }
+        }
+      }
+    },
+    "播放一段熟悉的音乐，注意是否有共振、金属杂音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play a piece of music you know well and listen for resonance or metallic rattling."
+          }
+        }
+      }
+    },
+    "播放高质量音视频素材，检查音质、音量与画面色彩。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play high-quality audio and video material and check sound quality, volume, and color."
+          }
+        }
+      }
+    },
+    "操作步骤 %ld 步": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%ld steps"
+          }
+        }
+      }
+    },
+    "文字、线条、几何与对比度总检。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overall check of text, lines, geometry and contrast."
+          }
+        }
+      }
+    },
+    "文字清晰度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text clarity"
+          }
+        }
+      }
+    },
+    "斜角光线下观察是否有彩虹纹、起皮、脱落斑块。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look at the display under angled light for rainbow marks, flaking, or patches where the coating has come off."
+          }
+        }
+      }
+    },
+    "无底": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No background"
+          }
+        }
+      }
+    },
+    "日志": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log"
+          }
+        }
+      }
+    },
+    "显示器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display"
+          }
+        }
+      }
+    },
+    "暂停": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        }
+      }
+    },
+    "暗环境下纯黑画面、亮度拉满，检查四边四角是否漏光。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In a dark room with a pure black screen at maximum brightness, check the edges and corners for light leaks."
+          }
+        }
+      }
+    },
+    "更可靠的方法：抹机后联网进入设置助理，若出现「远程管理」页面即为企业注册机。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For a more reliable check, erase the Mac and go through Setup Assistant while online; a Remote Management page means it is enrolled by a company."
+          }
+        }
+      }
+    },
+    "更早机型：看 True Tone 原彩显示与自动亮度是否可用——本应支持却没有，通常是非原装屏。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On earlier models, check whether True Tone and auto-brightness work — if the model should support them but they are missing, the display is usually not original."
+          }
+        }
+      }
+    },
+    "最低系统": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimum OS"
+          }
+        }
+      }
+    },
+    "最后一步：抹掉重装系统（最后做）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Final step: Erase and reinstall macOS (do this last)"
+          }
+        }
+      }
+    },
+    "最大容量 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maximum capacity %@"
+          }
+        }
+      }
+    },
+    "最高亮度下与同机型对比，明显偏暗说明背光老化。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At maximum brightness, compare with the same model; if it is clearly dimmer, the backlight has aged."
+          }
+        }
+      }
+    },
+    "有条件时带自己的素材与耳机做 A/B 对比。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you can, bring your own material and headphones for an A/B comparison."
+          }
+        }
+      }
+    },
+    "服务繁忙，正在自动重试翻译请求…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Service busy — retrying translation requests automatically…"
+          }
+        }
+      }
+    },
+    "未下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not downloaded"
+          }
+        }
+      }
+    },
+    "未安装 ffmpeg，无法烧录字幕。请在终端执行：brew install ffmpeg（或取消勾选「烧录字幕进视频」）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ffmpeg not installed — cannot burn in subtitles. Run this in Terminal: brew install ffmpeg (or uncheck \"Burn subtitles into video\")"
+          }
+        }
+      }
+    },
+    "未安装时仅生成字幕文件(.srt)，成片烧录将被拦截": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without ffmpeg only subtitle files (.srt) are generated; burn-in is blocked"
+          }
+        }
+      }
+    },
+    "未检测到 GPU 加速器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No GPU accelerator detected"
+          }
+        }
+      }
+    },
+    "未检测到 ffmpeg — 烧录字幕不可用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ffmpeg not found — subtitle burn-in unavailable"
+          }
+        }
+      }
+    },
+    "未检测到内置电池（台式机/无电池机型）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No built-in battery detected (desktop or battery-free model)."
+          }
+        }
+      }
+    },
+    "未检测到可用麦克风": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No available microphone detected"
+          }
+        }
+      }
+    },
+    "未检测到打印机": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No printer detected"
+          }
+        }
+      }
+    },
+    "未检测到摄像头": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No camera detected"
+          }
+        }
+      }
+    },
+    "未检测到风扇（被动散热机型正常）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No fans detected (normal on passively cooled Macs)"
+          }
+        }
+      }
+    },
+    "未注册": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not registered"
+          }
+        }
+      }
+    },
+    "未知显示器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown display"
+          }
+        }
+      }
+    },
+    "未获得摄像头权限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access was not granted"
+          }
+        }
+      }
+    },
+    "本机硬件快照": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac hardware snapshot"
+          }
+        }
+      }
+    },
+    "机型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "机身与外观检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chassis and appearance"
+          }
+        }
+      }
+    },
+    "权限不足（终端：sudo profiles status -type enrollment）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insufficient permissions (Terminal: sudo profiles status -type enrollment)"
+          }
+        }
+      }
+    },
+    "松手后应在数秒内完全恢复；出现永久暗斑说明屏幕已受损。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The image should fully recover within seconds of releasing; a permanent dark patch means the display is damaged."
+          }
+        }
+      }
+    },
+    "查「部件与维修」+ True Tone/自动亮度是否可用 + 边框撬痕。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check Parts & Service, whether True Tone and auto-brightness work, and whether the bezel shows pry marks."
+          }
+        }
+      }
+    },
+    "查看固态硬盘健康状态与剩余寿命（右侧快照已给出 SMART 与累计读写）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the SSD health status and remaining life (the snapshot on the right already shows SMART data and total reads and writes)."
+          }
+        }
+      }
+    },
+    "查看实时画面：清晰、无横纹黑块。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the live image: it should be sharp with no horizontal lines or black blocks."
+          }
+        }
+      }
+    },
+    "查看结果：记录参考代码（ADP000 = 未发现问题），其他代码即对应硬件故障，逐条向卖家追问，然后按屏幕选项重启或关机。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review the results: note the reference code (ADP000 = no issues found); any other code points to a hardware fault, so ask the seller about each one, then choose Restart or Shut Down on screen."
+          }
+        }
+      }
+    },
+    "查看详细日志": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View detailed log"
+          }
+        }
+      }
+    },
+    "标准模式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard mode"
+          }
+        }
+      }
+    },
+    "校验中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifying…"
+          }
+        }
+      }
+    },
+    "样式=丰富": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "style=rich"
+          }
+        }
+      }
+    },
+    "样式=紧凑": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "style=compact"
+          }
+        }
+      }
+    },
+    "核对配件清单：电源适配器功率、充电线与说明文档是否符合 Apple 官方规格。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the included accessories: confirm that the power adapter wattage, charging cable, and documentation match Apple's official specifications."
+          }
+        }
+      }
+    },
+    "检查包装完整性：约 2022 年起的较新包装已无塑封膜、改为纸质拉条，确认拉条或塑封完好、无二次封装痕迹。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that the packaging is intact: newer boxes from around 2022 on have no shrink wrap and use a paper pull tab instead, so confirm the tab or wrap is undamaged and shows no sign of being resealed."
+          }
+        }
+      }
+    },
+    "检查四角与边缘有无磕碰、掉漆，壳缝是否均匀。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the corners and edges for dents and chipped paint, and that the case seams are even."
+          }
+        }
+      }
+    },
+    "检查屏幕是否有键盘压痕、亮斑。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the display for keyboard imprints and bright spots."
+          }
+        }
+      }
+    },
+    "检查机身是否有凹痕、划痕、裂缝或氧化。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the chassis for dents, scratches, cracks, or oxidation."
+          }
+        }
+      }
+    },
+    "检查端口残留：灯光照入 USB-C 等端口查看腐蚀、水渍圈或黏腻残留；老款 MagSafe 口周围是进水高发点。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the ports for residue: shine a light into the USB-C and other ports to look for corrosion, watermarks, or sticky residue; the area around the older MagSafe connector is a common liquid-damage spot."
+          }
+        }
+      }
+    },
+    "检查耳机孔（仅老机型）：用手电照 3.5mm 耳机孔可见 LCI——白色正常、红色进水；较新机型外部看不到。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the headphone jack (older models only): shine a flashlight into the 3.5 mm jack to see the LCI — white is normal and red means liquid damage; newer models show nothing from the outside."
+          }
+        }
+      }
+    },
+    "检查腐蚀迹象：端口边缘、扬声器开孔与散热孔是否有白色/绿色残留。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for corrosion: look for white or green residue around the port edges, speaker grilles, and vents."
+          }
+        }
+      }
+    },
+    "检查风扇有无异响，负载时散热是否正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the fan for abnormal noise and that cooling works under load."
+          }
+        }
+      }
+    },
+    "检测到 %ld 台 · 默认 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detected %ld printer(s) · default %@"
+          }
+        }
+      }
+    },
+    "检测扬声器与屏幕表现，建议到直营店对比体验。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check speaker and display performance; comparing at an Apple Store is recommended."
+          }
+        }
+      }
+    },
+    "模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "模型 %ld/%ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models %ld/%ld"
+          }
+        }
+      }
+    },
+    "模型 5/5 ✓": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models 5/5 ✓"
+          }
+        }
+      }
+    },
+    "模型 · ModelScope 魔搭": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models · ModelScope"
+          }
+        }
+      }
+    },
+    "模型目录（粘贴后回车即扫描）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model directory (paste and press Return to scan)"
+          }
+        }
+      }
+    },
+    "模板缺失": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template missing"
+          }
+        }
+      }
+    },
+    "模板缺失：%@.pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template missing: %@.pdf"
+          }
+        }
+      }
+    },
+    "正在启动构建脚本…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starting build script…"
+          }
+        }
+      }
+    },
+    "正在扫描该目录…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning this directory…"
+          }
+        }
+      }
+    },
+    "正在把字幕烧进视频…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burning subtitles into the video…"
+          }
+        }
+      }
+    },
+    "正在搜索手表…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning for watch…"
+          }
+        }
+      }
+    },
+    "正在构建环境…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Building environment…"
+          }
+        }
+      }
+    },
+    "正在校对时间轴…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aligning the timeline…"
+          }
+        }
+      }
+    },
+    "正在翻译成目标语言…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating into the target language…"
+          }
+        }
+      }
+    },
+    "正在翻译成目标语言…（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translating into the target language… (%@)"
+          }
+        }
+      }
+    },
+    "正在识别语音…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing audio…"
+          }
+        }
+      }
+    },
+    "正在识别语音…（%@）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing audio… (%@)"
+          }
+        }
+      }
+    },
+    "正在请求麦克风权限…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requesting microphone access…"
+          }
+        }
+      }
+    },
+    "步骤": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steps"
+          }
+        }
+      }
+    },
+    "每 1 秒自动刷新并滚动到底部": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refreshes every second and scrolls to the bottom"
+          }
+        }
+      }
+    },
+    "每个 USB-C / 雷电口分别插入 U 盘，确认能正常读写文件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plug a USB flash drive into each USB-C / Thunderbolt port and confirm that you can read and write files."
+          }
+        }
+      }
+    },
+    "每个口分别测数据传输、外接显示与充电，松旷即异常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test data transfer, external display output, and charging on every port; a loose fit is a fault."
+          }
+        }
+      }
+    },
+    "没有该选项时进恢复模式 · Apple 芯片：关机后按住电源键直到「正在载入启动选项」，点「选项」›「继续」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If that option is missing, enter Recovery mode on Apple silicon: shut down, hold the power button until Loading startup options appears, then click Options › Continue."
+          }
+        }
+      }
+    },
+    "没有该选项时进恢复模式 · Intel 芯片：重启后立即按住 Command (⌘) + R 直到出现苹果标志。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If that option is missing, enter Recovery mode on Intel: restart and immediately hold Command (⌘) + R until the Apple logo appears."
+          }
+        }
+      }
+    },
+    "注册失败：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registration failed: %@"
+          }
+        }
+      }
+    },
+    "注意检查串键（按 A 亮 B）与连击。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also watch for wrong-key output (pressing A lights up B) and double presses."
+          }
+        }
+      }
+    },
+    "注意：进水会导致保修失效并留下间歇性故障；沿海潮湿环境极少数情况下 LCI 会因长期高湿度变红，需结合其他迹象判断。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note: liquid damage voids the warranty and can leave intermittent faults; in rare cases, long-term humidity in damp coastal climates turns LCIs red, so judge together with other signs."
+          }
+        }
+      }
+    },
+    "活动网卡：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active interface: %@"
+          }
+        }
+      }
+    },
+    "活动网卡：%@（另有 %ld 块在传输）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active interface: %@ (%ld more transferring)"
+          }
+        }
+      }
+    },
+    "活动网卡：—": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active interface: —"
+          }
+        }
+      }
+    },
+    "测试最大/最小亮度与自动亮度传感器。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test maximum and minimum brightness and the auto-brightness sensor."
+          }
+        }
+      }
+    },
+    "测试磁吸对齐与充电稳定性。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test magnetic alignment and charging stability."
+          }
+        }
+      }
+    },
+    "浏览并扫描…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browse & Scan…"
+          }
+        }
+      }
+    },
+    "添加视频": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add video"
+          }
+        }
+      }
+    },
+    "清屏": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        }
+      }
+    },
+    "温度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temperature"
+          }
+        }
+      }
+    },
+    "满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full charge %d mAh / Design %d mAh (%.0f%% health)"
+          }
+        }
+      }
+    },
+    "激活锁": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activation Lock"
+          }
+        }
+      }
+    },
+    "激活锁检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activation Lock check"
+          }
+        }
+      }
+    },
+    "灰度渐变": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grayscale gradient"
+          }
+        }
+      }
+    },
+    "点「开始」依次播放左 / 中 / 右三声提示音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start to play the left, center, and then right tone."
+          }
+        }
+      }
+    },
+    "点「开始」后在画布上按顺序敲击每个按键（含功能键与方向键）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start, then press every key on the canvas in order, including the function and arrow keys."
+          }
+        }
+      }
+    },
+    "点「开始」在画布上单指连续画圈与四角直线：应跟手、无断线。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start, then draw continuous circles and lines into all four corners with one finger: the cursor should follow smoothly with no breaks."
+          }
+        }
+      }
+    },
+    "点「开始」录制约 5 秒，随后自动回放。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start to record for about five seconds; playback starts automatically."
+          }
+        }
+      }
+    },
+    "点「开始」打开实时预览窗口（首次会请求摄像头权限）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start to open the live preview window (the first run asks for camera permission)."
+          }
+        }
+      }
+    },
+    "点「开始」进入全屏纯色画面，空格或 → 切换颜色，Esc 退出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click Start to enter the full-screen solid colors; press Space or → to change color and Esc to exit."
+          }
+        }
+      }
+    },
+    "点击本区域取得焦点，然后逐个按下每个键（F 键无反应请按 fn+F）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click this area to focus it, then press each key one by one (if the F keys do not respond, press fn+F)."
+          }
+        }
+      }
+    },
+    "点击测试区取得焦点，按下每个键——应实时点亮并计数。Esc 退出。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click the test area to focus it, then press each key — keys should light up and be counted in real time. Press Esc to exit."
+          }
+        }
+      }
+    },
+    "点右侧按钮一键构建（首次约 3–15 分钟）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build with the button on the right (first run takes about 3–15 min)"
+          }
+        }
+      }
+    },
+    "烧制失败（检查 ffmpeg）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burn-in failed (check ffmpeg)"
+          }
+        }
+      }
+    },
+    "烧录字幕中（ffmpeg）…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burning in subtitles (ffmpeg)…"
+          }
+        }
+      }
+    },
+    "烧录字幕进视频": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burn subtitles into video"
+          }
+        }
+      }
+    },
+    "环境就绪": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment ready"
+          }
+        }
+      }
+    },
+    "环境未构建": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment not built"
+          }
+        }
+      }
+    },
+    "环境配置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment setup"
+          }
+        }
+      }
+    },
+    "用 F1 / F2 走完亮度全行程，观察是否有跳变或闪烁。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press F1 / F2 through the full brightness range and watch for jumps or flicker."
+          }
+        }
+      }
+    },
+    "用 Geekbench 跑分对比同机型公开成绩。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Geekbench scores to compare with published results for the same model."
+          }
+        }
+      }
+    },
+    "用 UFO Test 测试屏幕刷新率是否达标。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use UFO Test to check that the display meets its refresh rate."
+          }
+        }
+      }
+    },
+    "用于": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "for"
+          }
+        }
+      }
+    },
+    "用单指连续画圈、直线覆盖四角与边缘：应跟手无断线。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw continuous circles and straight lines with one finger to cover all four corners and edges: tracking should be smooth with no breaks."
+          }
+        }
+      }
+    },
+    "用坏点检测页全屏切换红、绿、蓝、白、黑纯色画面，逐色观察有没有固定不变的亮点或黑点。再在全黑房间把亮度调到最高看四角有无明显漏光，轻微均匀的边缘泛光属正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the dead pixel test to switch the full screen through solid red, green, blue, white, and black, checking each color for bright or dark dots that never change. Then, in a completely dark room with brightness at maximum, check the corners for obvious backlight bleed; faint, even edge glow is normal."
+          }
+        }
+      }
+    },
+    "用手遮挡镜头再移开，观察曝光响应是否正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cover the lens with your hand and then move it away to check that exposure responds normally."
+          }
+        }
+      }
+    },
+    "用无纺布或超细纤维布轻压屏幕四角与边缘。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press the four corners and edges of the display gently with a non-woven or microfiber cloth."
+          }
+        }
+      }
+    },
+    "用无纺布轻压屏幕四角，观察是否出现黑斑。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press the four corners of the display gently through a non-woven cloth and watch for dark patches."
+          }
+        }
+      }
+    },
+    "电平进度 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Level %@"
+          }
+        }
+      }
+    },
+    "电池供电": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On battery"
+          }
+        }
+      }
+    },
+    "电池健康": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery health"
+          }
+        }
+      }
+    },
+    "电池充电状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery charging status"
+          }
+        }
+      }
+    },
+    "电池剩余容量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery remaining capacity"
+          }
+        }
+      }
+    },
+    "电池容量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery capacity"
+          }
+        }
+      }
+    },
+    "电池序列号 / 型号": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery serial number / model"
+          }
+        }
+      }
+    },
+    "电池当前电量": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery level"
+          }
+        }
+      }
+    },
+    "电池循环次数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery cycle count"
+          }
+        }
+      }
+    },
+    "电池检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery test"
+          }
+        }
+      }
+    },
+    "电池电压/电流/温度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery voltage / current / temperature"
+          }
+        }
+      }
+    },
+    "电源模式": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power mode"
+          }
+        }
+      }
+    },
+    "画面应清晰、色彩正常、无横纹、黑块或彩点。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The image should be sharp with normal color and no horizontal lines, black blocks, or colored dots."
+          }
+        }
+      }
+    },
+    "界面语言": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface language"
+          }
+        }
+      }
+    },
+    "登录时自动启动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch at login"
+          }
+        }
+      }
+    },
+    "白": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White"
+          }
+        }
+      }
+    },
+    "白→黑多级灰阶过渡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multi-step white→black grayscale ramp."
+          }
+        }
+      }
+    },
+    "的设备": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "device"
+          }
+        }
+      }
+    },
+    "看右侧快照「电池健康」「电池循环次数」「电池容量」三行：健康度 = 满充容量 / 设计容量。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the Battery health, Battery cycle count, and Battery capacity rows in the snapshot on the right: health equals full charge capacity divided by design capacity."
+          }
+        }
+      }
+    },
+    "硬件 · SMC": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hardware · SMC"
+          }
+        }
+      }
+    },
+    "硬件状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hardware status"
+          }
+        }
+      }
+    },
+    "确认「查找我的 Mac」已关闭，抹机后不再索要前机主 Apple 账户密码。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm that Find My Mac is turned off and that the erased Mac no longer asks for the previous owner's Apple Account password."
+          }
+        }
+      }
+    },
+    "确认删除？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm delete?"
+          }
+        }
+      }
+    },
+    "确认左右声道定位清晰、音量均衡、无破音与杂音。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm that the left and right channels are clearly positioned, evenly loud, and free of distortion and noise."
+          }
+        }
+      }
+    },
+    "磁盘": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk"
+          }
+        }
+      }
+    },
+    "磁盘 SMART": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk SMART"
+          }
+        }
+      }
+    },
+    "磁盘空间": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disk space"
+          }
+        }
+      }
+    },
+    "移除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        }
+      }
+    },
+    "空格 / → / 单击 = 下一张　← = 上一张　Esc = 退出（共 %ld 张纯色图）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space / → / click = next　← = previous　Esc = exit (solid colors: %ld)"
+          }
+        }
+      }
+    },
+    "立即重启 MetriBar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart MetriBar now"
+          }
+        }
+      }
+    },
+    "端口与连接": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ports and connectivity"
+          }
+        }
+      }
+    },
+    "精细线条": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fine lines"
+          }
+        }
+      }
+    },
+    "系统": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
+    "系统、机身底壳、包装盒三处序列号必须完全一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The serial number must match exactly in all three places: macOS, the bottom case, and the box."
+          }
+        }
+      }
+    },
+    "系统弹窗中选择「允许」，随后自动开始录音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Allow in the system dialog; recording starts automatically."
+          }
+        }
+      }
+    },
+    "系统设置 › Apple 账户 › iCloud › 查找：确认「查找我的 Mac」已关闭。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to System Settings › Apple Account › iCloud › Find My and confirm that Find My Mac is turned off."
+          }
+        }
+      }
+    },
+    "系统设置 › Touch ID 与密码：录入一枚新指纹。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings › Touch ID & Password and enroll a new fingerprint."
+          }
+        }
+      }
+    },
+    "系统设置 › 你的名字 › iCloud › 查找我的 Mac，确认已关闭且系统里不再显示前机主的 Apple 账户。最保险的做法是让卖家当面「抹掉所有内容和设置」，抹机后进入设置助理若不要求输入前机主密码，才算真正解锁。仍有激活锁的 Mac 绝对不能买。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings › your name › iCloud › Find My Mac and confirm that it is off and that the previous owner's Apple Account no longer appears in the system. The safest approach is to have the seller erase all content and settings in front of you; the Mac is only truly unlocked if Setup Assistant does not ask for the previous owner's password. Never buy a Mac that still has Activation Lock."
+          }
+        }
+      }
+    },
+    "系统设置 › 通用 › 关于本机 › 部件与维修：查看维修记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings › General › About › Parts & Service to review the service history."
+          }
+        }
+      }
+    },
+    "系统设置 › 通用 › 关于本机：读出序列号（右侧快照也已自动读取）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings › General › About and read the serial number (the snapshot on the right reads it automatically too)."
+          }
+        }
+      }
+    },
+    "系统设置 › 隐私与安全性 › 摄像头：勾选 MetriBar 后重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Settings › Privacy & Security › Camera: select MetriBar, then try again."
+          }
+        }
+      }
+    },
+    "系统设置 › 隐私与安全性 › 麦克风：勾选 MetriBar 后重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Settings › Privacy & Security › Microphone: select MetriBar, then try again."
+          }
+        }
+      }
+    },
+    "系统评估 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System rating: %@"
+          }
+        }
+      }
+    },
+    "系统默认": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System default"
+          }
+        }
+      }
+    },
+    "紧凑（纯文本）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compact (plain text)"
+          }
+        }
+      }
+    },
+    "红": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        }
+      }
+    },
+    "终端执行：diskutil info / | grep -i smart，确认为 Verified。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run diskutil info / | grep -i smart in Terminal and confirm that it reports Verified."
+          }
+        }
+      }
+    },
+    "终端执行：profiles status -type enrollment，两行都显示 No 才正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run profiles status -type enrollment in Terminal; both lines must read No."
+          }
+        }
+      }
+    },
+    "终端核验 + 抹机后联网复验，出现「远程管理」页即为企业监管机。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verify in Terminal, then re-check while online after erasing: a Remote Management screen means the Mac is enrolled in corporate management."
+          }
+        }
+      }
+    },
+    "绘制图案检查各区域跟踪与响应，再测双指滚动与用力点按。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw patterns to check tracking and response across the whole surface, then test two-finger scrolling and a force click."
+          }
+        }
+      }
+    },
+    "继续": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
+          }
+        }
+      }
+    },
+    "维修历史与配件核验": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Service history and parts check"
+          }
+        }
+      }
+    },
+    "绿": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        }
+      }
+    },
+    "网络": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network"
+          }
+        }
+      }
+    },
+    "网速": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speed"
+          }
+        }
+      }
+    },
+    "翻译服务待机": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation service standby"
+          }
+        }
+      }
+    },
+    "翻译服务运行中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation service running"
+          }
+        }
+      }
+    },
+    "联动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wired"
+          }
+        }
+      }
+    },
+    "肤色/天空/植被参照色卡。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference patches for skin, sky and foliage."
+          }
+        }
+      }
+    },
+    "胶囊底": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pill background"
+          }
+        }
+      }
+    },
+    "能清楚听到自己的声音 = 麦克风正常；无声/断续 = 异常": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hearing your own voice clearly means the microphone is fine; silence or dropouts mean a fault."
+          }
+        }
+      }
+    },
+    "自动": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        }
+      }
+    },
+    "色彩还原": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color accuracy"
+          }
+        }
+      }
+    },
+    "菜单栏显示": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu bar display"
+          }
+        }
+      }
+    },
+    "蓝": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        }
+      }
+    },
+    "蓝牙未开启": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth off"
+          }
+        }
+      }
+    },
+    "被按下的键应实时点亮并计数；未点亮的键即为不触发。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every key you press should light up and be counted in real time; a key that never lights up does not register."
+          }
+        }
+      }
+    },
+    "覆盖四个角与边缘，检查是否存在无响应区域。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cover all four corners and the edges to check for areas that do not respond."
+          }
+        }
+      }
+    },
+    "观察充电头与接口有无烧灼、发黑痕迹。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the connector and the port for burn marks or blackening."
+          }
+        }
+      }
+    },
+    "观察是否出现黑斑、水波纹样扩散。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch for dark spots or ripples that spread like water."
+          }
+        }
+      }
+    },
+    "视频翻译": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video Translation"
+          }
+        }
+      }
+    },
+    "角标/十字/斜线检查进纸歪斜。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corner marks, crosses and diagonals for paper skew."
+          }
+        }
+      }
+    },
+    "触控板全域画布": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full-area trackpad canvas"
+          }
+        }
+      }
+    },
+    "触控板检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trackpad test"
+          }
+        }
+      }
+    },
+    "触摸机身底部与键盘上方，温度应均匀上升而非局部烫手。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feel the bottom case and the area above the keyboard; heat should be even rather than burning hot in one spot."
+          }
+        }
+      }
+    },
+    "让卖家当面执行「抹掉所有内容和设置」，重启进入设置助理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Have the seller erase all content and settings in front of you, then restart into Setup Assistant."
+          }
+        }
+      }
+    },
+    "记录序列号：清晰拍摄盒上序列号，开箱后与机身序列号对比——必须完全一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record the serial number: film the serial number on the box clearly, then compare it with the serial number on the machine after unboxing — they must match exactly."
+          }
+        }
+      }
+    },
+    "设备": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device"
+          }
+        }
+      }
+    },
+    "设备名过滤（留空=任意心率设备）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device name filter (empty = any heart-rate device)"
+          }
+        }
+      }
+    },
+    "设备被其他 App 占用或输入不可用": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another app is using the device, or the input is unavailable."
+          }
+        }
+      }
+    },
+    "设备：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device: %@"
+          }
+        }
+      }
+    },
+    "设置助理若仍要求输入前机主 Apple 账户密码 = 激活锁未解除，绝对不能付款。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If Setup Assistant still asks for the previous owner's Apple Account password, Activation Lock has not been removed and you must not pay."
+          }
+        }
+      }
+    },
+    "设置（⌘,）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings (⌘,)"
+          }
+        }
+      }
+    },
+    "诊断模式（ADP000）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics mode (ADP000)"
+          }
+        }
+      }
+    },
+    "该入口只在检测到维修时显示；没有入口一般说明无维修记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This section appears only when a repair is detected; if it is missing, there is usually no service history."
+          }
+        }
+      }
+    },
+    "该机型或系统未提供可用摄像头设备": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model or macOS provides no available camera device."
+          }
+        }
+      }
+    },
+    "该机型或系统未提供输入设备": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model or macOS provides no input device."
+          }
+        }
+      }
+    },
+    "该目录下未发现任何模型（共查 %ld 个）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No models found in this directory (checked %ld)."
+          }
+        }
+      }
+    },
+    "详细日志": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detailed log"
+          }
+        }
+      }
+    },
+    "语音识别中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing…"
+          }
+        }
+      }
+    },
+    "请先在右侧「一键构建环境」": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Build the environment first (button on the right)"
+          }
+        }
+      }
+    },
+    "请在手表开启「广播心率」并允许蓝牙": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on “Broadcast Heart Rate” on your watch and allow Bluetooth"
+          }
+        }
+      }
+    },
+    "请在系统设置允许蓝牙": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Bluetooth in System Settings"
+          }
+        }
+      }
+    },
+    "请正常说话，录音结束会自动播放给你听": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speak normally; the recording plays back automatically when it ends."
+          }
+        }
+      }
+    },
+    "读取失败": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read failed"
+          }
+        }
+      }
+    },
+    "谨慎抹掉内置磁盘：在恢复模式打开「磁盘工具」，选 Macintosh HD；若有「抹掉卷组」优先用它，否则点「抹掉」并保持 APFS 格式。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase the internal disk carefully: open Disk Utility in Recovery mode and select Macintosh HD; if Erase Volume Group is offered, use it, otherwise click Erase and keep the APFS format."
+          }
+        }
+      }
+    },
+    "跑 2 分钟高负载（编译、跑分或视频导出）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a two-minute high load (compiling, benchmarking, or exporting video)."
+          }
+        }
+      }
+    },
+    "路径无效（需已存在的文件夹）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid path (must be an existing folder)"
+          }
+        }
+      }
+    },
+    "转写 → 翻译 → 双语字幕（可选烧录）。\n多路并行处理；模型用完自动卸载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription → translation → bilingual subtitles (burn-in optional).\nParallel processing; models unload when done."
+          }
+        }
+      }
+    },
+    "转写中": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing"
+          }
+        }
+      }
+    },
+    "转写环境已就绪": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription environment ready"
+          }
+        }
+      }
+    },
+    "轻微均匀的边缘泛光属正常；局部喷溅状亮斑属异常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faint, even glow along the edges is normal; localized splash-shaped bright patches are not."
+          }
+        }
+      }
+    },
+    "轻擦屏幕，查看防反射镀膜是否脱落（2012–2019 款高发）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wipe the display lightly and check whether the anti-reflective coating is peeling (common on 2012–2019 models)."
+          }
+        }
+      }
+    },
+    "轻轻碰动线缆，充电不应中断。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nudge the cable gently; charging should not stop."
+          }
+        }
+      }
+    },
+    "输入序列号，核对显示的机型、购买日期与保修/AppleCare 状态是否与卖家描述一致。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter the serial number and confirm that the model, purchase date, and warranty or AppleCare status match what the seller described."
+          }
+        }
+      }
+    },
+    "输入设备": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Input devices"
+          }
+        }
+      }
+    },
+    "运动流畅度测试：方块应平滑移动，卡顿说明掉帧；滚动线条应平滑无撕裂或抖动。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the motion smoothness test, the squares should move smoothly — stuttering means dropped frames — and the scrolling lines should be smooth with no tearing or judder."
+          }
+        }
+      }
+    },
+    "运行时与依赖": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime & dependencies"
+          }
+        }
+      }
+    },
+    "运行时与模型": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime & models"
+          }
+        }
+      }
+    },
+    "这个验机工具要收费或安装软件吗？": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Does this inspection tool cost money or require installing software?"
+          }
+        }
+      }
+    },
+    "进水指示器检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Contact Indicator (LCI) check"
+          }
+        }
+      }
+    },
+    "连 Wi-Fi 看信号并测速，蓝牙配对设备验证。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join a Wi-Fi network to check signal and speed, and pair a Bluetooth device to verify it."
+          }
+        }
+      }
+    },
+    "连接 Wi-Fi，检查信号强度与实测网速是否正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect to Wi-Fi and check that signal strength and measured speed are normal."
+          }
+        }
+      }
+    },
+    "连接中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecting…"
+          }
+        }
+      }
+    },
+    "连接状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection"
+          }
+        }
+      }
+    },
+    "连接蓝牙耳机或键鼠，确认配对与音频/输入正常。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Bluetooth headphones or a keyboard and mouse and confirm that pairing, audio, and input work."
+          }
+        }
+      }
+    },
+    "退出 MetriBar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit MetriBar"
+          }
+        }
+      }
+    },
+    "选择并扫描": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select & Scan"
+          }
+        }
+      }
+    },
+    "选择模型文件夹（内含 SenseVoiceSmall 等子目录）· ⌘⇧. 可显示隐藏文件夹": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a model folder (containing SenseVoiceSmall and other subfolders) · ⌘⇧. shows hidden folders"
+          }
+        }
+      }
+    },
+    "逐色观察是否有固定不变的亮点（卡点）或黑点（坏点）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In each color, look for bright dots that never change (stuck pixels) or dark dots (dead pixels)."
+          }
+        }
+      }
+    },
+    "递减线宽分辨率测试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decreasing line widths for resolution."
+          }
+        }
+      }
+    },
+    "通过": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pass"
+          }
+        }
+      }
+    },
+    "部件会标注「正品 Apple 部件 / 二手 Apple 部件 / 未知或未验证」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each part is labeled Genuine Apple Part, Used Apple Part, or Unknown or Unverified."
+          }
+        }
+      }
+    },
+    "采集": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sampling"
+          }
+        }
+      }
+    },
+    "采集中…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collecting…"
+          }
+        }
+      }
+    },
+    "重新下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redownload"
+          }
+        }
+      }
+    },
+    "重新安装 macOS：退出磁盘工具后选「重新安装 macOS」；卖机或送人则装完停在设置助理界面，不要登录自己的账号。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reinstall macOS: quit Disk Utility and choose Reinstall macOS; if you are selling or giving the Mac away, stop at the Setup Assistant screen when it finishes and do not sign in with your own account."
+          }
+        }
+      }
+    },
+    "重新搜索手表": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search for watch again"
+          }
+        }
+      }
+    },
+    "重新检测状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-check status"
+          }
+        }
+      }
+    },
+    "重置": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset"
+          }
+        }
+      }
+    },
+    "重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry"
+          }
+        }
+      }
+    },
+    "铰链 / 转轴检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinge test"
+          }
+        }
+      }
+    },
+    "锁屏后用该指纹解锁，应一次识别成功。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock the screen and unlock with that fingerprint; it should be recognized on the first try."
+          }
+        }
+      }
+    },
+    "键盘全键测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full keyboard test"
+          }
+        }
+      }
+    },
+    "需 ffmpeg": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requires ffmpeg"
+          }
+        }
+      }
+    },
+    "靠近听风扇：应平稳起转，无金属摩擦声或哒哒异响。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen close to the fan: it should spin up smoothly with no metallic scraping or rattling."
+          }
+        }
+      }
+    },
+    "靠近左右麦克风孔说话分别测试，回放应有对应强弱。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speak close to the left and right microphone openings in turn; playback should be louder on the matching side."
+          }
+        }
+      }
+    },
+    "音画质量对照素材": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio and video reference material"
+          }
+        }
+      }
+    },
+    "音画质量测试": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio and video quality test"
+          }
+        }
+      }
+    },
+    "音频检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio tests"
+          }
+        }
+      }
+    },
+    "预览": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
+          }
+        }
+      }
+    },
+    "风扇 / 散热检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fan and cooling test"
+          }
+        }
+      }
+    },
+    "麦克风权限未开启": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone access is off"
+          }
+        }
+      }
+    },
+    "麦克风检测": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone test"
+          }
+        }
+      }
+    },
+    "黑": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Black"
+          }
+        }
+      }
+    },
+    "黑/白/红/绿/蓝逐色找固定亮点、暗点与色斑。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cycle through black, white, red, green, and blue to look for stuck bright dots, dark dots, and blotches."
+          }
+        }
+      }
+    },
+    "黑白": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B&W"
+          }
+        }
+      }
+    },
+    "黑白基础页": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B&W basics"
+          }
+        }
+      }
+    },
+    "（国内直连，无需科学上网）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(direct connection in mainland China, no VPN needed)"
+          }
+        }
+      }
+    },
+    "（暂无日志）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(No log yet)"
+          }
+        }
+      }
+    },
+    "（系统读数 %ld%%）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (system reading %ld%%)"
+          }
+        }
+      }
+    },
+    "🎙 正在录音… %ld 秒后自动回放": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🎙 Recording… playback in %ld s"
+          }
+        }
+      }
+    },
+    "🎙 正在录音… 剩余 %.1f 秒": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🎙 Recording… %.1f s left"
+          }
+        }
+      }
+    },
+    "🔊 正在回放录音（%.1f 秒）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "🔊 Playing back the recording (%.1f s)"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
