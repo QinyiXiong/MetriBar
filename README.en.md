@@ -267,9 +267,7 @@ MetriBar/
 │   └── make_icon.swift                 # App icon generator (209 lines)
 ├── docs/
 │   ├── Xcode配置清单.md                 # Line-by-line project configuration checklist (Chinese)
-│   ├── 验机参考站点_spec.md                 # Source spec of the inspection checklist (30 pages scraped; Chinese)
 │   ├── MetriBar-测试报告.docx           # Full test report, 15 screenshots (Chinese)
-│   ├── make_report.py                  # Report generator
 │   └── 预览/*.png                       # Screenshots referenced by the READMEs
 └── README.md (Chinese) / README.en.md (English)
 ```
@@ -339,7 +337,7 @@ DispatchSourceTimer (serial queue, qos .utility, leeway 120 ms)
 
 ### 4.3 MacBook inspection
 
-**Source of the structure**: aligned with 验机参考站点 (30 pages scraped into [`docs/验机参考站点_spec.md`](docs/验机参考站点_spec.md)); wording and implementation are original. Current size: **10 sections / 32 items / 15 must-check / 8 FAQs, every item with step-by-step guidance**, asserted both by the self-test and the UI harness.
+**Structure**: the checklist is organised into 10 sections for the inspection workflow; the structure, wording, steps and implementation are original to this project. Current size: **10 sections / 32 items / 15 must-check / 8 FAQs, every item with step-by-step guidance**, asserted both by the self-test and the UI harness.
 
 | Section | Key items (★ = must-check) |
 | --- | --- |
@@ -833,7 +831,5 @@ Issues found by the repository-wide source audit and **already fixed**:
 | Document | Content |
 | --- | --- |
 | [`docs/Xcode配置清单.md`](docs/Xcode配置清单.md) | Line-by-line project configuration checklist, acceptance list and pitfalls (Chinese) |
-| [`docs/验机参考站点_spec.md`](docs/验机参考站点_spec.md) | Source spec of the inspection checklist (30 pages scraped: sections, items, steps, FAQ, external tools; Chinese) |
 | [`docs/MetriBar-测试报告.docx`](docs/MetriBar-测试报告.docx) | Full functional test report (per-case results, lag root cause, replica fidelity, progress-domain audit, 15 screenshots; Chinese) |
-| [`docs/make_report.py`](docs/make_report.py) | Report generator (consumes the UI harness JSON) |
 | [`Scripts/selftest.sh`](Scripts/selftest.sh) | Every release self-test check, in source |

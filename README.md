@@ -267,9 +267,7 @@ MetriBar/
 │   └── make_icon.swift                 # App 图标自绘脚本（209 行）
 ├── docs/
 │   ├── Xcode配置清单.md                 # 工程配置逐条核对表
-│   ├── 验机参考站点_spec.md                 # 验机清单的规格来源（30 页抓取整理）
 │   ├── MetriBar-测试报告.docx           # 全量测试报告（含 15 张界面截图）
-│   ├── make_report.py                  # 测试报告生成脚本
 │   └── 预览/*.png                       # README 引用的界面图
 └── README.md / README.en.md
 ```
@@ -339,7 +337,7 @@ DispatchSourceTimer (串行队列, qos .utility, leeway 120ms)
 
 ### 4.3 MacBook 验机模块
 
-**规格来源**：清单结构对照 验机参考站点（已抓取 30 页整理为 [`docs/验机参考站点_spec.md`](docs/验机参考站点_spec.md)），文案与实现为本项目原创。当前规模：**10 个板块 / 32 条目 / 15 项必查 / 8 问 FAQ，每条都带分步操作**，保真度由自测与 UI 测试台双重断言。
+**清单结构**：按验机场景分为 10 个板块，结构、文案、步骤与实现均为本项目原创整理。当前规模：**10 个板块 / 32 条目 / 15 项必查 / 8 问 FAQ，每条都带分步操作**，保真度由自测与 UI 测试台双重断言。
 
 | 板块 | 关键条目（★=必查） |
 | --- | --- |
@@ -832,7 +830,5 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 | 文档 | 内容 |
 | --- | --- |
 | [`docs/Xcode配置清单.md`](docs/Xcode配置清单.md) | 工程设置逐条核对表 + 验收清单 + 踩坑记录 |
-| [`docs/验机参考站点_spec.md`](docs/验机参考站点_spec.md) | 验机清单规格来源（30 页抓取整理：板块/条目/分步操作/FAQ/外部工具） |
 | [`docs/MetriBar-测试报告.docx`](docs/MetriBar-测试报告.docx) | 全量功能测试报告（用例逐条结果、卡顿根因实测、复刻保真度、进度条取值域审计、15 张截图） |
-| [`docs/make_report.py`](docs/make_report.py) | 测试报告生成脚本（读取 UI 测试台 JSON 产物） |
 | [`Scripts/selftest.sh`](Scripts/selftest.sh) | 发版自测全部检查项源码 |
