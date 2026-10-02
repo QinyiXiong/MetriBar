@@ -268,6 +268,7 @@ MetriBar/
 ├── docs/
 │   ├── Xcode配置清单.md                 # Line-by-line project configuration checklist (Chinese)
 │   ├── MetriBar-测试报告.docx           # Full test report, 15 screenshots (Chinese)
+│   ├── make_report.py                  # Test-report generator (consumes the UI harness JSON)
 │   └── 预览/*.png                       # Screenshots referenced by the READMEs
 └── README.md (Chinese) / README.en.md (English)
 ```
@@ -831,5 +832,6 @@ Issues found by the repository-wide source audit and **already fixed**:
 | Document | Content |
 | --- | --- |
 | [`docs/Xcode配置清单.md`](docs/Xcode配置清单.md) | Line-by-line project configuration checklist, acceptance list and pitfalls (Chinese) |
+| [`docs/make_report.py`](docs/make_report.py) | Test-report generator (reads the UI harness JSON and the self-test output, produces the docx) |
 | [`docs/MetriBar-测试报告.docx`](docs/MetriBar-测试报告.docx) | Full functional test report (per-case results, lag root cause, replica fidelity, progress-domain audit, 15 screenshots; Chinese) |
 | [`Scripts/selftest.sh`](Scripts/selftest.sh) | Every release self-test check, in source |

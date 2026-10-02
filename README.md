@@ -268,6 +268,7 @@ MetriBar/
 ├── docs/
 │   ├── Xcode配置清单.md                 # 工程配置逐条核对表
 │   ├── MetriBar-测试报告.docx           # 全量测试报告（含 15 张界面截图）
+│   ├── make_report.py                  # 测试报告生成脚本（读取 UI 测试台 JSON 产物）
 │   └── 预览/*.png                       # README 引用的界面图
 └── README.md / README.en.md
 ```
@@ -830,5 +831,6 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 | 文档 | 内容 |
 | --- | --- |
 | [`docs/Xcode配置清单.md`](docs/Xcode配置清单.md) | 工程设置逐条核对表 + 验收清单 + 踩坑记录 |
+| [`docs/make_report.py`](docs/make_report.py) | 测试报告生成脚本（读取 UI 测试台 JSON 与自测输出，重新产出 docx） |
 | [`docs/MetriBar-测试报告.docx`](docs/MetriBar-测试报告.docx) | 全量功能测试报告（用例逐条结果、卡顿根因实测、复刻保真度、进度条取值域审计、15 张截图） |
 | [`Scripts/selftest.sh`](Scripts/selftest.sh) | 发版自测全部检查项源码 |
