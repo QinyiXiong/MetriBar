@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ToolboxView: View {
     @State private var tab: ToolTab = .printer
+    /// 首次进入过的 Tab 常驻保留：切回来零重建（消除切换卡顿）
+    @State private var visited: Set<ToolTab> = [.printer]
 
     enum ToolTab: Hashable { case printer, verify, translate }
 
@@ -27,12 +29,22 @@ struct ToolboxView: View {
 
             Divider()
 
-            switch tab {
-            case .printer:   PrinterTab()
-            case .verify:    VerifyTab()
-            case .translate: TranslateTab()
+            // 用 ZStack + 隐藏而非 switch：访问过的 Tab 常驻，切回瞬间呈现（不再重建视图树）
+            ZStack {
+                if visited.contains(.printer) { tabLayer(.printer) { PrinterTab() } }
+                if visited.contains(.verify) { tabLayer(.verify) { VerifyTab() } }
+                if visited.contains(.translate) { tabLayer(.translate) { TranslateTab() } }
             }
         }
         .frame(minWidth: 820, minHeight: 540)
+        .onChange(of: tab) { visited.insert($0) }
+    }
+
+    @ViewBuilder
+    private func tabLayer<V: View>(_ t: ToolTab, @ViewBuilder _ content: () -> V) -> some View {
+        content()
+            .opacity(tab == t ? 1 : 0)
+            .allowsHitTesting(tab == t)
+            .accessibilityHidden(tab != t)
     }
 }

@@ -207,6 +207,24 @@ except UnicodeDecodeError as _e:
 if "firstIndex(of: 0x0A)" not in swift_main:
     bad += 1; print("  ✗ Swift尾部读取缺UTF-8换行对齐(暂无日志事故)")
 else: print("  ✓ Swift尾部读取换行对齐在位")
+# 验机清单保真度（15 必查 / 8 FAQ / 全部条目带分步说明）
+try:
+    _v = open("MetriBar/Views/VerifyTab.swift", encoding="utf-8").read()
+    _req = _v.count("required: true")
+    _faq = _v.count("VerifyFAQ(q:")
+    _noSteps = _v.count("VerifyItem(id:")
+    _withSteps = _v.count("steps: [")
+    if _req != 15:
+        bad += 1; print("  ✗ 必查项数 %d（应为15，对照站点规格）" % _req)
+    else: print("  ✓ 验机必查 15 项与站点一致")
+    if _faq != 8:
+        bad += 1; print("  ✗ FAQ %d 问（应为8）" % _faq)
+    else: print("  ✓ 验机 FAQ 8 问与站点一致")
+    if _withSteps < _noSteps:
+        bad += 1; print("  ✗ 有 %d 个条目缺分步说明" % (_noSteps - _withSteps))
+    else: print("  ✓ 验机 %d 条目全部带分步说明" % _noSteps)
+except OSError as _e:
+    bad += 1; print("  ✗ 读取 VerifyTab.swift 失败", _e)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")

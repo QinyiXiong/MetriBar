@@ -2,7 +2,8 @@
 //  VerifyTab.swift
 //  MetriBar
 //
-//  MacBook 验机：卡片式必查清单（文案原创）+ 交互检测 + 硬件快照。
+//  MacBook 验机：10 个板块的验机清单（板块与条目一一对应，每条带分步操作）；
+//  清单结构、文案与步骤均为本项目原创整理。
 //  硬件信息全部来自 system_profiler JSON（键名稳定、不受系统语言影响）
 //  与本机只读命令，绝不联网。
 //
@@ -20,6 +21,16 @@ struct VerifyItem: Identifiable, Equatable {
     var auto: Bool = false        // 有系统自动核验结果
     let title: String
     let guide: String
+    var steps: [String] = []      // 分步操作（对齐网站各检测页）
+    var link: String? = nil       // 外部工具 / 官方页面
+    var linkTitle: String? = nil
+}
+
+/// 常见问题（对齐网站 FAQ 七问）
+struct VerifyFAQ: Identifiable {
+    let id = UUID()
+    let q: String
+    let a: String
 }
 
 @MainActor
@@ -44,6 +55,7 @@ final class VerifyModel: ObservableObject {
 
     var requiredTotal: Int { VerifyCatalog.items.filter(\.required).count }
     var requiredDone: Int { VerifyCatalog.items.filter { $0.required && state($0.id) != .todo }.count }
+    var failCount: Int { VerifyCatalog.items.filter { state($0.id) == .fail }.count }
 
     // MARK: 硬件快照（system_profiler JSON + 只读命令）
 
@@ -186,73 +198,307 @@ final class VerifyModel: ObservableObject {
     }
 }
 
-// MARK: - 验机项目表（原创文案）
+// MARK: - 验机项目表（板块与条目结构，文案原创）
 
 enum VerifyCatalog {
     struct Section: Identifiable { let id = UUID(); let title: String; let icon: String; let items: [VerifyItem] }
 
     static let sections: [Section] = [
-        Section(title: "安全与身份", icon: "lock.shield.fill", items: [
-            VerifyItem(id: "activation-lock", required: true, title: "激活锁已解除",
-                       guide: "系统设置 › Apple 账户 › iCloud › 查找：确认「查找我的 Mac」已关闭；让卖家当面执行「抹掉所有内容和设置」，重启后设置助理不再索要前机主密码才算真正解锁。右侧硬件快照也会自动读取系统激活锁状态辅助核对。带激活锁的机器绝对不能付款。"),
-            VerifyItem(id: "mdm", required: true, title: "无 MDM 企业监管",
-                       guide: "右侧「MDM 监管」为自动核验结果；抹机后首联网出现「远程管理」页 = 企业监管机，不要购买。"),
-            VerifyItem(id: "serial-match", required: true, title: "序列号三处一致",
-                       guide: "比对 系统设置›关于本机、机身底壳刻印、包装盒标签 三处序列号（右侧已自动读出系统侧序列号）。部分新机型无底壳刻印属正常。"),
-            VerifyItem(id: "service-history", required: true, title: "维修历史核验",
-                       guide: "系统设置 › 通用 › 关于本机 › 部件与维修：查看是否更换过屏幕/电池、配件是否为正品 Apple 部件；无该入口一般代表无维修记录。"),
-            VerifyItem(id: "diagnostics", required: true, title: "Apple 诊断（ADP000）",
-                       guide: "关机并拔掉全部外设：Apple Silicon 长按电源进启动选项后按 ⌘D；Intel 开机按住 D。结束出现 ADP000 = 未发现问题，其他代码逐条向卖家追问。"),
+        Section(title: "拍摄开箱视频", icon: "video.fill", items: [
+            VerifyItem(id: "unbox-video", required: true, title: "拍摄开箱视频",
+                       guide: "接触包装前就开始录像，直到开机前不要停：拍清盒子六个面、纸质拉条、盒上序列号并核对机身一致。",
+                       steps: [
+                        "开封前开始录制：在接触包装之前就开录，清晰展示密封状态与包装盒六个面。",
+                        "检查包装完整性：约 2022 年起的较新包装已无塑封膜、改为纸质拉条，确认拉条或塑封完好、无二次封装痕迹。",
+                        "记录序列号：清晰拍摄盒上序列号，开箱后与机身序列号对比——必须完全一致。",
+                        "核对配件清单：电源适配器功率、充电线与说明文档是否符合 Apple 官方规格。",
+                        "一镜到底不中断：全程不要停止录制，口述观察内容可增加视频可信度。",
+                        "保留原始未剪辑视频，作为退换货或维权凭证。",
+                       ]),
         ]),
-        Section(title: "屏幕", icon: "display", items: [
-            VerifyItem(id: "dead-pixel", required: true, interactive: true, title: "全屏坏点检测",
-                       guide: "黑/白/红/绿/蓝逐色找固定亮点、暗点与色斑；空格换色，Esc 退出。"),
-            VerifyItem(id: "screen-original", required: true, title: "原装屏核验",
-                       guide: "先看「部件与维修」；检查 True Tone 与自动亮度——应支持却没有基本是换过非原装屏，再看四周边框有无撬压痕迹。"),
-            VerifyItem(id: "backlight", title: "漏光检测",
-                       guide: "暗环境、纯黑壁纸、亮度拉满观察四边四角；轻微均匀泛光正常，局部喷溅状亮斑异常。"),
-            VerifyItem(id: "coating", title: "镀膜检查",
-                       guide: "斜角光下轻擦屏幕，查看防反射膜有无脱落起皮/彩虹纹。"),
-            VerifyItem(id: "brightness", title: "亮度与感光",
-                       guide: "F1/F2 全行程；遮挡光感应区自动亮度应明显变化。"),
+        Section(title: "安全检查", icon: "lock.shield.fill", items: [
+            VerifyItem(id: "activation-lock", required: true, title: "激活锁检测",
+                       guide: "确认「查找我的 Mac」已关闭，抹机后不再索要前机主 Apple 账户密码。",
+                       steps: [
+                        "系统设置 › Apple 账户 › iCloud › 查找：确认「查找我的 Mac」已关闭。",
+                        "让卖家当面执行「抹掉所有内容和设置」，重启进入设置助理。",
+                        "设置助理若仍要求输入前机主 Apple 账户密码 = 激活锁未解除，绝对不能付款。",
+                        "右侧硬件快照已自动读取系统激活锁状态，可辅助核对。",
+                       ]),
+            VerifyItem(id: "mdm", required: true, title: "MDM 企业锁检测",
+                       guide: "终端核验 + 抹机后联网复验，出现「远程管理」页即为企业监管机。",
+                       steps: [
+                        "终端执行：profiles status -type enrollment，两行都显示 No 才正常。",
+                        "更可靠的方法：抹机后联网进入设置助理，若出现「远程管理」页面即为企业注册机。",
+                        "企业监管机可能被远程锁定或抹除，不要购买；右侧快照已自动核验一次。",
+                       ]),
+            VerifyItem(id: "serial-match", required: true, title: "序列号核对",
+                       guide: "系统、机身底壳、包装盒三处序列号必须完全一致。",
+                       steps: [
+                        "系统设置 › 通用 › 关于本机：读出序列号（右侧快照也已自动读取）。",
+                        "与机身底部刻印比对（若底壳更换过则无刻印，需追问原因）。",
+                        "与包装盒标签比对，三处一致才算通过。",
+                        "再到 Apple「检查覆盖范围」页面输入序列号，核对机型与保修状态是否匹配。",
+                       ],
+                       link: "https://checkcoverage.apple.com/", linkTitle: "Apple 保修状态查询"),
+            VerifyItem(id: "service-history", required: true, title: "维修历史与配件核验",
+                       guide: "「部件与维修」查看是否换过屏幕/电池，配件是否正品 Apple 部件。",
+                       steps: [
+                        "系统设置 › 通用 › 关于本机 › 部件与维修：查看维修记录。",
+                        "部件会标注「正品 Apple 部件 / 二手 Apple 部件 / 未知或未验证」。",
+                        "该入口只在检测到维修时显示；没有入口一般说明无维修记录。",
+                        "出现未说明的换屏、换电池记录需向卖家追问，或直接放弃。",
+                       ]),
+            VerifyItem(id: "diagnostics", required: true, title: "诊断模式（ADP000）",
+                       guide: "关机拔外设后进诊断模式，参考代码 ADP000 表示未发现问题。",
+                       steps: [
+                        "关机：完全关闭 MacBook；运行前断开所有外部设备，仅保留键盘、鼠标、显示器、以太网与电源适配器。",
+                        "启动诊断 · Apple 芯片：按住电源键直到看到启动选项，然后按 Command (⌘) + D。",
+                        "启动诊断 · Intel 芯片：开机后立即按住 D；如果无效，再尝试 Option (⌥) + D。",
+                        "按提示操作：依系统版本可能先要求选择语言，或选择要运行的检测项目。",
+                        "查看结果：记录参考代码（ADP000 = 未发现问题），其他代码即对应硬件故障，逐条向卖家追问，然后按屏幕选项重启或关机。",
+                       ]),
+        ]),
+        Section(title: "屏幕检测", icon: "display", items: [
+            VerifyItem(id: "dead-pixel", required: true, interactive: true, title: "坏点检测",
+                       guide: "黑/白/红/绿/蓝逐色找固定亮点、暗点与色斑。",
+                       steps: [
+                        "点「开始」进入全屏纯色画面，空格或 → 切换颜色，Esc 退出。",
+                        "逐色观察是否有固定不变的亮点（卡点）或黑点（坏点）。",
+                        "再在全黑房间把亮度调到最高，看四角是否有明显漏光。",
+                       ]),            VerifyItem(id: "coating", title: "屏幕镀膜检查",
+                       guide: "轻擦屏幕，查看防反射镀膜是否脱落（2012–2019 款高发）。",
+                       steps: [
+                        "关闭屏幕，用超细纤维布轻擦屏幕表面。",
+                        "斜角光线下观察是否有彩虹纹、起皮、脱落斑块。",
+                        "主要影响 2012–2019 款机型，脱落面积大不建议购买。",
+                       ]),            VerifyItem(id: "screen-pressure", title: "屏幕压力测试",
+                       guide: "用无纺布轻压屏幕四角，观察是否出现黑斑。",
+                       steps: [
+                        "用无纺布或超细纤维布轻压屏幕四角与边缘。",
+                        "观察是否出现黑斑、水波纹样扩散。",
+                        "松手后应在数秒内完全恢复；出现永久暗斑说明屏幕已受损。",
+                       ]),            VerifyItem(id: "screen-original", required: true, title: "原装屏幕核验",
+                       guide: "查「部件与维修」+ True Tone/自动亮度是否可用 + 边框撬痕。",
+                       steps: [
+                        "macOS 26 及以上：系统设置 › 通用 › 关于本机 › 部件与维修，显示器出现在列表即换过屏（M5 及更新机型才记录显示屏）。",
+                        "更早机型：看 True Tone 原彩显示与自动亮度是否可用——本应支持却没有，通常是非原装屏。",
+                        "仔细观察屏幕四周边框有无撬压痕迹、胶痕、缝隙不均。",
+                       ]),            VerifyItem(id: "backlight", title: "屏幕漏光检测",
+                       guide: "暗环境下纯黑画面、亮度拉满，检查四边四角是否漏光。",
+                       steps: [
+                        "在全黑房间，显示纯黑画面（可用坏点检测的全屏黑）。",
+                        "亮度调到最高，从正面与侧面观察四边四角。",
+                        "轻微均匀的边缘泛光属正常；局部喷溅状亮斑属异常。",
+                       ]),            VerifyItem(id: "brightness", title: "亮度检测",
+                       guide: "测试最大/最小亮度与自动亮度传感器。",
+                       steps: [
+                        "用 F1 / F2 走完亮度全行程，观察是否有跳变或闪烁。",
+                        "开启自动亮度，用手遮挡光感应区（屏幕上方），亮度应明显变化。",
+                        "最高亮度下与同机型对比，明显偏暗说明背光老化。",
+                       ]),
+
         ]),
         Section(title: "输入设备", icon: "keyboard.fill", items: [
-            VerifyItem(id: "keyboard", required: true, interactive: true, title: "键盘全键测试",
-                       guide: "在弹出画布内点击取得焦点后按下每个键（含功能键），实时点亮并计数；不触发/串键即故障。"),
-            VerifyItem(id: "trackpad", required: true, interactive: true, title: "触控板全域画布",
-                       guide: "在弹出画布上单指连续画圈与四角直线：跟手、无断线；再测双指滚动与用力点按。"),
-            VerifyItem(id: "touchid", title: "Touch ID 指纹",
-                       guide: "系统设置 › Touch ID 录入一枚新指纹并实际解锁，应一次成功。"),
+            VerifyItem(id: "trackpad", interactive: true, title: "触控板检测",
+                       guide: "绘制图案检查各区域跟踪与响应，再测双指滚动与用力点按。",
+                       steps: [
+                        "点「开始」在画布上单指连续画圈与四角直线：应跟手、无断线。",
+                        "覆盖四个角与边缘，检查是否存在无响应区域。",
+                        "再测双指滚动、三指拖动与用力点按（Force Touch）手感是否一致。",
+                       ]),
+            VerifyItem(id: "keyboard", interactive: true, title: "键盘全键测试",
+                       guide: "逐个按键实时点亮并计数，不触发或串键即为故障。",
+                       steps: [
+                        "点「开始」后在画布上按顺序敲击每个按键（含功能键与方向键）。",
+                        "被按下的键应实时点亮并计数；未点亮的键即为不触发。",
+                        "注意检查串键（按 A 亮 B）与连击。",
+                       ],
+                       link: nil, linkTitle: nil),
+            VerifyItem(id: "touchid", title: "Touch ID 检测",
+                       guide: "录入一枚新指纹并实际解锁，应一次成功。",
+                       steps: [
+                        "系统设置 › Touch ID 与密码：录入一枚新指纹。",
+                        "锁屏后用该指纹解锁，应一次识别成功。",
+                        "反复 5 次观察识别率，明显迟钝可能是传感器老化。",
+                       ]),
         ]),
-        Section(title: "音频与影像", icon: "waveform", items: [
-            VerifyItem(id: "speakers", required: true, interactive: true, title: "扬声器左右声道",
-                       guide: "依次播放 左→中→右 扫频音：定位清晰、无破音异响。"),
-            VerifyItem(id: "mic", required: true, interactive: true, title: "麦克风录放",
-                       guide: "录制 5 秒后自动回放；首次使用会请求麦克风权限。"),
-            VerifyItem(id: "camera", required: true, interactive: true, title: "摄像头预览",
-                       guide: "查看实时画面：清晰、无横纹黑块；首次使用会请求摄像头权限。"),
+        Section(title: "音频检测", icon: "waveform", items: [
+            VerifyItem(id: "speakers", required: true, interactive: true, title: "声音检测",
+                       guide: "依次播放 左→中→右 提示音，定位清晰、无破音异响。",
+                       steps: [
+                        "点「开始」依次播放左 / 中 / 右三声提示音。",
+                        "确认左右声道定位清晰、音量均衡、无破音与杂音。",
+                        "播放一段熟悉的音乐，注意是否有共振、金属杂音。",
+                       ],
+                       link: nil, linkTitle: nil),
+            VerifyItem(id: "mic", required: true, interactive: true, title: "麦克风检测",
+                       guide: "录制并回放，检查内置麦克风是否正常。",
+                       steps: [
+                        "点「开始」录制约 5 秒，随后自动回放。",
+                        "回放应清晰、无明显底噪或断续；首次使用会请求麦克风权限。",
+                        "靠近左右麦克风孔说话分别测试，回放应有对应强弱。",
+                       ]),
+            VerifyItem(id: "camera", required: true, interactive: true, title: "摄像头检测",
+                       guide: "查看实时画面：清晰、无横纹黑块。",
+                       steps: [
+                        "点「开始」打开实时预览窗口（首次会请求摄像头权限）。",
+                        "画面应清晰、色彩正常、无横纹、黑块或彩点。",
+                        "用手遮挡镜头再移开，观察曝光响应是否正常。",
+                       ]),
         ]),
-        Section(title: "端口与无线", icon: "cable.connector", items: [
-            VerifyItem(id: "usb-c", required: true, title: "USB-C / 雷电端口",
-                       guide: "每口分别：插 U 盘读文件 + 外接显示器 + 充电；需调整角度才通电 = 松旷。"),
-            VerifyItem(id: "magsafe", title: "MagSafe 充电",
-                       guide: "自动吸附亮灯并稳定充电，轻碰不中断。"),
-            VerifyItem(id: "wifi-bt", required: true, title: "Wi-Fi 与蓝牙",
-                       guide: "连 Wi-Fi 看信号并测速；MetriBar 心率链路即现成的蓝牙连通性验证。"),
+        Section(title: "端口与连接", icon: "cable.connector", items: [
+            VerifyItem(id: "usb-c", title: "USB-C / 雷电端口检测",
+                       guide: "每个口分别测数据传输、外接显示与充电，松旷即异常。",
+                       steps: [
+                        "每个 USB-C / 雷电口分别插入 U 盘，确认能正常读写文件。",
+                        "接外接显示器或转接器，确认视频输出正常。",
+                        "接充电器，确认充电指示与功率正常；需调整角度才通电 = 接口松旷。",
+                       ]),            VerifyItem(id: "wifi-bt", title: "WiFi 与蓝牙检测",
+                       guide: "连 Wi-Fi 看信号并测速，蓝牙配对设备验证。",
+                       steps: [
+                        "连接 Wi-Fi，检查信号强度与实测网速是否正常。",
+                        "连接蓝牙耳机或键鼠，确认配对与音频/输入正常。",
+                        "在多个位置移动，观察是否频繁掉线（天线故障征兆）。",
+                       ]),
+            VerifyItem(id: "magsafe", title: "MagSafe 充电检测",
+                       guide: "测试磁吸对齐与充电稳定性。",
+                       steps: [
+                        "接上 MagSafe 磁吸头，应自动吸附并亮起充电指示灯。",
+                        "轻轻碰动线缆，充电不应中断。",
+                        "观察充电头与接口有无烧灼、发黑痕迹。",
+                       ]),
         ]),
-        Section(title: "机身与散热", icon: "checkmark.seal.fill", items: [
-            VerifyItem(id: "hinge", required: true, title: "转轴开合",
-                       guide: "反复开合 10 次：阻尼均匀无异响，任意角度可悬停。"),
-            VerifyItem(id: "liquid", required: true, title: "进液痕迹",
-                       guide: "手电检查各端口触点绿锈/白渍与变色指示；进液机坚决不买。"),
-            VerifyItem(id: "chassis", title: "外观结构",
-                       guide: "侧光检查 C 面平整度、屏幕压痕亮斑、四角磕碰、壳缝均匀。"),
-            VerifyItem(id: "fan-load", title: "满载散热",
-                       guide: "跑 2 分钟负载：风扇平稳起转无金属摩擦声；实时转速回主面板观察。"),
+        Section(title: "机身与外观检查", icon: "checkmark.seal.fill", items: [
+            VerifyItem(id: "hinge", title: "铰链 / 转轴检测",
+                       guide: "反复开合 10 次：阻尼均匀无异响，任意角度可悬停。",
+                       steps: [
+                        "反复开合屏幕 10 次，感受阻尼是否均匀、有无异响。",
+                        "把屏幕停在多个角度，应能稳定悬停不下坠。",
+                        "单手握持机身晃动，屏幕不应自由翻转（转轴松动）。",
+                       ]),
+            VerifyItem(id: "liquid", required: true, title: "进水指示器检测",
+                       guide: "LCI 接触液体由白变红；2016 年及以后机型 LCI 在主板与键盘面板上，不拆底壳看不到。",
+                       steps: [
+                        "了解 LCI：机内白色小圆点指示器，接触液体后变红；2016 年及之后机型位于键盘面板和主板，不拆底壳无法看到。",
+                        "检查耳机孔（仅老机型）：用手电照 3.5mm 耳机孔可见 LCI——白色正常、红色进水；较新机型外部看不到。",
+                        "检查端口残留：灯光照入 USB-C 等端口查看腐蚀、水渍圈或黏腻残留；老款 MagSafe 口周围是进水高发点。",
+                        "检查腐蚀迹象：端口边缘、扬声器开孔与散热孔是否有白色/绿色残留。",
+                        "如需拆底壳（卖家允许时）：关机断电 → 五角星 P5 螺丝刀拧下 8–10 颗螺丝（记录位置，长短不同）→ 从转轴一侧撬起掀开 → 在主板与键盘面板找 2–3mm 小纸点，白色正常、红色进水；切勿硬撬或触碰主板。",
+                        "注意：进水会导致保修失效并留下间歇性故障；沿海潮湿环境极少数情况下 LCI 会因长期高湿度变红，需结合其他迹象判断。",
+                       ]),
+            VerifyItem(id: "chassis", title: "外壳检查",
+                       guide: "检查机身是否有凹痕、划痕、裂缝或氧化。",
+                       steps: [
+                        "侧光检查 C 面（键盘面）是否平整，有无翘曲。",
+                        "检查屏幕是否有键盘压痕、亮斑。",
+                        "检查四角与边缘有无磕碰、掉漆，壳缝是否均匀。",
+                       ]),
+        ]),
+        Section(title: "硬件状态", icon: "internaldrive", items: [
+            VerifyItem(id: "ssd-health", title: "SSD 健康检测",
+                       guide: "查看固态硬盘健康状态与剩余寿命（右侧快照已给出 SMART 与累计读写）。",
+                       steps: [
+                        "右侧「磁盘 SMART」为系统自动核验结果，Verified 即正常。",
+                        "终端执行：diskutil info / | grep -i smart，确认为 Verified。",
+                        "拷贝数 GB 大文件，观察速度是否稳定、是否掉盘。",
+                       ]),
+            VerifyItem(id: "fan-load", title: "风扇 / 散热检测",
+                       guide: "检查风扇有无异响，负载时散热是否正常。",
+                       steps: [
+                        "跑 2 分钟高负载（编译、跑分或视频导出）。",
+                        "靠近听风扇：应平稳起转，无金属摩擦声或哒哒异响。",
+                        "触摸机身底部与键盘上方，温度应均匀上升而非局部烫手。",
+                       ]),
+        ]),
+        Section(title: "外部工具", icon: "wrench.and.screwdriver.fill", items: [
+            VerifyItem(id: "battery-tool", required: true, title: "电池检测（详细数据）",
+                       guide: "系统设置看健康状态；coconutBattery 看详细容量、循环与硬盘读写。",
+                       steps: [
+                        "系统设置 › 电池 › 电池健康：查看最大容量百分比与循环次数。",
+                        "用 coconutBattery 查看设计容量、当前容量、循环次数与温度。",
+                        "对比机型标称循环寿命（通常 1000 次），循环过高说明重度使用。",
+                       ],
+                       link: "https://www.coconut-flavour.com/coconutbattery/", linkTitle: "下载 coconutBattery"),
+            VerifyItem(id: "serial-query", required: true, title: "序列号查询（保修核验）",
+                       guide: "到 Apple 官方页面输入序列号，验证保修状态与设备信息。",
+                       steps: [
+                        "打开 Apple「检查覆盖范围」页面（checkcoverage.apple.com）。",
+                        "输入序列号，核对显示的机型、购买日期与保修/AppleCare 状态是否与卖家描述一致。",
+                        "序列号无效、机型不符或显示已更换设备，都是高风险信号。",
+                       ],
+                       link: "https://checkcoverage.apple.com/", linkTitle: "打开 Apple 保修查询"),
+            VerifyItem(id: "geekbench", title: "性能测试",
+                       guide: "用 Geekbench 跑分对比同机型公开成绩。",
+                       steps: [
+                        "下载并安装 Geekbench（macOS 版）。",
+                        "接电源、关闭后台程序，跑 CPU 单核/多核与 GPU 测试。",
+                        "与同机型同配置的公开成绩对比，明显偏低说明散热或硬件异常。",
+                       ],
+                       link: "https://www.geekbench.com/download/", linkTitle: "下载 Geekbench"),
+            VerifyItem(id: "keyboard-online", title: "在线键盘测试",
+                       guide: "用在线工具实时查看每个按键的反馈。",
+                       steps: [
+                        "浏览器打开在线键盘测试页，逐个按键观察是否高亮。",
+                        "重点测功能键、方向键与不常用的符号键。",
+                        "与内置「键盘全键测试」互为印证，任一异常都应复测。",
+                       ],
+                       link: "https://www.zfrontier.com/lab/keyboardTester", linkTitle: "打开在线键盘测试"),
+            VerifyItem(id: "av-quality", title: "音画质量测试",
+                       guide: "检测扬声器与屏幕表现，建议到直营店对比体验。",
+                       steps: [
+                        "播放高质量音视频素材，检查音质、音量与画面色彩。",
+                        "与直营店同型号样机对比，注意破音、偏色、亮度不均。",
+                        "有条件时带自己的素材与耳机做 A/B 对比。",
+                       ],
+                       link: "https://www.bilibili.com/video/BV11f4y1K7Wx", linkTitle: "音画质量对照素材"),
+            VerifyItem(id: "refresh-rate", title: "刷新率检测",
+                       guide: "用 UFO Test 测试屏幕刷新率是否达标。",
+                       steps: [
+                        "打开 UFO Test（Display Refresh Rate Test）：看 Current / Average / Low / Max FPS 四项实时指标。",
+                        "运动流畅度测试：方块应平滑移动，卡顿说明掉帧；滚动线条应平滑无撕裂或抖动。",
+                        "对照预期：MacBook Pro 14/16 吋带 ProMotion 最高可达 120 FPS，其他 MacBook 通常显示 60 FPS；FPS 应保持稳定不剧烈波动。",
+                        "ProMotion 不显示 120Hz 时排查：Safari 默认把页面渲染限制在 60 FPS——Develop 菜单 → Feature Flags，取消勾选 “Prefer Page Rendering Updates near 60fps” 后刷新页面。",
+                        "再检查 系统设置 → 显示器 → 刷新率 是否设为 ProMotion；新版 Chrome 已支持 macOS 120Hz，若仍停在 60 可换浏览器复测。",
+                       ],
+                       link: "https://www.testufo.com/", linkTitle: "打开 UFO Test"),
+        ]),
+        Section(title: "最后一步：抹掉重装系统（最后做）", icon: "arrow.counterclockwise.circle.fill", items: [
+            VerifyItem(id: "reinstall", required: true, title: "抹掉数据重装系统",
+                       guide: "所有检查通过后最后再做；优先用系统自带抹掉功能，没有该选项才进恢复模式重装。",
+                       steps: [
+                        "备份数据：先用 Time Machine 或手动备份重要文件（此步会删除全部数据）。",
+                        "优先用系统自带抹掉：macOS Monterey 及以上、Apple 芯片或带 T2 芯片机型，进入 系统设置 › 通用 › 传输或还原 › 抹掉所有内容与设置。",
+                        "没有该选项时进恢复模式 · Apple 芯片：关机后按住电源键直到「正在载入启动选项」，点「选项」›「继续」。",
+                        "没有该选项时进恢复模式 · Intel 芯片：重启后立即按住 Command (⌘) + R 直到出现苹果标志。",
+                        "谨慎抹掉内置磁盘：在恢复模式打开「磁盘工具」，选 Macintosh HD；若有「抹掉卷组」优先用它，否则点「抹掉」并保持 APFS 格式。",
+                        "重新安装 macOS：退出磁盘工具后选「重新安装 macOS」；卖机或送人则装完停在设置助理界面，不要登录自己的账号。",
+                        "复验企业监管：重装后联网进入设置助理，出现「远程管理」页 = 企业监管机，立即退货；索要前机主 Apple 账户密码 = 激活锁仍在，立即退货。",
+                       ]),
         ]),
     ]
 
     static var items: [VerifyItem] { sections.flatMap(\.items) }
+
+    /// 常见问题（对齐网站 FAQ 七问）
+    static let faqs: [VerifyFAQ] = [
+        VerifyFAQ(q: "买二手 MacBook 付款前必须检查哪些项目？",
+                  a: "先过账户与身份关：激活锁已解除、无 MDM 企业锁、序列号三处一致（系统/机身/包装）、「部件与维修」里没有未说明的维修记录、Apple 诊断跑出 ADP000。再看硬件硬伤：屏幕是否原装、有无进水痕迹、坏点、扬声器/麦克风/摄像头、电池健康。全部通过后最后抹盘重装。任一必查项不过都不要付款，其余键盘、接口、外壳等按需选做。"),
+        VerifyFAQ(q: "怎么判断 MacBook 有没有激活锁？",
+                  a: "系统设置 › 你的名字 › iCloud › 查找我的 Mac，确认已关闭且系统里不再显示前机主的 Apple 账户。最保险的做法是让卖家当面「抹掉所有内容和设置」，抹机后进入设置助理若不要求输入前机主密码，才算真正解锁。仍有激活锁的 Mac 绝对不能买。"),
+        VerifyFAQ(q: "怎么检查 MacBook 是否被企业 MDM 管理？",
+                  a: "在终端运行 profiles status -type enrollment，两行都显示 No 才正常。更可靠的方法是抹机后联网进入设置助理，出现「远程管理」页面就说明被企业注册监管，这类机器可能被远程锁定或抹除，不要购买。"),
+        VerifyFAQ(q: "怎么判断 MacBook 屏幕是不是原装？",
+                  a: "macOS 26 及以上先看 系统设置 › 通用 › 关于本机 › 部件与维修，显示器出现在列表里就是换过屏（M5 及更新机型才记录显示屏）。更早机型看 True Tone 原彩和自动亮度是否可用，本应支持却没有该选项通常就是换了非原装屏，再结合边框撬痕判断。"),
+        VerifyFAQ(q: "MacBook 屏幕坏点怎么检测？",
+                  a: "用坏点检测页全屏切换红、绿、蓝、白、黑纯色画面，逐色观察有没有固定不变的亮点或黑点。再在全黑房间把亮度调到最高看四角有无明显漏光，轻微均匀的边缘泛光属正常。"),
+        VerifyFAQ(q: "怎么查看 MacBook 的维修记录？",
+                  a: "macOS 26 及以上进入 系统设置 › 通用 › 关于本机 › 部件与维修，会列出检测到的维修并把部件标为正品 Apple 部件、二手 Apple 部件、未知或未验证。这个入口只在检测到维修时才显示，没有入口一般说明没有维修记录。"),
+        VerifyFAQ(q: "这个验机工具要收费或安装软件吗？",
+                  a: "不需要，也不用装任何第三方工具。所有检测（坏点、摄像头、麦克风、扬声器、键盘、触控板、刷新率）都由 MetriBar 在本机完成，不上传任何数据；硬件信息仅通过本机只读命令读取。"),
+        VerifyFAQ(q: "怎么进入 Apple 诊断模式？",
+                  a: "先关机并拔掉除电源外的所有外设。Apple 芯片机型按住电源键直到出现启动选项，再按 Command + D；Intel 机型开机后立即按住 D。参考代码 ADP000 表示未发现问题，其他代码即对应硬件故障。"),
+    ]
 }
 
 // MARK: - 验机 Tab UI（卡片式，与打印机 Tab 统一视觉）
@@ -262,6 +508,7 @@ struct InlineTestID: Identifiable { let id: String }
 struct VerifyTab: View {
     @StateObject private var model = VerifyModel()
     @State private var inlineSheet: InlineTestID?   // "keyboard" / "trackpad"
+    @State private var detailSheet: VerifyItem?
 
     private let cols = [GridItem(.adaptive(minimum: 210, maximum: 260), spacing: 14)]
 
@@ -272,15 +519,19 @@ struct VerifyTab: View {
         }
         .onAppear { if model.hardware.isEmpty { model.collectHardware() } }
         .sheet(item: $inlineSheet) { s in inlineSheetContent(s.id) }
+        .sheet(item: $detailSheet) { item in detailSheetContent(item) }
     }
 
     private var checklistColumn: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 ProgressView(value: Double(model.requiredDone), total: Double(max(model.requiredTotal, 1)))
-                    .frame(maxWidth: 240)
+                    .frame(maxWidth: 200)
                 Text("必查 \(model.requiredDone)/\(model.requiredTotal)")
                     .font(.system(size: 11, weight: .semibold)).foregroundColor(.secondary)
+                if model.failCount > 0 {
+                    Text("· 不通过 \(model.failCount)").font(.system(size: 11, weight: .semibold)).foregroundColor(.red)
+                }
                 Spacer()
                 Button("重置") { model.reset() }.controlSize(.small)
             }
@@ -296,6 +547,10 @@ struct VerifyTab: View {
                             }
                         }
                     }
+                    faqSection
+                    Text("验机清单结构参考 验机参考站点 · 文案与实现为本机原创 · 全部检测仅在本机进行，不联网")
+                        .font(.system(size: 9)).foregroundColor(.secondary)
+                        .padding(.top, 4)
                 }
                 .padding(14)
             }
@@ -324,6 +579,14 @@ struct VerifyTab: View {
                     }
                     .controlSize(.small)
                 }
+                if !item.steps.isEmpty {
+                    Button("步骤") { detailSheet = item }.controlSize(.small)
+                }
+                if let link = item.link, let url = URL(string: link) {
+                    Button("打开") { NSWorkspace.shared.open(url) }
+                        .controlSize(.small)
+                        .help(item.linkTitle ?? link)
+                }
                 Spacer()
                 Button("通过") { model.set(item.id, .pass) }
                     .buttonStyle(.bordered).controlSize(.regular)
@@ -339,6 +602,25 @@ struct VerifyTab: View {
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
     }
 
+    private var faqSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("常见问题", systemImage: "questionmark.circle.fill").font(.system(size: 13, weight: .bold))
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(VerifyCatalog.faqs) { f in
+                    DisclosureGroup {
+                        Text(f.a).font(.system(size: 10)).foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 4).padding(.leading, 2)
+                    } label: {
+                        Text(f.q).font(.system(size: 11, weight: .medium))
+                    }
+                    .padding(9)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.primary.opacity(0.035)))
+                }
+            }
+        }
+    }
+
     private func badge(_ text: String, _ bg: Color, _ fg: Color) -> some View {
         Text(text).font(.system(size: 9, weight: .medium))
             .padding(.horizontal, 5).padding(.vertical, 1.5)
@@ -347,6 +629,45 @@ struct VerifyTab: View {
 
     private func dotColor(_ id: String) -> Color {
         switch model.state(id) { case .pass: return .green; case .fail: return .red; case .todo: return Color.secondary.opacity(0.4) }
+    }
+
+    /// 分步操作详情（对齐网站各检测页说明）
+    private func detailSheetContent(_ item: VerifyItem) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text(item.title).font(.system(size: 15, weight: .bold))
+                if item.required { badge("必查", Color.red.opacity(0.12), .red) }
+                Spacer()
+            }
+            Text(item.guide).font(.system(size: 11)).foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(item.steps.enumerated()), id: \.offset) { i, step in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\(i + 1)")
+                                .font(.system(size: 10, weight: .bold)).foregroundColor(.white)
+                                .frame(width: 16, height: 16)
+                                .background(Circle().fill(Color.accentColor))
+                            Text(step).font(.system(size: 11))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+            }
+            HStack {
+                if let link = item.link, let url = URL(string: link) {
+                    Button(item.linkTitle ?? "打开链接") { NSWorkspace.shared.open(url) }.controlSize(.small)
+                }
+                Spacer()
+                Button("通过") { model.set(item.id, .pass); detailSheet = nil }.controlSize(.small).tint(.green)
+                Button("不通过") { model.set(item.id, .fail); detailSheet = nil }.controlSize(.small).tint(.red)
+                Button("关闭") { detailSheet = nil }.keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(20).frame(width: 560, height: 460)
     }
 
     @ViewBuilder
@@ -396,4 +717,3 @@ struct VerifyTab: View {
         .padding(14)
     }
 }
-

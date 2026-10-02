@@ -18,6 +18,14 @@ struct MetriBarApp: App {
     @StateObject private var store: MetricsStore
 
     init() {
+        // UI 测试台：`--uitest <输出目录>` 启动后自驱动渲染全部界面并断言，完成后退出。
+        // （Agent/终端无「屏幕录制」「辅助功能」权限，这是唯一能"自己操作界面"的通道）
+        if UITestHarness.requested {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { UITestHarness.run() }
+            _settings = StateObject(wrappedValue: AppSettings())
+            _store = StateObject(wrappedValue: MetricsStore(interval: 2))
+            return
+        }
         DispatchQueue.global(qos: .utility).async { DispatchQueue.main.asyncAfter(deadline: .now()+1) { TranslateModel.reapOrphanServers() } }
         let defaults = UserDefaults.standard
         let storedInterval = (defaults.object(forKey: AppSettings.Keys.refreshInterval) as? Double) ?? 2

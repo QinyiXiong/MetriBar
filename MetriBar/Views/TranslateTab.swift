@@ -132,7 +132,17 @@ final class TranslateModel: ObservableObject {
     @Published var envStage: String = ""
     @Published var envBusy = false
     @Published var serverRunning = false
-    @Published var ffmpegOK = false
+    /// 上次成功的 ffmpeg 路径（持久化）：冷启动时先按缓存显示，后台再复核
+    private static let ffmpegCacheKey = "translate.ffmpegPath"
+
+    static var cachedFFmpeg: String? {
+        guard let p = UserDefaults.standard.string(forKey: ffmpegCacheKey), !p.isEmpty,
+              FileManager.default.isExecutableFile(atPath: p) else { return nil }
+        return p
+    }
+
+    /// 冷启动优化：首帧就用缓存状态，避免"明明装了却显示未检测到"的假告警
+    @Published var ffmpegOK = TranslateModel.cachedFFmpeg != nil
     @Published var envProgress: Double = 0
     /// 阅完即删：截断磁盘日志（App内存缓冲不受影响）
     static func purgeLogFile() {
@@ -140,6 +150,7 @@ final class TranslateModel: ObservableObject {
     }
 
     static func detectFFmpeg() -> String? {
+        if let c = cachedFFmpeg { return c }   // 缓存命中直接返回，省一次登录shell（慢机器可达数秒）
         // 登录shell解析（含用户自定义PATH，覆盖 ffmpeg-full / conda / macports）
         let probe = Process()
         probe.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -188,8 +199,9 @@ final class TranslateModel: ObservableObject {
     func checkEnv() {
         // ffmpeg探测(登录shell ~200ms)移出主线程：UI先显示缓存值，结果稍后自动刷新
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let ok = TranslateModel.detectFFmpeg() != nil
-            DispatchQueue.main.async { self?.ffmpegOK = ok }
+            let path = TranslateModel.detectFFmpeg()
+            if let path { UserDefaults.standard.set(path, forKey: TranslateModel.ffmpegCacheKey) }
+            DispatchQueue.main.async { self?.ffmpegOK = path != nil }
         }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             let ready = FileManager.default.isExecutableFile(atPath: ToolPaths.envPython)
@@ -222,20 +234,31 @@ final class TranslateModel: ObservableObject {
     }
 
     /// App 启动时清理孤儿翻译服务（上次被强杀时残留的、属于本 App 的 mlx_lm.server）
+    private static var didReap = false
+
+    /// App 启动时清理孤儿进程（后台执行，绝不阻塞主线程）
     static func reapOrphanServers() {
-        let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
-        // 孤儿翻译服务 / 本App孤儿下载curl / 残留pip安装，一并清扫
-        for pat in [me + ".*-m mlx_lm.server",
-                    "curl.*modelscope[.].cn/models/",
-                    me + ".*pip install"] {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-            p.arguments = ["-f", pat]
-            try? p.run(); p.waitUntilExit()
+        guard !didReap else { return }
+        didReap = true
+        DispatchQueue.global(qos: .utility).async {
+            let me = ToolPaths.envPython.replacingOccurrences(of: "/bin/python3", with: "")
+            for pat in [me + ".*-m mlx_lm.server",
+                        "curl.*modelscope[.].cn/models/",
+                        me + ".*pip install"] {
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+                p.arguments = ["-f", pat]
+                try? p.run(); p.waitUntilExit()
+            }
         }
     }
 
-    func refreshAvailability(_ settings: TranslateSettings) {
+    private var lastScan = Date.distantPast
+    private var verifying: Set<String> = []
+
+    func refreshAvailability(_ settings: TranslateSettings, force: Bool = false) {
+        if !force, Date().timeIntervalSince(lastScan) < 20 { return }   // 20秒内不重复全量扫描
+        lastScan = Date()
         let roots = [settings.effectiveModelDir, settings.pipelineDir + "/models", ToolPaths.defaultModelDir]
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -247,9 +270,12 @@ final class TranslateModel: ObservableObject {
                         self.downloads[i].status = "✓ 已就绪"
                         self.appendLog("扫描命中 \(spec.dirName) → \(dir)")
                     } else {
-                        // 无凭证 → 联网对官方清单逐文件大小校验，全对才补凭证置就绪
-                        self.downloads[i].status = "校验中…"
-                        self.verifyAndMark(spec: spec, dir: dir, idx: i)
+                        // 无凭证 → 联网对官方清单逐文件大小校验（同一模型只跑一次，避免切Tab重复请求）
+                        if !self.verifying.contains(spec.id.uuidString) {
+                            self.verifying.insert(spec.id.uuidString)
+                            self.downloads[i].status = "校验中…"
+                            self.verifyAndMark(spec: spec, dir: dir, idx: i)
+                        }
                     }
                 } else {
                     self.downloads[i].status = "未下载"
@@ -307,7 +333,7 @@ final class TranslateModel: ObservableObject {
             DispatchQueue.main.async {
                 self?.envOK = false; self?.envBusy = false
                 self?.envStage = "已删除全部运行时与依赖，可重新一键构建"
-                self?.refreshAvailability(settings)
+                self?.refreshAvailability(settings, force: true)
                 self?.appendLog("✓ 运行时与依赖已删除")
             }
         }
@@ -524,6 +550,7 @@ final class TranslateModel: ObservableObject {
             }
             DispatchQueue.main.async {
                 guard let self, idx < self.downloads.count else { return }
+                self.verifying.remove(spec.id.uuidString)
                 if ok {
                     let mark: [String: Any] = ["files": 1, "bytes": 1, "at": "verified"]
                     if let md = try? JSONSerialization.data(withJSONObject: mark) { try? md.write(to: URL(fileURLWithPath: Self.completionMarkPath(dir))) }
@@ -670,6 +697,8 @@ final class TranslateModel: ObservableObject {
         }
     }
     func stopTicker() { progressTimer?.invalidate(); progressTimer = nil }
+
+    static let shared = TranslateModel()
 
     init() { installTerminationChain() }
 
@@ -858,7 +887,7 @@ final class TranslateModel: ObservableObject {
 
 struct TranslateTab: View {
     @ObservedObject private var settings = TranslateSettings.shared
-    @StateObject private var model = TranslateModel()
+    @ObservedObject private var model = TranslateModel.shared
     @State private var dirDraft: String = ""
     @State private var showLogWin = false
     private func barColor(_ t: TranslateModel.TranslateTask) -> Color {
@@ -884,7 +913,12 @@ struct TranslateTab: View {
             queueColumn.frame(minWidth: 420, idealWidth: 500, minHeight: 480)
 
         }
-        .onAppear { TranslateModel.reapOrphanServers(); dirDraft = settings.effectiveModelDir; model.checkEnv(); model.refreshAvailability(settings) }
+        .onAppear {
+            // 切Tab高频触发：只做零成本赋值，探测/扫描均后台且自带节流
+            if dirDraft.isEmpty { dirDraft = settings.effectiveModelDir }
+            model.checkEnv()
+            model.refreshAvailability(settings)
+        }
     }
 
     private var queueColumn: some View {
@@ -1058,7 +1092,7 @@ struct TranslateTab: View {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: videoPath).deletingLastPathComponent()])
     }
 
-    private var envSheet: some View {
+    var envSheet: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("运行时与模型").font(.system(size: 14, weight: .bold))
