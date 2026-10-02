@@ -114,24 +114,71 @@ final class VerifyModel: ObservableObject {
             rows.append(("系统", "macOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)." +
                         "\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion) (build \(ProcessInfo.processInfo.operatingSystemVersion.patchVersion))"))
 
+            // ── 电池详表：system_profiler + ioreg(AppleSmartBattery) 同源数据，
+            //    与 coconutBattery 展示的字段一致，无需安装任何第三方 App ──
             let sp = prof("SPPowerDataType")
             let cycle = deep(sp, ["cycle_count"]) as? Int
             let health = str(deep(sp, ["battery_health"]) ?? deep(sp, ["health"]))
-            if cycle != nil || health != nil {
+            let maxCap = str(deep(sp, ["health_maximum_capacity"]))
+            let soc = (deep(sp, ["state_of_charge"]) as? NSNumber)?.intValue
+            if cycle != nil || health != nil || maxCap != nil {
                 var parts: [String] = []
-                if let c = cycle { parts.append("循环 \(c) 次") }
-                if let h = health, !h.isEmpty { parts.append("系统评估：\(h)") }
-                rows.append(("电池", parts.joined(separator: " · ")))
+                if let h = health, !h.isEmpty { parts.append("系统评估 \(h)") }
+                if let mc = maxCap, !mc.isEmpty { parts.append("最大容量 \(mc)") }
+                rows.append(("电池健康", parts.isEmpty ? "—" : parts.joined(separator: " · ")))
             } else {
-                rows.append(("电池", "未检测到内置电池"))
+                rows.append(("电池健康", "未检测到内置电池（台式机/无电池机型）"))
             }
+            if let c = cycle { rows.append(("电池循环次数", "\(c) 次（机型标称寿命通常 1000 次）")) }
+
+            let (rcIO, ioOut) = Shell.run("/usr/sbin/ioreg", ["-rn", "AppleSmartBattery"])
+            if rcIO == 0 {
+                func ioNum(_ key: String) -> Int? {
+                    guard let r = ioOut.range(of: "\"\(key)\" = ") else { return nil }
+                    let tail = ioOut[r.upperBound...]
+                    let token = tail.prefix { $0.isNumber || $0 == "-" }
+                    return Int(token)
+                }
+                func ioStr(_ key: String) -> String? {
+                    guard let r = ioOut.range(of: "\"\(key)\" = \"") else { return nil }
+                    let tail = ioOut[r.upperBound...]
+                    guard let end = tail.firstIndex(of: "\"") else { return nil }
+                    let v = String(tail[tail.startIndex..<end])
+                    return v.isEmpty ? nil : v
+                }
+                let design = ioNum("DesignCapacity")
+                let full = ioNum("NominalChargeCapacity") ?? ioNum("AppleRawMaxCapacity")
+                if let d = design, let f = full, d > 0 {
+                    let ratio = Double(f) / Double(d) * 100
+                    rows.append(("电池容量", String(format: "满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）", f, d, ratio)))
+                }
+                var power: [String] = []
+                if let v = ioNum("Voltage") { power.append(String(format: "%.2f V", Double(v) / 1000)) }
+                if let a = ioNum("Amperage") { power.append("\(a) mA") }
+                if let t = ioNum("Temperature"), t > 0 { power.append(String(format: "%.1f ℃", Double(t) / 100)) }
+                if !power.isEmpty { rows.append(("电池电压/电流/温度", power.joined(separator: " · "))) }
+                var ids: [String] = []
+                if let sn = ioStr("Serial") { ids.append(sn) }
+                if let dn = ioStr("DeviceName") { ids.append(dn) }
+                if !ids.isEmpty { rows.append(("电池序列号 / 型号", ids.joined(separator: " · "))) }
+                let charging = ioNum("IsCharging") == 1
+                let full2 = ioNum("FullyCharged") == 1
+                let ext = ioStr("ExternalConnected").map { $0.lowercased() == "yes" } ?? false
+                rows.append(("电池充电状态", (ext ? "接电源" : "电池供电")
+                             + (full2 ? " · 已充满" : charging ? " · 正在充电" : " · 未充电")))
+            }
+
             let (_, battPct) = Shell.run("/bin/bash", ["-lc", "/usr/bin/pmset -g batt"])
             let pctToken = battPct.split(whereSeparator: { " \t\n();;'\u{ff08}\u{ff09}".contains($0) })
                 .first(where: { $0.hasSuffix("%") && $0.dropLast().allSatisfy(\.isNumber) })
             if let pct = pctToken {
                 let ac = battPct.localizedCaseInsensitiveContains("AC Power") || battPct.contains("交流")
-                rows.append(("电量", String(pct) + (ac ? " · 接电源" : " · 电池供电")))
+                rows.append(("电池当前电量", String(pct) + (ac ? " · 接电源" : " · 电池供电")
+                             + (soc != nil ? "（系统读数 \(soc!)%）" : "")))
             }
+            let (_, pmsetFull) = Shell.run("/usr/bin/pmset", ["-g", "custom"])
+            let lowPower = pmsetFull.contains("lowpowermode         1")
+            rows.append(("电源模式", lowPower ? "低电量模式已开启" : "标准模式"))
 
             let dp = prof("SPDisplaysDataType")
             if let node = dp?["SPDisplaysDataType"] {
@@ -308,7 +355,7 @@ enum VerifyCatalog {
                         "再测双指滚动、三指拖动与用力点按（Force Touch）手感是否一致。",
                        ]),
             VerifyItem(id: "keyboard", interactive: true, title: "键盘全键测试",
-                       guide: "逐个按键实时点亮并计数，不触发或串键即为故障。",
+                       guide: "内置拟真键盘画布：逐个按键实时点亮并计数，不触发或串键即为故障。",
                        steps: [
                         "点「开始」后在画布上按顺序敲击每个按键（含功能键与方向键）。",
                         "被按下的键应实时点亮并计数；未点亮的键即为不触发。",
@@ -412,14 +459,14 @@ enum VerifyCatalog {
                        ]),
         ]),
         Section(title: "外部工具", icon: "wrench.and.screwdriver.fill", items: [
-            VerifyItem(id: "battery-tool", required: true, title: "电池检测（详细数据）",
-                       guide: "系统设置看健康状态；coconutBattery 看详细容量、循环与硬盘读写。",
+            VerifyItem(id: "battery-tool", required: true, title: "电池检测",
+                       guide: "右侧「本机硬件快照」已直接读出全部电池数据：健康度、循环次数、设计/满充容量、电压电流温度、序列号，无需安装任何第三方 App。",
                        steps: [
-                        "系统设置 › 电池 › 电池健康：查看最大容量百分比与循环次数。",
-                        "用 coconutBattery 查看设计容量、当前容量、循环次数与温度。",
-                        "对比机型标称循环寿命（通常 1000 次），循环过高说明重度使用。",
-                       ],
-                       link: "https://www.coconut-flavour.com/coconutbattery/", linkTitle: "下载 coconutBattery"),
+                        "看右侧快照「电池健康」「电池循环次数」「电池容量」三行：健康度 = 满充容量 / 设计容量。",
+                        "循环次数对比机型标称寿命（通常 1000 次），过高说明重度使用；健康度低于 80% 通常需更换电池。",
+                        "「电池充电状态」应随插拔电源实时变化：接电源显示充电/已充满，拔掉显示电池供电。",
+                        "如需交叉验证：系统设置 › 电池 › 电池健康，与右侧读数对照应一致。",
+                       ]),
             VerifyItem(id: "serial-query", required: true, title: "序列号查询（保修核验）",
                        guide: "到 Apple 官方页面输入序列号，验证保修状态与设备信息。",
                        steps: [
@@ -436,14 +483,6 @@ enum VerifyCatalog {
                         "与同机型同配置的公开成绩对比，明显偏低说明散热或硬件异常。",
                        ],
                        link: "https://www.geekbench.com/download/", linkTitle: "下载 Geekbench"),
-            VerifyItem(id: "keyboard-online", title: "在线键盘测试",
-                       guide: "用在线工具实时查看每个按键的反馈。",
-                       steps: [
-                        "浏览器打开在线键盘测试页，逐个按键观察是否高亮。",
-                        "重点测功能键、方向键与不常用的符号键。",
-                        "与内置「键盘全键测试」互为印证，任一异常都应复测。",
-                       ],
-                       link: "https://www.zfrontier.com/lab/keyboardTester", linkTitle: "打开在线键盘测试"),
             VerifyItem(id: "av-quality", title: "音画质量测试",
                        guide: "检测扬声器与屏幕表现，建议到直营店对比体验。",
                        steps: [
@@ -509,6 +548,7 @@ struct VerifyTab: View {
     @StateObject private var model = VerifyModel()
     @State private var inlineSheet: InlineTestID?   // "keyboard" / "trackpad"
     @State private var detailSheet: VerifyItem?
+    @State private var keyboardResetToken = 0
 
     private let cols = [GridItem(.adaptive(minimum: 210, maximum: 260), spacing: 14)]
 
@@ -548,9 +588,6 @@ struct VerifyTab: View {
                         }
                     }
                     faqSection
-                    Text("验机清单结构参考 验机参考站点 · 文案与实现为本机原创 · 全部检测仅在本机进行，不联网")
-                        .font(.system(size: 9)).foregroundColor(.secondary)
-                        .padding(.top, 4)
                 }
                 .padding(14)
             }
@@ -632,30 +669,33 @@ struct VerifyTab: View {
     }
 
     /// 分步操作详情（对齐网站各检测页说明）
-    private func detailSheetContent(_ item: VerifyItem) -> some View {
+    func detailSheetContent(_ item: VerifyItem) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text(item.title).font(.system(size: 15, weight: .bold))
+                Text(item.title).font(.system(size: 18, weight: .bold))
                 if item.required { badge("必查", Color.red.opacity(0.12), .red) }
                 Spacer()
+                Text("操作步骤 \(item.steps.count) 步").font(.system(size: 11)).foregroundColor(.secondary)
             }
-            Text(item.guide).font(.system(size: 11)).foregroundColor(.secondary)
+            Text(item.guide).font(.system(size: 13)).foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(item.steps.enumerated()), id: \.offset) { i, step in
-                        HStack(alignment: .top, spacing: 8) {
+                        HStack(alignment: .top, spacing: 10) {
                             Text("\(i + 1)")
-                                .font(.system(size: 10, weight: .bold)).foregroundColor(.white)
-                                .frame(width: 16, height: 16)
+                                .font(.system(size: 12, weight: .bold)).foregroundColor(.white)
+                                .frame(width: 22, height: 22)
                                 .background(Circle().fill(Color.accentColor))
-                            Text(step).font(.system(size: 11))
+                            Text(step).font(.system(size: 13.5))
+                                .lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
                         }
                     }
                 }
+                .padding(.trailing, 6)
             }
             HStack {
                 if let link = item.link, let url = URL(string: link) {
@@ -667,7 +707,7 @@ struct VerifyTab: View {
                 Button("关闭") { detailSheet = nil }.keyboardShortcut(.cancelAction)
             }
         }
-        .padding(20).frame(width: 560, height: 460)
+        .padding(22).frame(width: 660, height: 540)
     }
 
     @ViewBuilder
@@ -679,12 +719,17 @@ struct VerifyTab: View {
                                         "用单指连续画圈、直线覆盖四角与边缘：应跟手无断线。")
                 .font(.system(size: 11)).foregroundColor(.secondary)
             Group {
-                if id == "keyboard" { KeyboardTestView().frame(maxWidth: .infinity, minHeight: 340, maxHeight: 420) } else { TrackpadCanvasView() }
+                if id == "keyboard" { KeyboardTestView(resetToken: keyboardResetToken).frame(maxWidth: .infinity, minHeight: 280, maxHeight: 320) } else { TrackpadCanvasView() }
             }
-            .frame(width: 560, height: 220)
-            Button("完成") { inlineSheet = nil }.keyboardShortcut(.cancelAction)
+            .frame(width: id == "keyboard" ? 880 : 560, height: id == "keyboard" ? 290 : 220)
+            HStack(spacing: 10) {
+                if id == "keyboard" { Button("重置") { keyboardResetToken += 1 }.controlSize(.small) }
+                Spacer()
+                Button("完成") { inlineSheet = nil }.keyboardShortcut(.cancelAction)
+            }
+            .frame(width: id == "keyboard" ? 880 : 560)
         }
-        .padding(20).frame(width: 620)
+        .padding(20).frame(width: id == "keyboard" ? 940 : 620)
     }
 
     private var hardwareColumn: some View {

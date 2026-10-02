@@ -43,6 +43,7 @@ enum UITestHarness {
         trace("HARNESS START out=\(outDir)")
         originalChecklist = UserDefaults.standard.data(forKey: checklistKey)
         NSApp.setActivationPolicy(.regular)   // 允许渲染真实控件
+        NSApp.appearance = NSAppearance(named: .darkAqua)   // 全局深色：避免白字落在白底上"隐形"
         pump(0.6)
         trace("激活策略已切换")
 
@@ -76,6 +77,8 @@ enum UITestHarness {
         trace("→ uiTranslateEnvStates"); uiTranslateEnvStates()
         trace("→ uiTranslateDownloadStates"); uiTranslateDownloadStates()
         trace("→ uiTranslateEnvSheet"); uiTranslateEnvSheet()
+        trace("→ uiVerifyDetailSheet"); uiVerifyDetailSheet()
+        trace("→ uiVerifyHUD"); uiVerifyHUD()
         trace("→ uiTCCStatus"); uiTCCStatus()
         trace("→ verifyCatalogFidelity"); verifyCatalogFidelity()
         trace("→ perfMeasurements"); perfMeasurements()
@@ -129,8 +132,8 @@ enum UITestHarness {
     }
 
     private static func uiVerifyKeyboardPanel() {
-        let img = captureNS(KeyboardLayoutView(frame: NSRect(x: 0, y: 0, width: 900, height: 300)),
-                            name: "05-verify-keyboard", size: NSSize(width: 900, height: 300))
+        let img = captureNS(KeyboardLayoutView(frame: NSRect(x: 0, y: 0, width: 880, height: 290)),
+                            name: "05-verify-keyboard", size: NSSize(width: 880, height: 290))
         record("ui.verify-keyboard-panel", (img?.nonBlank ?? false), ["非空白": img?.nonBlank ?? false])
     }
 
@@ -230,6 +233,35 @@ enum UITestHarness {
         record("ui.translate-env-sheet", img?.nonBlank ?? false, ["截图非空白": img?.nonBlank ?? false])
     }
 
+    /// 步骤弹窗：大字版分步说明（对照站点各检测页）
+    private static func uiVerifyDetailSheet() {
+        guard let item = VerifyCatalog.items.first(where: { $0.id == "liquid" }) ?? VerifyCatalog.items.first(where: { !$0.steps.isEmpty }) else {
+            record("ui.verify-detail-sheet", false, ["note": "无带步骤的条目"]); return
+        }
+        let img = captureWindow(AnyView(VerifyTab().detailSheetContent(item)), name: "13-verify-detail-sheet", size: NSSize(width: 660, height: 540))
+        record("ui.verify-detail-sheet", img?.nonBlank ?? false, [
+            "条目": item.title, "步骤数": item.steps.count, "截图非空白": img?.nonBlank ?? false,
+        ])
+    }
+
+    /// 交互测试提示浮层（坏点/麦克风/摄像头共用的状态提示）
+    private static func uiVerifyHUD() {
+        TestHUD.shared.show("坏点检测 · 第 1/5 张：黑色", "空格 / → / 单击 = 下一张　← = 上一张　Esc = 退出（共 5 张纯色图）", high: false)
+        pump(0.4)
+        var ok = false
+        if let panel = NSApp.windows.first(where: { $0 is NSPanel && $0.level == .floating }), let cv = panel.contentView {
+            cv.layoutSubtreeIfNeeded()
+            if let rep = cv.bitmapImageRepForCachingDisplay(in: cv.bounds) {
+                cv.cacheDisplay(in: cv.bounds, to: rep)
+                if let d = rep.representation(using: .png, properties: [:]) {
+                    ok = write(d, name: "14-verify-hud")
+                }
+            }
+        }
+        TestHUD.shared.hide()
+        record("ui.verify-hud", ok, ["浮层出现并截图": ok])
+    }
+
     /// 权限状态（不弹窗、不请求）：麦克风/摄像头
     private static func uiTCCStatus() {
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -248,7 +280,7 @@ enum UITestHarness {
         // 站点 15 个必查条目（标题对齐）
         let siteRequired = ["拍摄开箱视频", "激活锁检测", "MDM 企业锁检测", "序列号核对", "维修历史与配件核验",
                             "诊断模式（ADP000）", "坏点检测", "原装屏幕核验", "声音检测", "麦克风检测",
-                            "摄像头检测", "进水指示器检测", "电池检测（详细数据）", "序列号查询（保修核验）",
+                            "摄像头检测", "进水指示器检测", "电池检测", "序列号查询（保修核验）",
                             "抹掉数据重装系统"]
         let mineRequired = Set(required.map(\.title))
         let missing = siteRequired.filter { !mineRequired.contains($0) }
@@ -320,7 +352,10 @@ enum UITestHarness {
     /// （cacheDisplay 丢文字、ImageRenderer 不支持 HSplitView，均不可用）
     private static func captureWindow(_ view: AnyView, name: String, size: NSSize) -> Shot? {
         // 统一深色：host 与 window 外观必须一致，且给显式底色——否则深色解析出的白字会落在白底上"隐形"
-        let host = NSHostingView(rootView: view.background(Color(nsColor: .windowBackgroundColor)))
+        let content = view
+            .environment(\.colorScheme, .dark)          // SwiftUI 语义色按深色解析
+            .background(Color(white: 0.11))              // 字面量底色：与外观无关，杜绝白字白底
+        let host = NSHostingView(rootView: content)
         host.appearance = NSAppearance(named: .darkAqua)
         host.frame = NSRect(origin: .zero, size: size)
         let win = NSWindow(contentRect: NSRect(origin: .zero, size: size),
@@ -384,11 +419,18 @@ enum UITestHarness {
 
     /// AppKit 自绘视图截图（键盘画布等 NSView.draw 类）
     private static func captureNS(_ v: NSView, name: String, size: NSSize) -> Shot? {
+        let box = NSView(frame: NSRect(origin: .zero, size: size))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = NSColor(calibratedWhite: 0.11, alpha: 1).cgColor
+        box.appearance = NSAppearance(named: .darkAqua)
+        v.appearance = NSAppearance(named: .darkAqua)
         v.frame = NSRect(origin: .zero, size: size)
+        box.addSubview(v)
+        box.layoutSubtreeIfNeeded()
         v.layoutSubtreeIfNeeded()
-        v.displayIfNeeded()
-        guard let rep = v.bitmapImageRepForCachingDisplay(in: v.bounds) else { return nil }
-        v.cacheDisplay(in: v.bounds, to: rep)
+        box.displayIfNeeded()
+        guard let rep = box.bitmapImageRepForCachingDisplay(in: box.bounds) else { return nil }
+        box.cacheDisplay(in: box.bounds, to: rep)
         guard let data = rep.representation(using: .png, properties: [:]) else { return nil }
         let url = URL(fileURLWithPath: outDir + "/" + name + ".png")
         guard (try? data.write(to: url)) != nil else { return nil }
@@ -455,6 +497,7 @@ enum UITestHarness {
     }
 
     private static func finish() {
+        NSApp.appearance = nil
         // 还原用户真实清单状态：原本没有就删掉键，原本有就写回原值
         if let d = originalChecklist { UserDefaults.standard.set(d, forKey: checklistKey) }
         else { UserDefaults.standard.removeObject(forKey: checklistKey) }

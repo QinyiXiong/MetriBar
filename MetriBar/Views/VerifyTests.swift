@@ -26,16 +26,98 @@ enum VerifyTests {
     }
 }
 
+// MARK: - 通用测试提示浮层（非激活面板，不抢焦点）
+
+@MainActor
+final class TestHUD {
+    static let shared = TestHUD()
+
+    private var panel: NSPanel?
+    private var titleLabel: NSTextField?
+    private var subLabel: NSTextField?
+    private var highLevel = false
+
+    /// high=true 时置于全屏检测窗之上
+    func show(_ title: String, _ subtitle: String = "", high: Bool = false) {
+        if panel == nil || high != highLevel { build(high: high) }
+        titleLabel?.stringValue = title
+        subLabel?.stringValue = subtitle
+        layout()
+        panel?.orderFrontRegardless()
+    }
+
+    func update(_ title: String, _ subtitle: String = "") {
+        titleLabel?.stringValue = title
+        subLabel?.stringValue = subtitle
+        layout()
+    }
+
+    func hide() { panel?.orderOut(nil) }
+
+    private func build(high: Bool) {
+        highLevel = high
+        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 84),
+                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        p.level = high ? .screenSaver : .floating
+        p.isOpaque = false
+        p.backgroundColor = .clear
+        p.hasShadow = true
+        p.ignoresMouseEvents = true
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        let box = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 84))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 0.9).cgColor
+        box.layer?.cornerRadius = 16
+        box.layer?.borderWidth = 1
+        box.layer?.borderColor = NSColor(calibratedWhite: 1, alpha: 0.14).cgColor
+        let t = NSTextField(labelWithString: "")
+        t.font = .systemFont(ofSize: 16, weight: .semibold)
+        t.textColor = .white; t.alignment = .center
+        let sub = NSTextField(labelWithString: "")
+        sub.font = .systemFont(ofSize: 12)
+        sub.textColor = NSColor(calibratedWhite: 0.72, alpha: 1); sub.alignment = .center
+        box.addSubview(t); box.addSubview(sub)
+        p.contentView = box
+        panel = p; titleLabel = t; subLabel = sub
+    }
+
+    private func layout() {
+        guard let p = panel, let box = p.contentView, let t = titleLabel, let sub = subLabel else { return }
+        let w: CGFloat = 560
+        let th: CGFloat = t.stringValue.isEmpty ? 0 : 22
+        let sh: CGFloat = sub.stringValue.isEmpty ? 0 : 18
+        let h = max(56, th + sh + 26)
+        t.frame = NSRect(x: 16, y: h - th - 12, width: w - 32, height: th)
+        sub.frame = NSRect(x: 16, y: 12, width: w - 32, height: sh)
+        box.frame = NSRect(x: 0, y: 0, width: w, height: h)
+        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        p.setFrame(NSRect(x: screen.midX - w / 2, y: screen.minY + 72, width: w, height: h), display: true)
+    }
+}
+
+@MainActor
+enum Guide {
+    /// 一次性提示（4 秒后自动消失）：权限、设备缺失等前置说明
+    static func hud(_ title: String, _ subtitle: String = "") {
+        Diag.notice(Diag.lifecycle, "验机提示：\(title) \(subtitle)")
+        TestHUD.shared.show(title, subtitle)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { TestHUD.shared.hide() }
+    }
+}
+
 // MARK: - 全屏坏点检测
 
 @MainActor
 final class DeadPixelController {
     static let shared = DeadPixelController()
 
-    private let colors: [NSColor] = [.black, .white, .red, .green, .blue]
+    private let colors: [(NSColor, String)] = [(.black, "黑"), (.white, "白"), (.red, "红"), (.green, "绿"), (.blue, "蓝")]
     private var index = 0
     private var window: NSWindow?
     private var monitor: Any?
+    private var clickMonitor: Any?
+
+    var isShowing: Bool { window != nil }
 
     func show() {
         guard window == nil else { return }
@@ -44,29 +126,47 @@ final class DeadPixelController {
         let w = NSWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         w.level = .screenSaver
         w.isOpaque = true
-        w.backgroundColor = colors[index]
+        w.backgroundColor = colors[index].0
         w.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         window = w
+        TestHUD.shared.show(hudTitle, hudHint, high: true)
 
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
-            if event.keyCode == 53 { self.close(); return nil }        // Esc
-            if event.keyCode == 49 || event.keyCode == 125 { self.next() } // Space / →
+            switch event.keyCode {
+            case 53: self.close()                        // Esc
+            case 49, 124, 125: self.next()               // 空格 / → / ↓
+            case 123, 126: self.prev()                   // ← / ↑
+            default: break
+            }
             return nil
+        }
+        // 单击画面也能换色（不需要键盘也能测）
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            self?.next()
+            return event
         }
     }
 
-    private func next() {
-        index = (index + 1) % colors.count
-        window?.backgroundColor = colors[index]
+    private var hudTitle: String { "坏点检测 · 第 \(index + 1)/\(colors.count) 张：\(colors[index].1)色" }
+    private var hudHint: String { "空格 / → / 单击 = 下一张　← = 上一张　Esc = 退出（共 \(colors.count) 张纯色图）" }
+
+    private func next() { index = (index + 1) % colors.count; apply() }
+    private func prev() { index = (index - 1 + colors.count) % colors.count; apply() }
+
+    private func apply() {
+        window?.backgroundColor = colors[index].0
+        TestHUD.shared.update(hudTitle, hudHint)
     }
 
     func close() {
         if let m = monitor { NSEvent.removeMonitor(m); monitor = nil }
+        if let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
         window?.orderOut(nil)
         window = nil
+        TestHUD.shared.hide()
     }
 }
 
@@ -109,18 +209,36 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
     private var player: AVAudioPlayer?
     private var workTimer: Timer?
 
+    private var tick: Timer?
+    private var deadline = Date()
+    private static let recordSeconds = 5.0
+
     func toggle() {
         if recorder?.isRecording == true { stopAndPlayback(); return }
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        if status == .denied || status == .restricted {
+            Guide.hud("麦克风权限未开启", "系统设置 › 隐私与安全性 › 麦克风：勾选 MetriBar 后重试")
+            return
+        }
+        if status == .notDetermined {
+            Guide.hud("正在请求麦克风权限…", "系统弹窗中选择「允许」，随后自动开始录音")
+        }
         AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
-            guard granted else {
-                DispatchQueue.main.async { self?.notify("请在 系统设置 › 隐私与安全 › 麦克风 中允许 MetriBar") }
-                return
+            Task { @MainActor in
+                guard granted else {
+                    self?.notify("请在 系统设置 › 隐私与安全性 › 麦克风 中允许 MetriBar")
+                    return
+                }
+                self?.begin()
             }
-            DispatchQueue.main.async { self?.begin() }
         }
     }
 
     private func begin() {
+        guard AVCaptureDevice.default(for: .audio) != nil else {
+            Guide.hud("未检测到可用麦克风", "该机型或系统未提供输入设备")
+            return
+        }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("metribar-mic-test.caf")
         let settings: [String: Any] = [AVFormatIDKey: kAudioFormatLinearPCM,
                                         AVSampleRateKey: 44_100, AVNumberOfChannelsKey: 1,
@@ -128,23 +246,44 @@ final class MicTestController: NSObject, AVAudioRecorderDelegate {
         recorder = try? AVAudioRecorder(url: url, settings: settings)
         recorder?.delegate = self
         guard recorder?.prepareToRecord() == true else { notify("录音器不可用"); return }
-        recorder?.record(forDuration: 5)
-        notify("正在录制 5 秒…对麦克风说话")
-        workTimer = Timer.scheduledTimer(withTimeInterval: 5.2, repeats: false) { [weak self] _ in
+        recorder?.record(forDuration: Self.recordSeconds)
+        deadline = Date().addingTimeInterval(Self.recordSeconds)
+        notify("开始录音：请对着麦克风说一句话")
+        TestHUD.shared.show("🎙 正在录音… \(Int(Self.recordSeconds)) 秒后自动回放",
+                            "请正常说话，录音结束会自动播放给你听")
+        tick = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let rec = self.recorder, rec.isRecording else { return }
+                let left = max(0, self.deadline.timeIntervalSinceNow)
+                let level = max(0, min(1, Double(rec.currentTime) / Self.recordSeconds))
+                let bars = String(repeating: "▮", count: Int(level * 20))
+                TestHUD.shared.update("🎙 正在录音… 剩余 \(String(format: "%.1f", left)) 秒",
+                                      "电平进度 \(bars)")
+            }
+        }
+        workTimer = Timer.scheduledTimer(withTimeInterval: Self.recordSeconds + 0.25, repeats: false) { [weak self] _ in
             Task { @MainActor in self?.stopAndPlayback() }
         }
     }
 
     private func stopAndPlayback() {
-        workTimer?.invalidate()
+        workTimer?.invalidate(); tick?.invalidate(); tick = nil
         guard let rec = recorder, rec.isRecording else { return }
         rec.stop()
         usleep(120_000)
         if let p = try? AVAudioPlayer(contentsOf: rec.url) {
             player = p; p.play()
-            notify("回放刚才的录音…")
+            notify("录音结束，正在回放…")
+            let dur = p.duration
+            TestHUD.shared.show("🔊 正在回放录音（\(String(format: "%.1f", dur)) 秒）",
+                                "能清楚听到自己的声音 = 麦克风正常；无声/断续 = 异常")
+            DispatchQueue.main.asyncAfter(deadline: .now() + dur + 0.4) {
+                TestHUD.shared.show("✓ 麦克风检测完成", "可再点一次「开始」复测", high: false)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { TestHUD.shared.hide() }
+            }
         } else {
             notify("录音文件不可用")
+            Guide.hud("录音文件不可用", "可能是麦克风被其他 App 占用，关闭后重试")
         }
     }
 
@@ -168,70 +307,132 @@ final class CameraPreviewController {
     private var session: AVCaptureSession?
 
     func toggle() {
-        if let w = window { w.close(); window = nil; session?.stopRunning(); session = nil; return }
+        if let w = window { w.close(); window = nil; stop(); return }
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        if status == .denied || status == .restricted {
+            Guide.hud("摄像头权限未开启", "系统设置 › 隐私与安全性 › 摄像头：勾选 MetriBar 后重试")
+            return
+        }
         AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-            guard granted else {
-                DispatchQueue.main.async {
-                    let a = NSAlert(); a.messageText = "摄像头权限"
-                    a.informativeText = "请在 系统设置 › 隐私与安全 › 摄像头 中允许 MetriBar，然后再次点击。"
-                    a.runModal()
+            Task { @MainActor in
+                guard granted else {
+                    Guide.hud("未获得摄像头权限", "系统设置 › 隐私与安全性 › 摄像头：勾选 MetriBar 后重试")
+                    return
                 }
-                return
+                self?.openWindow()
             }
-            DispatchQueue.main.async { self?.openWindow() }
         }
     }
 
+    private func stop() {
+        let s = session
+        session = nil
+        DispatchQueue.global(qos: .userInitiated).async { s?.stopRunning() }
+    }
+
     private func openWindow() {
+        guard let device = AVCaptureDevice.default(for: .video) else {
+            Guide.hud("未检测到摄像头", "该机型或系统未提供可用摄像头设备")
+            return
+        }
         let session = AVCaptureSession()
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input) else { return }
+        session.sessionPreset = .high
+        guard let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input) else {
+            Guide.hud("摄像头无法启动", "设备被其他 App 占用或输入不可用")
+            return
+        }
         session.addInput(input)
-        session.startRunning()
         self.session = session
 
-        let hosting = NSHostingView(rootView: CameraPreviewView(session: session))
-        let w = NSWindow(contentViewController: NSViewController())
-        w.contentView = hosting
-        w.title = "摄像头预览"
-        w.styleMask = [.titled, .closable]
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+                         styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        w.title = "摄像头预览 · \(device.localizedName)"
         w.isReleasedWhenClosed = false
-        w.setContentSize(NSSize(width: 512, height: 384))
+        let root = CameraPanelView(session: session, device: device)
+        w.contentView = NSHostingView(rootView: root)
         w.center()
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        // startRunning 是阻塞调用：放到后台，避免开窗卡顿（画面之前一直空白的根因之一）
+        DispatchQueue.global(qos: .userInitiated).async { session.startRunning() }
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { [weak self] _ in
-            Task { @MainActor in self?.session?.stopRunning(); self?.session = nil; self?.window = nil }
+            Task { @MainActor in self?.stop(); self?.window = nil }
         }
         window = w
     }
 }
 
-private struct CameraPreviewView: NSViewRepresentable {
+/// 摄像头面板：预览 + 顶部状态/提示（预览层用 backing layer，尺寸随窗口自适应）
+private struct CameraPanelView: View {
     let session: AVCaptureSession
-    func makeNSView(context: Context) -> NSView {
-        let v = NSView()
-        let sessionRef = self.session
-        DispatchQueue.global(qos: .userInitiated).async {
-            let layer = AVCaptureVideoPreviewLayer(session: sessionRef)
-            layer.videoGravity = .resizeAspect
-            DispatchQueue.main.async {
-                v.wantsLayer = true
-                v.layer?.addSublayer(layer)
+    let device: AVCaptureDevice
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "video.fill").foregroundColor(.green)
+                Text("实时预览中").font(.system(size: 11, weight: .semibold))
+                Text("· 检查画面是否清晰、无横纹/黑块/彩点；用手遮挡再移开看曝光响应")
+                    .font(.system(size: 10)).foregroundColor(.secondary)
+                Spacer()
             }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            Divider()
+            CameraPreviewLayerView(session: session)
+                .frame(minWidth: 480, minHeight: 360)
+            Divider()
+            HStack {
+                Text("设备：\(device.localizedName)").font(.system(size: 10)).foregroundColor(.secondary)
+                Spacer()
+                Text("关闭窗口即停止摄像头（不占用时不耗电）").font(.system(size: 10)).foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 7)
         }
-        return v
     }
-    func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView.layer?.sublayers?.first as? AVCaptureVideoPreviewLayer)?.frame = nsView.bounds
+}
+
+/// AVCaptureVideoPreviewLayer 作为 backing layer，layout 时同步尺寸 —— 保证一定有画面
+private struct CameraPreviewLayerView: NSViewRepresentable {
+    let session: AVCaptureSession
+    func makeNSView(context: Context) -> PreviewBackingView { PreviewBackingView(session: session) }
+    func updateNSView(_ nsView: PreviewBackingView, context: Context) {}
+}
+
+final class PreviewBackingView: NSView {
+    private let previewLayer: AVCaptureVideoPreviewLayer
+
+    init(session: AVCaptureSession) {
+        previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        super.init(frame: .zero)
+        wantsLayer = true
+        previewLayer.videoGravity = .resizeAspect
+        previewLayer.backgroundColor = NSColor.black.cgColor
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func makeBackingLayer() -> CALayer { previewLayer }
+    override func layout() {
+        super.layout()
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        previewLayer.frame = bounds
+        CATransaction.commit()
     }
 }
 
 // MARK: - 键盘实时检测（内联小面板）
 
 struct KeyboardTestView: NSViewRepresentable {
+    var resetToken: Int = 0
+
+    final class Coordinator { var lastToken: Int; init(_ t: Int) { lastToken = t } }
+    func makeCoordinator() -> Coordinator { Coordinator(resetToken) }
+
     func makeNSView(context: Context) -> KeyboardLayoutView { KeyboardLayoutView() }
-    func updateNSView(_ nsView: KeyboardLayoutView, context: Context) {}
+    func updateNSView(_ nsView: KeyboardLayoutView, context: Context) {
+        if context.coordinator.lastToken != resetToken {
+            context.coordinator.lastToken = resetToken
+            nsView.reset()      // 「重置」按钮：清空已测记录重新开始
+        }
+    }
 }
 
 /// 全尺寸键盘画布。keyCode 全部取自 Apple 官方 <Carbon/Carbon.h> kVK_* 权威表：
@@ -383,6 +584,9 @@ final class KeyboardLayoutView: NSView {
     }
     private func flash(_ i: Int) { lit = i; litAt = Date(); tested.insert(i); needsDisplay = true }
 
+    /// 清空已测记录，重新开始
+    func reset() { tested.removeAll(); lit = nil; needsDisplay = true }
+
     override func draw(_ dirtyRect: NSRect) {
         // 画布背景透明，直接坐在弹窗底色上（不再叠自己的灰块）
         let statusH: CGFloat = 26, pad: CGFloat = 12, gap: CGFloat = 3
@@ -412,36 +616,85 @@ final class KeyboardLayoutView: NSView {
                               height: max((isFn ? 0.7 : c.h) * unit - gap, 12))
             let isLit = flashAlive && lit == idx
             let isTested = tested.contains(idx)
-            (isLit ? NSColor.controlAccentColor
-                    : isTested ? NSColor.systemGreen.withAlphaComponent(0.55)
-                    : NSColor(calibratedWhite: 0.5, alpha: 0.16)).setFill()
-            NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
+            let radius = max(4, unit * 0.16)
+            let path = NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius)
 
-            // 文字自适应缩字号，禁止截断
-            let text = c.main.isEmpty ? c.shift : c.main
-            var fs = min(11, max(8.5, rect.height * 0.36))
+            // 拟真键帽：顶亮底暗的竖向渐变 + 描边 + 底部厚度阴影（模仿实机/在线键盘测试观感）
+            let capTop: NSColor, capBottom: NSColor, border: NSColor, textColor: NSColor
+            if isLit {
+                capTop = NSColor.controlAccentColor.blended(withFraction: 0.35, of: .white) ?? .controlAccentColor
+                capBottom = NSColor.controlAccentColor
+                border = NSColor.controlAccentColor.blended(withFraction: 0.5, of: .black) ?? .controlAccentColor
+                textColor = .white
+            } else if isTested {
+                capTop = NSColor.systemGreen.withAlphaComponent(0.42)
+                capBottom = NSColor.systemGreen.withAlphaComponent(0.26)
+                border = NSColor.systemGreen.withAlphaComponent(0.65)
+                textColor = .labelColor
+            } else if isFn {
+                capTop = NSColor(calibratedWhite: 0.42, alpha: 0.20)
+                capBottom = NSColor(calibratedWhite: 0.32, alpha: 0.16)
+                border = NSColor(calibratedWhite: 0.6, alpha: 0.22)
+                textColor = NSColor.secondaryLabelColor
+            } else {
+                capTop = NSColor(calibratedWhite: isDark ? 0.30 : 0.99, alpha: 1)
+                capBottom = NSColor(calibratedWhite: isDark ? 0.20 : 0.90, alpha: 1)
+                border = NSColor(calibratedWhite: isDark ? 0.45 : 0.72, alpha: 0.55)
+                textColor = .labelColor
+            }
+            NSGraphicsContext.saveGraphicsState()
+            let shadow = NSShadow()
+            shadow.shadowColor = NSColor.black.withAlphaComponent(isLit ? 0.0 : 0.22)
+            shadow.shadowBlurRadius = 2.0
+            shadow.shadowOffset = NSSize(width: 0, height: -1.5)
+            shadow.set()
+            (capTop).setFill()
+            path.fill()
+            NSGraphicsContext.restoreGraphicsState()
+
+            if let grad = NSGradient(starting: capTop, ending: capBottom) {
+                grad.draw(in: path, angle: -90)
+            }
+            border.setStroke()
+            path.lineWidth = 0.8
+            path.stroke()
+
+            // 键帽文字：主标居中；有副标（shift）时小字放左上角，贴近实机键帽
+            let main = c.main.isEmpty ? c.shift : c.main
+            let alt = c.main.isEmpty ? "" : c.shift
+            var fs = min(13, max(9, rect.height * 0.40))
             var attrs: [NSAttributedString.Key: Any] = [:]
             while fs > 5 {
                 attrs = [.font: NSFont.systemFont(ofSize: fs, weight: isLit ? .bold : .medium),
-                        .foregroundColor: isLit ? NSColor.white : NSColor.labelColor]
-                if NSAttributedString(string: text, attributes: attrs).size().width <= rect.width - 4 { break }
+                         .foregroundColor: textColor]
+                if NSAttributedString(string: main, attributes: attrs).size().width <= rect.width - 6 { break }
                 fs -= 0.5
             }
             let ps = NSMutableParagraphStyle(); ps.alignment = .center
             attrs[.paragraphStyle] = ps
-            NSAttributedString(string: text, attributes: attrs)
-                .draw(in: NSRect(x: rect.minX, y: rect.midY - fs * 0.62, width: rect.width, height: fs * 1.3))
+            let textY = rect.midY - fs * 0.62 - (alt.isEmpty ? 0 : fs * 0.10)
+            NSAttributedString(string: main, attributes: attrs)
+                .draw(in: NSRect(x: rect.minX, y: textY, width: rect.width, height: fs * 1.35))
+
+            if !alt.isEmpty, rect.width > unit * 0.85 {
+                let afs = max(6.5, fs * 0.62)
+                let aattrs: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: afs, weight: .regular),
+                    .foregroundColor: textColor.withAlphaComponent(0.72)]
+                NSAttributedString(string: alt, attributes: aattrs)
+                    .draw(at: NSPoint(x: rect.minX + 4, y: rect.maxY - afs - 3))
+            }
         }
 
         let remain = cells.count - tested.count
-        let text = tested.isEmpty ? "点击后逐键按下（F 键无反应请按 fn+F）"
+        let text = tested.isEmpty ? "点击本区域取得焦点，然后逐个按下每个键（F 键无反应请按 fn+F）"
             : (remain == 0 ? "✓ 全部 \(cells.count) 键已点亮 · Esc 退出" : "已测 \(tested.count)/\(cells.count) · 剩余 \(remain)")
         let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11, weight: .semibold),
+            .font: NSFont.systemFont(ofSize: 12.5, weight: .semibold),
             .foregroundColor: (remain == 0 && !tested.isEmpty) ? NSColor.systemGreen : NSColor.secondaryLabelColor]
         let w = NSAttributedString(string: text, attributes: attrs).size().width
         NSAttributedString(string: text, attributes: attrs)
-            .draw(at: NSPoint(x: bounds.midX - w / 2, y: pad * 0.5))
+            .draw(at: NSPoint(x: bounds.midX - w / 2, y: pad * 0.8))
     }
 
     private var isDark: Bool { effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
