@@ -32,7 +32,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("语言 / Language") {
+            Section(L10n.t("语言 / Language")) {
                 Picker("界面语言", selection: Binding(get: { settings.appLanguage },
                                                   set: { settings.appLanguage = $0 })) {
                     ForEach(AppLanguage.allCases) { lang in Text(lang.label).tag(lang) }
@@ -59,7 +59,7 @@ struct SettingsView: View {
             Section("菜单栏显示") {
                 Picker("排版样式", selection: $menuBarStyleRaw) {
                     ForEach(AppSettings.MenuBarStyle.allCases) { style in
-                        Text(style.label).tag(style.rawValue)
+                        Text(L10n.t(style.label)).tag(style.rawValue)
                     }
                 }
 
@@ -93,7 +93,7 @@ struct SettingsView: View {
                             .fill(heartStatus.isConnected ? Color(nsColor: .systemGreen)
                                                          : Color(nsColor: .systemOrange).opacity(0.8))
                             .frame(width: 6, height: 6)
-                        Text(heartStatus.status.text)
+                        Text(L10n.t(heartStatus.status.text))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -148,7 +148,7 @@ struct SettingsView: View {
             Section("关于") {
                 LabeledContent("Bundle ID", value: "com.qyx.MetriBar")
                 LabeledContent("最低系统", value: "macOS 13 Ventura")
-                LabeledContent("SMC 访问", value: "已关闭 App Sandbox（外部 dmg 分发）")
+                LabeledContent("SMC 访问", value: L10n.t("已关闭 App Sandbox（外部 dmg 分发）"))
                 LabeledContent("传感器库", value: "SMCKit (MIT)")
             }
         }

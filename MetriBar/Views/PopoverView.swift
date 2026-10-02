@@ -91,7 +91,7 @@ struct PopoverView: View {
 
     private var interfaceSummary: String {
         guard let primary = snapshot.network.primaryInterface else {
-            return "活动网卡：—"
+            return L10n.t("活动网卡：—")
         }
         let rest = snapshot.network.activeInterfaces
             .filter { $0.id != primary && !$0.isIdle }
@@ -119,7 +119,7 @@ struct PopoverView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.arrow.triangle.2.circlepath")
                         .font(.system(size: 10))
-                    Text(hr.status.text == "心率显示已关闭" ? "" : "请在手表开启「广播心率」并允许蓝牙")
+                    Text(L10n.t(hr.status.text == "心率显示已关闭" ? "" : "请在手表开启「广播心率」并允许蓝牙"))
                         .font(.system(size: 10))
                 }
                 .foregroundColor(.secondary)
@@ -142,7 +142,7 @@ struct PopoverView: View {
                 systemImage: "cpu",
                 title: "CPU 占用",
                 value: Fmt.percent(snapshot.cpu.total),
-                detail: "用户 \(Fmt.percent(snapshot.cpu.user)) · 系统 \(Fmt.percent(snapshot.cpu.system))"
+                detail: L10n.t("用户 %@ · 系统 %@", Fmt.percent(snapshot.cpu.user), Fmt.percent(snapshot.cpu.system))
             )
             SlimGauge(fraction: snapshot.cpu.total, color: GaugeColor.forFraction(snapshot.cpu.total))
 
@@ -163,7 +163,7 @@ struct PopoverView: View {
                 ForEach(snapshot.hardware.fans) { fan in
                     MetricRow(
                         systemImage: "fanblades",
-                        title: fan.displayName,
+                        title: L10n.t("风扇 %ld", fan.id + 1),
                         value: Fmt.rpm(fan.rpm),
                         detail: fanRange(fan)
                     )
@@ -180,10 +180,10 @@ struct PopoverView: View {
     /// GPU 明细：渲染 / 光栅占用 + IORegistry 节点名。
     private var gpuDetail: String? {
         let gpu = snapshot.gpu
-        guard gpu.available else { return "未检测到 GPU 加速器" }
+        guard gpu.available else { return L10n.t("未检测到 GPU 加速器") }
         var parts: [String] = []
-        if let renderer = gpu.renderer { parts.append("渲染 \(Fmt.percent(renderer))") }
-        if let tiler = gpu.tiler { parts.append("光栅 \(Fmt.percent(tiler))") }
+        if let renderer = gpu.renderer { parts.append(L10n.t("渲染 %@", Fmt.percent(renderer))) }
+        if let tiler = gpu.tiler { parts.append(L10n.t("光栅 %@", Fmt.percent(tiler))) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -215,8 +215,8 @@ struct PopoverView: View {
 
     private func legendItem(_ name: String, _ value: String) -> some View {
         HStack(spacing: 3) {
-            Text(name)
-            Text(value).monospacedDigit()
+            Text(L10n.t(name))
+            Text(L10n.t(value)).monospacedDigit()
         }
         .font(.system(size: 10))
         .foregroundColor(.secondary)
@@ -230,7 +230,7 @@ struct PopoverView: View {
                 systemImage: "internaldrive",
                 title: snapshot.disk.volumeName,
                 value: Fmt.percent(snapshot.disk.usedFraction),
-                detail: "可用 \(Fmt.compactVolume(snapshot.disk.freeBytes)) / \(Fmt.compactVolume(snapshot.disk.totalBytes))"
+                detail: L10n.t("可用 %@ / %@", Fmt.compactVolume(snapshot.disk.freeBytes), Fmt.compactVolume(snapshot.disk.totalBytes))
             )
             SlimGauge(fraction: snapshot.disk.usedFraction, color: GaugeColor.forFraction(snapshot.disk.usedFraction))
         }
@@ -240,7 +240,7 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Label("\(settings.intervalText) 刷新", systemImage: "arrow.triangle.2.circlepath")
+            Label(L10n.t("%@ 刷新", settings.intervalText), systemImage: "arrow.triangle.2.circlepath")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
                 .labelStyle(.titleAndIcon)

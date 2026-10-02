@@ -179,7 +179,7 @@ final class AppSettings: ObservableObject {
     }
 
     var intervalText: String {
-        refreshInterval < 1.5 ? "1 秒" : String(format: "%.0f 秒", refreshInterval)
+        refreshInterval < 1.5 ? L10n.t("1 秒") : L10n.t("%.0f 秒", refreshInterval)
     }
 
     // MARK: - 写操作

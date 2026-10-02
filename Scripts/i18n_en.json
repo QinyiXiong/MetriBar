@@ -58,7 +58,6 @@
     "蓝牙：已上电，开始搜索手表",
     "蓝牙：未开启（请在系统设置打开蓝牙）",
     "蓝牙：未授权（系统设置›隐私与安全›蓝牙 允许 MetriBar）",
-    "语言 / Language",
     "语言切换：重启 App",
     "请在 系统设置 › 隐私与安全性 › 麦克风 中允许 MetriBar",
     "跟随系统 / System",
@@ -617,5 +616,12 @@
   "（系统读数 %ld%%）": " (system reading %ld%%)",
   "转写 → 翻译 → 双语字幕（可选烧录）。\n多路并行处理；模型用完自动卸载。": "Transcription → translation → bilingual subtitles (burn-in optional).\nParallel processing; models unload when done.",
   "活动网卡：%@（另有 %ld 块在传输）": "Active interface: %@ (%ld more transferring)",
-  "活动网卡：%@": "Active interface: %@"
+  "活动网卡：%@": "Active interface: %@",
+  "用户 %@ · 系统 %@": "User %@ · System %@",
+  "可用 %@ / %@": "%@ free / %@",
+  "渲染 %@": "Renderer %@",
+  "光栅 %@": "Tiler %@",
+  "%@ 刷新": "%@ refresh",
+  "风扇 %ld": "Fan %ld",
+  "语言 / Language": "Language"
 }

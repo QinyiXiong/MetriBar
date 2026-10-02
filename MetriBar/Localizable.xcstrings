@@ -89,6 +89,17 @@
         }
       }
     },
+    "%@ 刷新": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ refresh"
+          }
+        }
+      }
+    },
     "%ld 次（机型标称寿命通常 1000 次）": {
       "extractionState": "manual",
       "localizations": {
@@ -1145,6 +1156,17 @@
         }
       }
     },
+    "光栅 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiler %@"
+          }
+        }
+      }
+    },
     "全自动：转写开始时自动拉起翻译服务，队列跑完自动停止并卸载模型": {
       "extractionState": "manual",
       "localizations": {
@@ -1603,6 +1625,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%.0f GB free / %.0f GB total (%.0f%% used)"
+          }
+        }
+      }
+    },
+    "可用 %@ / %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ free / %@"
           }
         }
       }
@@ -4082,6 +4115,17 @@
         }
       }
     },
+    "渲染 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renderer %@"
+          }
+        }
+      }
+    },
     "满充 %d mAh / 设计 %d mAh（健康度 %.0f%%）": {
       "extractionState": "manual",
       "localizations": {
@@ -4353,6 +4397,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Use the dead pixel test to switch the full screen through solid red, green, blue, white, and black, checking each color for bright or dark dots that never change. Then, in a completely dark room with brightness at maximum, check the corners for obvious backlight bleed; faint, even edge glow is normal."
+          }
+        }
+      }
+    },
+    "用户 %@ · 系统 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User %@ · System %@"
           }
         }
       }
@@ -5369,6 +5424,17 @@
         }
       }
     },
+    "语言 / Language": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
     "语音识别中…": {
       "extractionState": "manual",
       "localizations": {
@@ -5937,6 +6003,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Preview"
+          }
+        }
+      }
+    },
+    "风扇 %ld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fan %ld"
           }
         }
       }

@@ -187,7 +187,7 @@ struct PanelSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title)
+            Text(L10n.t(title))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(.secondary)
                 .textCase(nil)
@@ -225,12 +225,12 @@ struct MetricRow: View {
                 .foregroundColor(.secondary)
                 .frame(width: 14, alignment: .center)
 
-            Text(title)
+            Text(L10n.t(title))
                 .font(.system(size: 12))
                 .foregroundColor(.primary)
 
             if let tertiary {
-                Text(tertiary)
+                Text(L10n.t(tertiary))
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -240,14 +240,14 @@ struct MetricRow: View {
             Spacer(minLength: 6)
 
             VStack(alignment: .trailing, spacing: 1) {
-                Text(value)
+                Text(L10n.t(value))
                     .font(.system(size: 12, weight: .medium))
                     .monospacedDigit()
                     .foregroundColor(.primary)
                     .fixedSize()
 
                 if let detail {
-                    Text(detail)
+                    Text(L10n.t(detail))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .monospacedDigit()

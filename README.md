@@ -751,6 +751,9 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 | 维护方式 | 源码字面量自动提取 → `Scripts/i18n_en.json` 存英文译文 → `python3 Scripts/gen_localizable.py` 生成 catalog；`--check` 模式供自测使用（词条与源码不同步即发版报红） |
 | 判定边界 | **内部状态不做本地化**：`task.status == "完成"` 这类比较继续用中文常量，只在**显示边界**翻译，因此业务逻辑与自测断言不受语言影响 |
 | 配置 | `knownRegions = (en, Base, zh-Hans)`；`STRING_CATALOG_GENERATE_SYMBOLS = NO`（中文作 key 时自动生成的 Swift 符号会互相冲突） |
+| **中文残留自动审计** | 应用内测试台在英文模式下把界面渲染成位图，用系统 **Vision OCR** 扫描（离线、无第三方依赖），**任何中文残留即判失败**；中文模式下同一用例反向自证"检测器确实能识别中文"。首次运行就抓出了菜单栏面板/设置窗的 4 类残留 |
+| 审计排除项（如实说明） | ① 内置 9 张打印测试页 PDF 的**纸张内容**（随包原始文档，含中文标题，属内容不属界面文案）；② 2 条已对照截图逐条核实的 OCR 噪声（Vision 把地球图标+破折号、转圈图标误读成汉字），白名单在测试台源码里带注释留证 |
+| 维护纪律 | `python3 Scripts/gen_localizable.py --check` 已纳入自测：**缺译文即失败**——曾因"加了新词条忘了重新生成 catalog"，导致 `L10n.t` 查不到而回退成中文格式串 |
 
 > 一句话：**README 中英分文件；软件界面中英双语可切换**。
 
@@ -798,8 +801,10 @@ gh release upload v2.0 dist/MetriBar-2.0.dmg --clobber
 ![环境配置面板](docs/预览/env-sheet.png)
 ![构建进度（依赖 5/9）](docs/预览/env-build-progress.png)
 
-**English UI**（同一份构建，设置 › 语言 切 English 后重启）
+**English UI**（同一份构建，设置 › 语言 切 English 后重启；由 OCR 审计确认无中文残留）
 
+![English menu bar panel](docs/预览/panel-en.png)
+![English settings window](docs/预览/settings-en.png)
 ![English environment panel](docs/预览/env-sheet-en.png)
 ![English printer test](docs/预览/toolbox-printer-en.png)
 

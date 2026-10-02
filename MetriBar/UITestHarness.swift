@@ -13,6 +13,7 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import Vision
 
 @MainActor
 enum UITestHarness {
@@ -83,6 +84,9 @@ enum UITestHarness {
         trace("→ uiTranslateEnvSheet"); uiTranslateEnvSheet()
         trace("→ uiVerifyDetailSheet"); uiVerifyDetailSheet()
         trace("→ uiVerifyHUD"); uiVerifyHUD()
+        trace("→ uiPopoverPanel"); uiPopoverPanel()
+        trace("→ uiSettingsWindow"); uiSettingsWindow()
+        trace("→ uiChineseLeakAudit"); uiChineseLeakAudit()
         trace("→ uiTCCStatus"); uiTCCStatus()
         trace("→ harnessMainQueueProbe"); harnessMainQueueProbe()
         trace("→ uiVerifyHardwareSnapshot"); uiVerifyHardwareSnapshot()
@@ -390,6 +394,119 @@ enum UITestHarness {
         }
         TestHUD.shared.hide()
         record("ui.verify-hud", ok, ["浮层出现并截图": ok])
+    }
+
+    /// 菜单栏面板（此前测试台**完全没覆盖**，导致英文模式下仍是中文却没被发现）
+    private static func uiPopoverPanel() {
+        let store = MetricsStore(interval: 2)
+        let settings = AppSettings()
+        let view = AnyView(PopoverView().environmentObject(store).environmentObject(settings))
+        let img = captureWindow(view, name: languageTag("16-popover-panel"), size: NSSize(width: 372, height: 900))
+        record("ui.popover-panel", img?.nonBlank ?? false, [
+            "语言": L10n.effectiveLanguageCode, "截图非空白": img?.nonBlank ?? false,
+        ])
+    }
+
+    /// 设置窗（同样此前未覆盖）
+    private static func uiSettingsWindow() {
+        let img = captureWindow(AnyView(SettingsView()), name: languageTag("17-settings-window"), size: NSSize(width: 400, height: 640))
+        record("ui.settings-window", img?.nonBlank ?? false, [
+            "语言": L10n.effectiveLanguageCode, "截图非空白": img?.nonBlank ?? false,
+        ])
+    }
+
+    /// **中文泄漏审计（Vision OCR）**：把界面渲染成位图后做离线 OCR，检查英文模式下是否还有中文。
+    ///
+    /// 为什么必须 OCR：SwiftUI 的文字是自绘的，遍历 `NSTextField` 抓不到（最初的实现就是这么"假通过"的）。
+    /// Vision 是系统内置框架，离线运行，无需额外依赖与权限。
+    private static func uiChineseLeakAudit() {
+        let store = MetricsStore(interval: 2)
+        let settings = AppSettings()
+        // 说明：打印机测试的预览图是随包的 9 张原始测试页 PDF（文档内容，含中文标题），
+        // 属"纸张内容"而非界面文案，故不纳入界面中文审计（在报告与 README 中如实说明）。
+        let samples: [(String, AnyView, NSSize)] = [
+            ("菜单栏面板", AnyView(PopoverView().environmentObject(store).environmentObject(settings)), NSSize(width: 372, height: 900)),
+            ("设置窗口", AnyView(SettingsView()), NSSize(width: 400, height: 640)),
+            ("MacBook 验机", AnyView(VerifyTab()), NSSize(width: 1070, height: 740)),
+            ("环境配置面板", AnyView(TranslateTab().envSheet), NSSize(width: 560, height: 640)),
+        ]
+        // OCR 噪声白名单：每条都已**对照截图逐条核实**——是 Vision 把图标/破折号误读成汉字，
+        // 并非界面残留中文。新增泄漏不在名单内，仍会让本用例失败。
+        //   · "哦 Active intertace：一" ← 地球图标 + "Active interface: —"（已核对 16-popover-panel-en.png）
+        //   · "米 collecting..."        ← 转圈图标 + "Collecting…"（已核对验机页硬件列截图）
+        let ocrNoise: Set<String> = ["哦 Active intertace：一", "米 collecting..."]
+        var leaks: [String: [String]] = [:]
+        var scanned = 0
+        for (name, view, size) in samples {
+            guard let img = renderImage(view, size: size) else { continue }
+            scanned += 1
+            let cjk = ocrCJK(in: img).filter { !ocrNoise.contains($0) }
+            if !cjk.isEmpty { leaks[name] = Array(cjk.prefix(6)) }
+        }
+        if L10n.isEnglish {
+            record("i18n.no-chinese-in-english", leaks.isEmpty && scanned == samples.count, [
+                "语言": L10n.effectiveLanguageCode, "OCR 扫描界面数": scanned,
+                "仍有中文的界面": leaks.isEmpty ? "无" : "\(leaks)",
+            ])
+        } else {
+            // 中文模式下本用例是**反向验证**：应当 OCR 出大量中文，否则说明检测器本身失效
+            let total = leaks.values.reduce(0) { $0 + $1.count }
+            record("i18n.no-chinese-in-english", total > 0, [
+                "note": "当前非英文模式：此用例用于验证 OCR 检测器有效（应能识别出中文）",
+                "语言": L10n.effectiveLanguageCode, "OCR 到中文的界面数": leaks.count,
+                "样例": leaks.values.first?.first ?? "无",
+            ])
+        }
+    }
+
+    /// 渲染视图为 NSImage（截图与 OCR 共用）
+    private static func renderImage(_ view: AnyView, size: NSSize) -> NSImage? {
+        let content = view
+            .environment(\.colorScheme, .dark)
+            .background(Color(white: 0.11))
+        let host = NSHostingView(rootView: content)
+        host.appearance = NSAppearance(named: .darkAqua)
+        host.frame = NSRect(origin: .zero, size: size)
+        let win = NSWindow(contentRect: NSRect(origin: .zero, size: size),
+                           styleMask: [.titled], backing: .buffered, defer: false)
+        win.appearance = NSAppearance(named: .darkAqua)
+        win.contentView = host
+        win.setFrameOrigin(NSPoint(x: 30, y: 30))
+        win.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        pump(0.8)
+        host.layoutSubtreeIfNeeded()
+        host.layer?.layoutIfNeeded()
+        host.displayIfNeeded()
+        pump(0.2)
+        defer { win.orderOut(nil); win.contentView = nil }
+        let scale: CGFloat = 2
+        guard let ctx = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale),
+                                  bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue) else { return nil }
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.translateBy(x: 0, y: size.height)
+        ctx.scaleBy(x: 1, y: -1)
+        if let layer = host.layer { layer.render(in: ctx) } else { return nil }
+        guard let cg = ctx.makeImage() else { return nil }
+        return NSImage(cgImage: cg, size: size)
+    }
+
+    /// OCR 出图片中包含中文的文本片段（Vision 离线识别）
+    private static func ocrCJK(in image: NSImage) -> [String] {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return [] }
+        let req = VNRecognizeTextRequest()
+        req.recognitionLevel = .accurate
+        req.recognitionLanguages = ["zh-Hans", "en-US"]
+        req.usesLanguageCorrection = false
+        let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+        try? handler.perform([req])
+        let lines = (req.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+        return lines.filter { $0.range(of: "[\\u4e00-\\u9fff]", options: .regularExpression) != nil }
+    }
+
+    private static func languageTag(_ base: String) -> String {
+        L10n.isEnglish ? base + "-en" : base
     }
 
     /// 权限状态（不弹窗、不请求）：麦克风/摄像头

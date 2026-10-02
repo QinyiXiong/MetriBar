@@ -751,6 +751,9 @@ Issues found by the repository-wide source audit and **already fixed**:
 | Maintenance | Literals are extracted from source → English lives in `Scripts/i18n_en.json` → `python3 Scripts/gen_localizable.py` writes the catalog; `--check` runs in the self-test and fails the release when the catalog drifts from the source |
 | Boundary rule | **Internal state is never localized**: comparisons such as `task.status == "完成"` keep the Chinese constant and translation happens only at the display boundary, so business logic and self-test assertions are language-independent |
 | Configuration | `knownRegions = (en, Base, zh-Hans)`; `STRING_CATALOG_GENERATE_SYMBOLS = NO` (auto-generated Swift symbols collide when Chinese strings are the keys) |
+| **Automated Chinese-leak audit** | In English mode the in-app harness renders the UI to bitmaps and reads them with the system **Vision OCR** (offline, no third-party dependency); **any remaining Chinese fails the run**. In Chinese mode the same case self-verifies that the detector really does see Chinese. Its first run caught four classes of leakage in the menu-bar popover and the settings window |
+| Audit exclusions (stated openly) | ① The **paper content** of the nine bundled print-test PDFs (original shipped documents with Chinese headings — content, not UI chrome); ② two OCR-noise strings verified line-by-line against screenshots (Vision misreads the globe icon plus em-dash, and the spinner icon, as CJK). The allow-list lives in the harness source with comments and evidence |
+| Maintenance rule | `python3 Scripts/gen_localizable.py --check` now runs in the self-test and **fails when any entry lacks English** — this was added after adding new keys without regenerating the catalog, which made `L10n.t` fall back to the Chinese format string |
 
 > In one line: **the docs ship as two files; the app UI is bilingual and switchable.**
 
@@ -799,8 +802,10 @@ Issues found by the repository-wide source audit and **already fixed**:
 ![Environment panel](docs/预览/env-sheet.png)
 ![Build progress (dependency 5/9)](docs/预览/env-build-progress.png)
 
-**English UI** (same build, Settings › Language → English, then restart)
+**English UI** (same build, Settings › Language → English, then restart; the OCR audit confirms no Chinese remains)
 
+![English menu bar panel](docs/预览/panel-en.png)
+![English settings window](docs/预览/settings-en.png)
 ![English environment panel](docs/预览/env-sheet-en.png)
 ![English printer test](docs/预览/toolbox-printer-en.png)
 

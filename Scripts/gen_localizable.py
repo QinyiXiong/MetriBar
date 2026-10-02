@@ -201,6 +201,12 @@ def main():
             problems.append(f"译文表有过期条目 {len(stale)} 条")
         if stale_skip:
             problems.append(f"排除表有过期条目 {len(stale_skip)} 条")
+        # 关键：缺译文必须失败。曾经因为"加了新词条却忘了重新生成 catalog"，
+        # L10n.t 查不到就回退成中文格式串，英文界面里冒出中文。
+        if missing_en:
+            problems.append(f"有 {len(missing_en)} 条词条缺英文译文（例：{missing_en[:3]}）")
+        if problems[:1] or not problems:
+            pass
         if problems:
             print("✗ i18n 校验失败: " + "；".join(problems))
             return 1
