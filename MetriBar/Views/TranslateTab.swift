@@ -3,9 +3,9 @@
 //  MetriBar
 //
 //  视频翻译（全自动零配置版）：
-//   · Python 运行时 **已内置于 App**（Resources/python，独立可搬运 CPython）；
+//   · Python 运行时**不内置**：首次「一键构建环境」时经国内镜像下载到数据目录；
 //   · 转写流水线脚本已内置（Resources/pipeline：transcribe.py / embed_subtitle.py）；
-//   · 「一键构建环境」：基于内置 Python 在 App 数据目录建 venv，
+//   · 「一键构建环境」：基于下载好的运行时在 App 数据目录建 venv，
 //     经国内镜像自动安装 funasr/torch/openai/mlx-lm 等全部依赖（不含模型）；
 //   · ASR 三模型 + Hy-MT2 翻译模型：一键从 **ModelScope 魔搭** 直连下载（带进度）；
 //   · 「部署翻译服务」：mlx_lm.server 子进程跑 Hy-MT2（OpenAI 兼容端点），
@@ -643,7 +643,8 @@ final class TranslateModel: ObservableObject {
         p.executableURL = URL(fileURLWithPath: ToolPaths.envPython)
         p.arguments = ["-m", "mlx_lm.server", "--model", mtDir, "--port", String(port),
                        "--decode-concurrency", "8"]
-        // 不加 --decode-concurrency：实测 Hy-MT2-7B 批量并发吞吐劣化 ~100×（串行1.9s/条 vs 并发4条794s）
+        // 并发解码 8 路：服务端按此排队；真正打到端点上的并发由 METRIBAR_TRANSLATE_CONCURRENCY 动态分摊。
+        // 注：早期「并发劣化 ~100×」的结论是 mlx-lm 与 mlx 主版本错配导致的假象，版本对齐后并发正常。
         var env = ProcessInfo.processInfo.environment
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (env["PATH"] ?? "")
         p.environment = env
@@ -973,7 +974,7 @@ struct TranslateTab: View {
                 .disabled(model.autoRunning || !model.tasks.contains { $0.status == "排队中" })
                 Toggle(isOn: $settings.burnIn) { Text("烧录字幕进视频").font(.system(size: 11)) }
                     .toggleStyle(.checkbox)
-                    .onChange(of: settings.burnIn) { v in settings.persist("translate.burnIn", v ? "1" : "0") }
+                    .onChange(of: settings.burnIn) { v in settings.persist("burnIn", v ? "1" : "0") }
                 if !model.ffmpegOK { Text("需 ffmpeg").font(.system(size: 9)).foregroundColor(.orange) }
                 Button("日志", action: { showLogWin = true })
                     .buttonStyle(.borderless).help("查看详细日志")

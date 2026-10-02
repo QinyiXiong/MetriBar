@@ -284,6 +284,22 @@ try:
         print("  ✓ 进度条取值域检查通过（百分比已归一/或为 0...1 域）")
 except OSError as _e3:
     bad += 1; print("  ✗ 读取 TranslateTab.swift 失败", _e3)
+# 设置键前缀守卫（曾把 persist("translate.burnIn") 写成 translate.translate.burnIn，
+# 导致「烧录字幕进视频」开关关掉后重启又变回开启）
+try:
+    import re as _re5
+    _tr2 = open("MetriBar/Views/TranslateTab.swift", encoding="utf-8").read()
+    _badk = _re5.findall(r'persist\("(translate\.[^"]+)"', _tr2)
+    if _badk:
+        bad += 1; print("  ✗ persist 传了带前缀的键（会写成 translate.translate.*）:", _badk)
+    else:
+        print("  ✓ 设置键前缀一致（persist 只传裸键名）")
+    if 'persist("burnIn"' in _tr2 and 'forKey: "translate.burnIn"' in _tr2:
+        print("  ✓ 烧录开关的读写键一致（translate.burnIn）")
+    else:
+        bad += 1; print("  ✗ 烧录开关读写键不一致")
+except OSError as _e5:
+    bad += 1; print("  ✗ 读取 TranslateTab.swift 失败", _e5)
 if not os.access("/Applications/MetriBar.app/Contents/Resources/install_runtime.sh", os.X_OK):
     bad += 1; print("  ✗ 已安装App缺构建脚本")
 else: print("  ✓ 已安装App自带构建脚本")
